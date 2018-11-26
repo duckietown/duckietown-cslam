@@ -1,20 +1,17 @@
 #!/usr/bin/env python
 import rospy
-import rospy
 from std_msgs.msg import String, Header, Time
 from geometry_msgs.msg import *
-from g2ograph_builder import *
+import duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder as dGB
 import g2o
 import numpy as np
-from duckietown_graph_builder import *
 
-mygraph = duckietownGraphBuilder()
+mygraph = dGB.duckietownGraphBuilder()
 
 
 def callback(data):
-    global mygraph
+    # global mygraph
     # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-    print("Hello")
     t = [data.transform.translation.x,
          data.transform.translation.y, data.transform.translation.z]
     # to transform to a rotation matrix!
@@ -27,9 +24,9 @@ def callback(data):
     time = Time(data.header.stamp)
     if id0 == "daddy":
         fixed = id0 = 0
-
+    rospy.loginfo("Adding new edge")
     mygraph.add_edge(id0, id1, transform, time.data.secs)
-    # graph.optimize(15)
+    mygraph.optimize(15, output_name="/home/amaury/test.g2o")
 
 
 def listener():
@@ -48,10 +45,8 @@ def listener():
 
 
 def main():
-    print("yaouh")
     listener()
 
 
 if __name__ == '__main__':
-    print("ggggggggggggggggggggggggggggggggggggggggggggggggg")
     main()

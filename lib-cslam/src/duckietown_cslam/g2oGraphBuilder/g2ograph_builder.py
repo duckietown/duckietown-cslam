@@ -67,6 +67,6 @@ class g2oGraphBuilder():
             print('Initial chi2 =', self.optimizer.chi2())
 
         self.optimizer.set_verbose(verbose)
-        self.optimizer.optimize(100)
+        self.optimizer.optimize(number_of_steps)
         if(save_result):
             self.optimizer.save(output_name)

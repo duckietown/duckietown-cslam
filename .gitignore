@@ -1,3 +1,7 @@
 ros-cslam/build/
 ros-cslam/devel/
 ros-cslam/.catkin_workspace
+!/*.pyc
+ros-cslam/install/
+*.pyc
+lib-cslam/src/duckietown_cslam.egg-info/

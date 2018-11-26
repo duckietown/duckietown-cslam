@@ -21,8 +21,8 @@ using `pipenv`:
     $ pipenv install
     $ pipenv shell
     $ cd lib-cslam
-    $ pip install -r requirements.txt
-    $ python setup.py develop --no-deps
+    $ pip install -r requirements.txt --user
+    $ python setup.py develop --no-deps --user
     
    
 ## Unit tests

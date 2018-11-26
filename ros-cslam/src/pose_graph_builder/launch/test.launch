@@ -1,5 +1,5 @@
 <launch>
-    <node name="listener" pkg="duckie_test" type="transform_listener_ros.py" />
-    <node name="dummy_publisher" pkg="duckie_test" type="transform_publisher_ros.py" />
+    <node name="listener" pkg="pose_graph_builder" type="transform_listener_ros.py" />
+    <node name="dummy_publisher" pkg="pose_graph_builder" type="transform_publisher_ros.py" />
 
 </launch>
