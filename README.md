@@ -32,3 +32,20 @@ Run this:
     $ make -C lib-cslam tests-clean tests
     
 The output is generated in the folder in `lib-cslam/out-comptests/`.
+
+## To test ongoing work with g2o
+To test the ongoing work on g2o, do this :
+
+    $ cd lib-cslam
+    $ python setup.py develop --no-deps --user 
+    the --user is because I dont use a virtual env right now
+    $ cd ../ros-cslam
+    $ catkin_make install
+    $ source devel/setup.bash
+    $ roslaunch pose_graph_builder test.launch
+
+
+This will launch a dummy publisher that publishes 6 duckies and relative pose randomly.  
+The transform_listener_ros.py listens to it, and creates a graph using duckietown_graph_builder (that itself uses g2o_graph_builder, both are in lib-cslam)
+
+To visualize, run rviz on another terminal and set the frame from "map" to "world". Add the topic type TF. Et voilà!  
