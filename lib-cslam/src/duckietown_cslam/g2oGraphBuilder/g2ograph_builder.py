@@ -34,6 +34,7 @@ class g2oGraphBuilder():
                 vc1.set_id(vertex1Id)
                 vc1.set_estimate(self.optimizer.vertex(
                     vertex0Id).estimate() * measure)
+                vc1.set_fixed(False)
                 self.optimizer.add_vertex(vc1)
 
             edge = g2o.EdgeSE3()
@@ -49,6 +50,7 @@ class g2oGraphBuilder():
             else:
                 vc0 = g2o.VertexSE3()
                 vc0.set_id(vertex0Id)
+                vc0.set_fixed(False)
                 self.optimizer.add_vertex(vc0)
                 self.add_edge(vertex0Id, vertex1Id, measure)
 
