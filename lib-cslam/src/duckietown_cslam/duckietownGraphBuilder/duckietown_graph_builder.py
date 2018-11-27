@@ -4,6 +4,8 @@ import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oBG
 import geometry as g
 import random
 
+time_step = 0.5
+
 
 class duckietownGraphBuilder():
     def __init__(self, initial_duckie_dict={}, initial_watchtower_dict={}, initial_april_dict={}, smallest_time_step=0.010):
@@ -17,14 +19,29 @@ class duckietownGraphBuilder():
 
     def convert_names_to_int(self, s, time_stamp):
         items = s.split("_")
-        return int(int(items[1]) + 10 * int(time_stamp % 10000))
+        a = 0
+        b = int(items[1]) % 100
+        c = int((time_stamp * 100))
+        if(items[0] == "duckie"):
+            a = 8
+        elif(items[0] == "watchtower"):
+            a = 2
+            c = 0
+        elif(items[0] == "apriltag"):
+            a = 3
+            c = 0
+
+        result = a * 10**8 + b * 10**6 + c
+        return result
 
     def convert_int_to_name(self, i):
         time_stamp = 123456789
         return ["duckie_5", time_stamp]
 
     def interpolate(self, old_stamp_index, node_type, node_id, measure, vertexId):
-        to_interpolate = self.lists[node_type][node_id][old_stamp_index:-1]
+        to_interpolate = self.lists[node_type][node_id][old_stamp_index:]
+        print("interpolating one odometry measure on %d nodes" %
+              len(to_interpolate))
         total_delta_t = float(to_interpolate[-1] - to_interpolate[0])
         R = measure.R
         t = measure.t
@@ -53,6 +70,7 @@ class duckietownGraphBuilder():
                             save_result=save_result, output_name=output_name)
 
     def add_edge(self, vertex0Id, vertex1Id, measure, time_stamp, old_time_stamp=0):
+        # print(self.lists)
         if(vertex0Id != vertex1Id):
             for vertexId in [vertex0Id, vertex1Id]:
                 [node_type, node_id] = vertexId.split("_")
@@ -73,27 +91,46 @@ class duckietownGraphBuilder():
 
             self.graph.add_edge(vertex0Id_int, vertex1Id_int, measure)
         else:
+            old_time_created = False
             if(old_time_stamp == 0):
                 print(
-                    "Should be given an old_time_stamp when receiving odometry transform")
-                exit(-1)
-            [node_type, node_id, _] = vertex0Id.split("_")
+                    "Should be given an old_time_stamp when receiving odometry transform. Assuming time step is %f seconds" % time_step)
+                old_time_stamp = time_stamp - 0.5
+                old_time_created = True
+            [node_type, node_id] = vertex0Id.split("_")
             if(node_type in self.lists):
                 if(node_id not in self.lists[node_type]):
-                    print("This is absurd")
-                    exit(-1)
-                else:
-                    if(node_type in self.movable):
-                        old_stamp_index = self.lists[node_type][node_id].index(
-                            old_time_stamp)
+                    self.lists[node_type][node_id] = [time_stamp]
+
+                if(node_type in self.movable):
+                    if(old_time_created):
                         self.lists[node_type][node_id].append(
-                            time_stamp)
-                        self.interpolate(
-                            old_stamp_index, node_type, node_id, measure, vertex0Id)
-                    else:
-                        print(
-                            "Node type should be movable if given odometry transform")
-                        exit(-1)
+                            old_time_stamp)
+                        self.lists[node_type][node_id].sort()
+                    if(old_time_stamp not in self.lists[node_type][node_id]):
+                        print("not in!! %f " % old_time_stamp)
+                    old_stamp_index = self.lists[node_type][node_id].index(
+                        old_time_stamp)
+                    self.lists[node_type][node_id].append(
+                        time_stamp)
+                    self.interpolate(
+                        old_stamp_index, node_type, node_id, measure, vertex0Id)
+                else:
+                    print(
+                        "Node type should be movable if given odometry transform")
+                    exit(-1)
             else:
                 print("ERROR : could not read node type well")
                 exit(-1)
+
+    def get_all_poses(self):
+        result_dict = {}
+        for mytype, listdict in self.lists.iteritems():
+            result_dict[mytype] = {}
+            for node_id, time_stamp_list in listdict.iteritems():
+                last_time_stamp = time_stamp_list[-1]
+                vertex_id = "%s_%s" % (mytype, node_id)
+                result_dict[mytype][node_id] = self.graph.vertex_pose(
+                    self.convert_names_to_int(vertex_id, last_time_stamp))
+        # print(result_dict)
+        return result_dict

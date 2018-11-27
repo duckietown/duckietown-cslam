@@ -9,6 +9,7 @@ class g2oGraphBuilder():
         self.solver = g2o.BlockSolverX(g2o.LinearSolverDenseX())
         self.algorithm = g2o.OptimizationAlgorithmLevenberg(self.solver)
         self.optimizer.set_algorithm(self.algorithm)
+        self.already_initialized = False
 
     def add_vertex(self, vertex_id, vertexPose, fixed=False):
         # vertexPose has to be Isometry3D
@@ -54,13 +55,17 @@ class g2oGraphBuilder():
     def vertices_and_edges(self):
         return (self.optimizer.vertices(), self.optimizer.edges())
 
+    def vertex_pose(self, vertexId):
+        return (self.optimizer.vertex(vertexId).estimate())
+
     def remove_vertex(self, vertexId):
         self.optimizer.remove_vertex(vertexId)
 
         # optimizing
     def optimize(self, number_of_steps, verbose=True, save_result=True, output_name="output.g2o"):
-
-        self.optimizer.initialize_optimization()
+        if(not self.already_initialized):
+            self.optimizer.initialize_optimization()
+            self.already_initialized = True
         self.optimizer.compute_active_errors()
         if(verbose):
             print('Optimization:')

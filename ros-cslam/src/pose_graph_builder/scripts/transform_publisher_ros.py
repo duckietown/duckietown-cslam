@@ -2,7 +2,7 @@
 import rospy
 from std_msgs.msg import String, Header, Time
 from geometry_msgs.msg import *
-
+import numpy as np
 import random
 
 
@@ -23,10 +23,13 @@ def talker():
         myTransformStamped.header = h
         d = random.randint(0, 5)
 
-        rotation = Quaternion(random.random(), random.random(),
-                              random.random(), random.random())
-        translation = Vector3(d, d + random.random() *
-                              3, d + 4 * random.random())
+        rotation = [random.random(), random.random(),
+                    random.random(), random.random()]
+        rotation = rotation/np.linalg.norm(rotation)
+        rotation = Quaternion(
+            rotation[0], rotation[1], rotation[2], rotation[3])
+        translation = Vector3(
+            d - s0, d - s0 + random.random(), d - s0 + random.random())
 
         myTransformStamped.transform = Transform(translation, rotation)
         myTransformStamped.child_frame_id = "duckie_%d" % d
