@@ -20,7 +20,7 @@ def get_version(filename):
 version = get_version(filename='src/duckietown_cslam/__init__.py')
 
 setup(name='duckietown_cslam',
-      description='A contralized slam',
+      description='A centralized slam',
       version=version,
       download_url='http://github.com/duckietown/duckietown-cslam/tarball/%s' % version,
       package_dir={'': 'src'},
