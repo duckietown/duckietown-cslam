@@ -18,25 +18,23 @@ class duckietownGraphBuilder():
         self.smallest_time_step = smallest_time_step
 
     def convert_names_to_int(self, s, time_stamp):
-        items = s.split("_")
+        [node_type, node_id] = s.split("_")
         a = 0
-        b = int(items[1]) % 100
-        c = int((time_stamp * 100))
-        if(items[0] == "duckie"):
-            a = 8
-        elif(items[0] == "watchtower"):
+        b = int(node_id) % 1000
+
+        if(node_type == "duckie"):
+            a = 1
+            c = self.lists[node_type][node_id].index(time_stamp)
+
+        elif(node_type == "watchtower"):
             a = 2
             c = 0
-        elif(items[0] == "apriltag"):
+        elif(node_type == "apriltag"):
             a = 3
             c = 0
 
-        result = a * 10**8 + b * 10**6 + c
+        result = a * 10**8 + b * 10**5 + c
         return result
-
-    def convert_int_to_name(self, i):
-        time_stamp = 123456789
-        return ["duckie_5", time_stamp]
 
     def interpolate(self, old_stamp_index, node_type, node_id, measure, vertexId):
         to_interpolate = self.lists[node_type][node_id][old_stamp_index:]
