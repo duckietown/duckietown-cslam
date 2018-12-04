@@ -2,6 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import Image, CameraInfo
+# from duckietown_msgs.msg import Pose2DStamped
 
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
@@ -21,6 +22,9 @@ ACQ_SOCKET_PORT = int(os.getenv('ACQ_SOCKET_PORT', 65432))
 ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', "watchtower10")
 ACQ_TOPIC_RAW = os.getenv('ACQ_TOPIC_RAW', "camera_node/image/raw")
 ACQ_TOPIC_CAMERAINFO = os.getenv('ACQ_TOPIC_CAMERAINFO', "camera_node/camera_info")
+ACQ_TOPIC_VELOCITY_TO_POSE = os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', None)
+ACQ_VELOCITY_TO_POSE_LINEAR_SCALE = float(os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', 1.0))
+ACQ_VELOCITY_TO_POSE_ANGULAR_SCALE = float(os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', 1.0))
 ACQ_TEST_STREAM = bool(os.getenv('ACQ_TEST_STREAM', True))
 ACQ_BEAUTIFY = bool(os.getenv('ACQ_BEAUTIFY', True))
 ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
@@ -32,11 +36,18 @@ class acquisitionProcessor():
                                                     lambda data: self.callback("lastRawImage", data),  queue_size = 1)
         self.subscriberCameraInfo = rospy.Subscriber("/"+ACQ_DEVICE_NAME+"/"+ACQ_TOPIC_CAMERAINFO, CameraInfo,
                                                     lambda data: self.callback("lastCameraInfo", data),  queue_size = 1)
+        # if ACQ_TOPIC_VELOCITY_TO_POSE: #Only if set (probably not for watchtowers)
+        #     self.subscriberCameraInfo = rospy.Subscriber("/"+ACQ_DEVICE_NAME+"/"+ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
+        #                                                 lambda data: self.callback("velocityToPose", data),  queue_size = 1)
+
         self.bridge = CvBridge()
         self.rate = rospy.Rate(ACQ_UPDATE_RATE)
 
         self.lastRawImage = None
         self.lastCameraInfo = None
+
+        self.velocityToPose = None
+        self.previousVelocityToPose = None
 
         self.socketClient = socketClient(host=ACQ_SOCKET_HOST, port=ACQ_SOCKET_PORT)
 
@@ -49,10 +60,30 @@ class acquisitionProcessor():
 
                 cv_image = self.bridge.imgmsg_to_cv2(currRawImage, desired_encoding="rgb8")
 
-                # Process the data and extract the apriltags
+                # Process the image and extract the apriltags
                 dsp_options={"beautify": ACQ_BEAUTIFY, "tag_size": ACQ_TAG_SIZE}
                 dsp = deviceSideProcessor(dsp_options)
                 output = dsp.process(cv_image,  np.array(currCameraInfo.K).reshape((3,3)), currCameraInfo.D)
+
+                # Process the odometry data
+                if ACQ_TOPIC_VELOCITY_TO_POSE:
+                    # skip the first time
+                    if self.previousVelocityToPose:
+                        prev_stamp_secs = self.previousVelocityToPose.header.stamp.secs
+                        prev_stamp_nsecs = self.previousVelocityToPose.header.stamp.nsecs
+                        prev_x = self.previousVelocityToPose.x
+                        prev_y = self.previousVelocityToPose.y
+                        prev_theta = self.previousVelocityToPose.theta
+
+                        curr_x = self.velocityToPose.x
+                        curr_y = self.velocityToPose.y
+                        curr_theta = self.velocityToPose.theta
+
+                        delta_x = (curr_x-prev_x) * ACQ_VELOCITY_TO_POSE_LINEAR_SCALE
+                        delta_y = (curr_y-prev_y) * ACQ_VELOCITY_TO_POSE_LINEAR_SCALE
+                        delta_theta = (curr_theta-prev_theta) * ACQ_VELOCITY_TO_POSE_ANGULAR_SCALE
+
+                    self.previousVelocityToPose = self.velocityToPose
 
                 # Generate a diagnostic image
                 if ACQ_TEST_STREAM:
@@ -95,6 +126,8 @@ class acquisitionProcessor():
             self.lastRawImage = ros_data
         if property=="lastCameraInfo":
             self.lastCameraInfo = ros_data
+        if property=="velocityToPose":
+            self.velocityToPose = ros_data
         # print("Registered %s", property)
 
 if __name__ == '__main__':

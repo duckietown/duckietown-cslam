@@ -55,7 +55,7 @@ class aprilTagProcessor():
         ##corners (4x2 array)
         #The corners of the tag in image pixel coordinates. These always wrap counter-clock wise around the tag. (top left is origin, x axis is horizontal, y axis is vertical)
 
-        camera_params = ( cameraMatrix[0,0], cameraMatrix[0,2], cameraMatrix[1,1], cameraMatrix[1,2] )
+        camera_params = ( cameraMatrix[0,0], cameraMatrix[1,1], cameraMatrix[0,2], cameraMatrix[1,2] )
 
         self.options.camera_params = camera_params
         self.detector = apriltag.Detector(self.options, searchpath=aprilTagSooPath)
