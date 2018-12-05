@@ -3,57 +3,89 @@
 from interprocess_communication import socketServer
 import rospy
 from geometry_msgs.msg import TransformStamped
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
+from sensor_msgs.msg import Image, CameraInfo
 import cPickle as pickle
 import os
 
+def TF(inint):
+    if inint==0:
+        return False
+    else:
+        return True
+
 ACQ_SOCKET_HOST = os.getenv('ACQ_SOCKET_HOST', '127.0.0.1')
 ACQ_SOCKET_PORT = int(os.getenv('ACQ_SOCKET_PORT', 65432))
-ACQ_POSES_TOPIC = os.getenv('ACQ_POSES_TOPIC', "poses")
+ACQ_POSES_TOPIC = os.getenv('ACQ_POSES_TOP  IC', "poses")
+ACQ_ODOMETRY_TOPIC = os.getenv('ACQ_ODOMETRY_TOPIC', "odometry")
 ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', "watchtower10")
-ACQ_TEST_STREAM = bool(os.getenv('ACQ_TEST_STREAM', True))
+ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
 
 server = socketServer(ACQ_SOCKET_HOST, ACQ_SOCKET_PORT)
 
 seq_stamper = 0
 
 publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, TransformStamped, queue_size=1)
-if ACQ_TEST_STREAM: publisherImages = rospy.Publisher("/poses_acquisition/video/"+ACQ_DEVICE_NAME, Image, queue_size=1)
-bridge = CvBridge()
+publisherOdometry = rospy.Publisher("/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
+
+if ACQ_TEST_STREAM:
+    publisherTestImages = rospy.Publisher("/poses_acquisition/test_video/"+ACQ_DEVICE_NAME, Image, queue_size=1)
+    publisherRawImages = rospy.Publisher("/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME, Image, queue_size=1)
+    publisherRectifiedImages = rospy.Publisher("/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME, Image, queue_size=1)
+    publisherCameraInfoRaw = rospy.Publisher("/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
+    publisherCameraInfoRectified = rospy.Publisher("/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
+
 rospy.init_node('acquisition_node_'+ACQ_DEVICE_NAME)
 
 while True:
     try:
         incomingData = pickle.loads(server.waitAndGetData())
 
-        for tag in incomingData:
-            # Publish the relative pose
-            newTransformStamped = TransformStamped()
-            newTransformStamped.header.seq = seq_stamper
-            newTransformStamped.header.stamp.secs = int(tag["timestamp_secs"])
-            newTransformStamped.header.stamp.nsecs = int(tag["timestamp_nsecs"])
-            newTransformStamped.header.frame_id = str(tag["source"])
-            newTransformStamped.child_frame_id = str(tag["tag_id"])
-            newTransformStamped.transform.translation.x = float(tag["tvec"][0])
-            newTransformStamped.transform.translation.y = float(tag["tvec"][1])
-            newTransformStamped.transform.translation.z = float(tag["tvec"][2])
-            newTransformStamped.transform.rotation.x = float(tag["qvec"][0])
-            newTransformStamped.transform.rotation.y = float(tag["qvec"][1])
-            newTransformStamped.transform.rotation.z = float(tag["qvec"][2])
-            newTransformStamped.transform.rotation.w = float(tag["qvec"][3])
+        if "apriltags" in incomingData:
+            for tag in incomingData["apriltags"]:
+                # Publish the relative pose
+                newTransformStamped = TransformStamped()
+                newTransformStamped.header.seq = seq_stamper
+                newTransformStamped.header.stamp.secs = int(tag["timestamp_secs"])
+                newTransformStamped.header.stamp.nsecs = int(tag["timestamp_nsecs"])
+                newTransformStamped.header.frame_id = str(tag["source"])
+                newTransformStamped.child_frame_id = str(tag["tag_id"])
+                newTransformStamped.transform.translation.x = float(tag["tvec"][0])
+                newTransformStamped.transform.translation.y = float(tag["tvec"][1])
+                newTransformStamped.transform.translation.z = float(tag["tvec"][2])
+                newTransformStamped.transform.rotation.x = float(tag["qvec"][0])
+                newTransformStamped.transform.rotation.y = float(tag["qvec"][1])
+                newTransformStamped.transform.rotation.z = float(tag["qvec"][2])
+                newTransformStamped.transform.rotation.w = float(tag["qvec"][3])
 
-            publisherPoses.publish(newTransformStamped)
-            print("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
+                publisherPoses.publish(newTransformStamped)
+                print("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
 
-            # Publish the overlayed image if submitted:
-            if ACQ_TEST_STREAM and tag["overlayed_image"] is not None:
-                imgMsg = bridge.cv2_to_imgmsg(tag["overlayed_image"], encoding="rgb8")
+        if "odometry" in incomingData:
+            publisherOdometry.publish(incomingData["odometry"])
+
+
+        # Publish the test and raw data if submitted and requested:
+        if ACQ_TEST_STREAM:
+            if "test_stream_image" in incomingData:
+                imgMsg = incomingData["test_stream_image"]
                 imgMsg.header.seq = seq_stamper
-                imgMsg.header.stamp.secs = int(tag["timestamp_secs"])
-                imgMsg.header.stamp.nsecs = int(tag["timestamp_nsecs"])
-                imgMsg.header.frame_id = str(tag["source"])
-                publisherImages.publish(imgMsg)
+                publisherTestImages.publish(imgMsg)
+
+            if "raw_image" in incomingData:
+                imgMsg = incomingData["raw_image"]
+                imgMsg.header.seq = seq_stamper
+                publisherRawImages.publish(imgMsg)
+
+            if "rectified_image" in incomingData:
+                imgMsg = incomingData["rectified_image"]
+                imgMsg.header.seq = seq_stamper
+                publisherRectifiedImages.publish(imgMsg)
+
+            if "raw_camera_info" in incomingData:
+                publisherCameraInfoRaw.publish(incomingData["raw_camera_info"])
+
+            if "rectified_camera_info" in incomingData:
+                publisherCameraInfoRectified.publish(incomingData["rectified_camera_info"])
 
         seq_stamper+=1
 
