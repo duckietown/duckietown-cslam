@@ -49,45 +49,108 @@ class transform_listener():
         # print(id)
         return id
 
+    def handle_odometry_message(self, id, transform, time_stamp):
+        old_time_stamp = 0
+
+        if(id in self.old_stamps):
+            old_time_stamp = self.old_stamps[id]
+
+        self.old_stamps[id] = time_stamp
+        self.mygraph.add_edge(id, id, transform,
+                              time_stamp, old_time_stamp)
+
+    def handle_watchtower_message(self, id0, id1, transform,
+                                  time_stamp):
+        node_type = id1.split("_")[0]
+        if(node_type == "duckie"):
+            # do some transform
+            t = [0.1, 0.0, 0.1]
+            z_angle = -90
+            z_angle = np.deg2rad(z_angle)
+
+            R_z = g.rotation_from_axis_angle(
+                np.array([0, 0, 1]), z_angle)
+            rectification = g2o.Isometry3d(R_z, t)
+            transform = transform * rectification
+
+        self.mygraph.add_edge(id0, id1, transform,
+                              time_stamp)
+
+    def handle_duckiebot_message(self, id0, id1, transform,
+                                 time_stamp):
+        node_type = id0.split("_")[0]
+        if(node_type == "duckie"):
+            # do some transform
+            t = [0.1, 0.0, 0.1]
+            y_angle = 105
+            z_angle = -90
+            y_angle = np.deg2rad(y_angle)
+            z_angle = np.deg2rad(z_angle)
+            R_y = g.rotation_from_axis_angle(
+                np.array([0, 1, 0]), y_angle)
+
+            R_z = g.rotation_from_axis_angle(
+                np.array([0, 0, 1]), z_angle)
+            R = np.matmul(R_y, R_z)
+            rectification = g2o.Isometry3d(R, t)
+            transform = transform * rectification
+        else:
+            print("This should not be here!")
+        self.mygraph.add_edge(id0, id1, transform,
+                              time_stamp)
+
+    def filter_name(self, id):
+        if(id == "donaldthegreat"):
+            id = "duckie_88"
+
+        elif(id.startswith("watchtower")):
+            id = "watchtower_%s" % id.strip("watchtower")
+
+        elif(len(id.split("_")) == 1):
+            id = self.find_vertex_name(id)
+
+        return id
+
     def callback(self, data):
         a = rospy.get_time()
+        id0 = data.header.frame_id
+        id1 = data.child_frame_id
 
-        # global mygraph
-        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
+        id0 = self.filter_name(id0)
+        id1 = self.filter_name(id1)
+
+        isfromwatchtower = False
+        if(id0.startswith("watchtower")):
+            isfromwatchtower = True
+            if(id1.startswith("watchtower")):
+                # print(data)
+                return 0
+
         t = [data.transform.translation.x,
              data.transform.translation.y, data.transform.translation.z]
         # to transform to a rotation matrix!
         q = [data.transform.rotation.x, data.transform.rotation.y,
              data.transform.rotation.z, data.transform.rotation.w]
         M = g.rotations.rotation_from_quaternion(np.array(q))
+        det = np.linalg.det(M)
+        if(det < 0):
+            print("det is %f" % det)
+
         transform = g2o.Isometry3d(M, t)
-        id0 = data.header.frame_id
-        id1 = data.child_frame_id
-
-        if(id0.startswith("watchtower")):
-            id0 = "watchtower_%s" % id0.strip("watchtower")
-
-        if(len(id1.split("_")) == 1):
-            id1 = self.find_vertex_name(id1)
-
-        fixed = False
         time = Time(data.header.stamp)
-        if id0 == "daddy":
-            fixed = id0 = 0
-
-        old_time_stamp = 0
         time_stamp = time.data.secs + time.data.nsecs * 10**(-9)
+        if(id1 == id0):
+            self.handle_odometry_message(id1, transform, time_stamp)
+        elif(isfromwatchtower):
+            self.handle_watchtower_message(id0, id1, transform,
+                                           time_stamp)
+        else:
+            self.handle_duckiebot_message(id0, id1, transform, time_stamp)
 
-        if(id0 == id1):
-            if(id0 in self.old_stamps):
-                old_time_stamp = self.old_stamps[id0]
-            self.old_stamps[id0] = time_stamp
-
-        self.mygraph.add_edge(id0, id1, transform, time_stamp, old_time_stamp)
         self.n += 1
-        if(self.n == 50):
+        if(self.n == 10):
             self.mygraph.optimize(
-                15,  save_result=False, verbose=False)
+                15,  save_result=True, verbose=False, output_name="/home/amaury/test2.g2o")
             self.n = 0
 
         if(self.n % 20 == 0):
@@ -97,24 +160,30 @@ class transform_listener():
                     self.tfbroadcast(node_type, node_id, node_pose)
         b = rospy.get_time()
         diff = b-a
-        print("difference time is %f " % diff)
+        # print("difference time is %f " % diff)
 
     def tfbroadcast(self, node_type, node_id, node_pose):
         br = tf2_ros.TransformBroadcaster()
         t = geometry_msgs.msg.TransformStamped()
 
         t.header.stamp = rospy.Time.now()
-        t.header.frame_id = "world"
+        if(node_type == "duckie"):
+            t.header.frame_id = "map"
+        else:
+            t.header.frame_id = "map"
         t.child_frame_id = "%s_%s" % (node_type, node_id)
         t.transform.translation.x = node_pose.t[0]
         t.transform.translation.y = node_pose.t[1]
         t.transform.translation.z = node_pose.t[2]
         # print(node_pose.R)
+        det = np.linalg.det(node_pose.R)
+        if(det < 0):
+            print("after optim : det = %f" % det)
         q = g.rotations.quaternion_from_rotation(node_pose.R)
-        t.transform.rotation.w = q[0]
-        t.transform.rotation.x = q[1]
-        t.transform.rotation.y = q[2]
-        t.transform.rotation.z = q[3]
+        t.transform.rotation.x = q[0]
+        t.transform.rotation.y = q[1]
+        t.transform.rotation.z = q[2]
+        t.transform.rotation.w = q[3]
 
         br.sendTransform(t)
 
@@ -134,6 +203,9 @@ class transform_listener():
         self.initialize_id_map()
 
         rospy.Subscriber("/poses_acquisition/poses",
+                         TransformStamped, self.callback)
+
+        rospy.Subscriber("/poses_acquisition/odometry",
                          TransformStamped, self.callback)
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()

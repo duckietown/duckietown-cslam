@@ -5,12 +5,11 @@ import geometry as g
 import random
 import yaml
 
-
-time_step = 0.001
+time_step = 0.5
 
 
 class duckietownGraphBuilder():
-    def __init__(self, initial_duckie_dict={}, initial_watchtower_dict={}, initial_april_dict={}, smallest_time_step=0.010, initial_floor_april_tags=""):
+    def __init__(self, initial_duckie_dict={}, initial_watchtower_dict={}, initial_april_dict={}, smallest_time_step=0.00000010, initial_floor_april_tags=""):
         self.graph = g2oBG.g2oGraphBuilder()
         self.types = ["duckie", "watchtower", "apriltag"]
         initial_dicts = [initial_duckie_dict,
@@ -37,7 +36,7 @@ class duckietownGraphBuilder():
                                 vertex_id = "apriltag_%d" % tag_id
                                 self.add_vertex(
                                     vertex_id, theta, position, fixed=True)
-
+                print(self.lists)
             except yaml.YAMLError as exc:
                 print(exc)
 
@@ -75,15 +74,15 @@ class duckietownGraphBuilder():
 
     def interpolate(self, old_stamp_index, node_type, node_id, measure, vertexId):
         to_interpolate = self.lists[node_type][node_id][old_stamp_index:]
-        print("interpolating one odometry measure on %d nodes" %
-              len(to_interpolate))
+        # print("interpolating one odometry measure on %d nodes" %
+        #   len(to_interpolate))
         total_delta_t = float(to_interpolate[-1] - to_interpolate[0])
         R = measure.R
         t = measure.t
         q = g.SE3_from_rotation_translation(R, t)
         vel = g.SE3.algebra_from_group(q)
         check = 0.0
-        for i in range(0, len(to_interpolate)-1):
+        for i in range(0, len(to_interpolate) - 1):
             partial_delta_t = float(to_interpolate[i+1] - to_interpolate[i])
             alpha = partial_delta_t/total_delta_t
             check += alpha
@@ -96,9 +95,10 @@ class duckietownGraphBuilder():
                 vertexId, to_interpolate[i+1])
             self.graph.add_edge(
                 vertex0Id_int, vertex1Id_int, interpolated_measure)
-
+        # print("end interpolation")
         if(check != 1.0):
-            print("damn, check is %.4f instead of 1.0" % check)
+            # print("damn, check is %.4f instead of 1.0" % check)
+            pass
 
     def optimize(self, number_of_steps, verbose=True, save_result=True, output_name="output.g2o"):
         self.graph.optimize(number_of_steps, verbose=verbose,
@@ -117,9 +117,11 @@ class duckietownGraphBuilder():
                     else:
                         if(node_type in self.movable):
                             last_update = self.lists[node_type][node_id][-1]
-                            if(abs(time_stamp - last_update) > self.smallest_time_step):
+                            if(time_stamp != last_update):
                                 self.lists[node_type][node_id].append(
                                     time_stamp)
+                            # else:
+                            # print("ignored a time stamp")
                 else:
                     print("ERROR : could not read node type well")
                     exit(-1)
@@ -132,12 +134,17 @@ class duckietownGraphBuilder():
             if(old_time_stamp == 0):
                 print(
                     "Should be given an old_time_stamp when receiving odometry transform. Assuming time step is %f seconds" % time_step)
-                old_time_stamp = time_stamp - 0.5
+                old_time_stamp = time_stamp - time_step
                 old_time_created = True
             [node_type, node_id] = vertex0Id.split("_")
             if(node_type in self.lists):
                 if(node_id not in self.lists[node_type]):
                     self.lists[node_type][node_id] = [time_stamp]
+                else:
+                    last_update = self.lists[node_type][node_id][-1]
+                    if(time_stamp != last_update):
+                        self.lists[node_type][node_id].append(
+                            time_stamp)
 
                 if(node_type in self.movable):
                     if(old_time_created):
@@ -148,13 +155,13 @@ class duckietownGraphBuilder():
                         print("not in!! %f " % old_time_stamp)
                     old_stamp_index = self.lists[node_type][node_id].index(
                         old_time_stamp)
-                    self.lists[node_type][node_id].append(
-                        time_stamp)
+
                     self.interpolate(
                         old_stamp_index, node_type, node_id, measure, vertex0Id)
                 else:
+
                     print(
-                        "Node type should be movable if given odometry transform")
+                        "Node type %s should be movable if given odometry transform" % node_type)
                     exit(-1)
             else:
                 print("ERROR : could not read node type well")
@@ -162,12 +169,18 @@ class duckietownGraphBuilder():
 
     def get_all_poses(self):
         result_dict = {}
-        for mytype, listdict in self.lists.iteritems():
-            result_dict[mytype] = {}
+        for node_type, listdict in self.lists.iteritems():
+            result_dict[node_type] = {}
             for node_id, time_stamp_list in listdict.iteritems():
                 last_time_stamp = time_stamp_list[-1]
-                vertex_id = "%s_%s" % (mytype, node_id)
-                result_dict[mytype][node_id] = self.graph.vertex_pose(
+                vertex_id = "%s_%s" % (node_type, node_id)
+                if(self.convert_names_to_int(vertex_id, last_time_stamp) not in self.graph.optimizer.vertices()):
+                    print("len(time_stamp_list) = %i for %s %s" %
+                          (len(time_stamp_list), node_type, node_id))
+                    if(node_type == "duckie"):
+                        last_time_stamp = time_stamp_list[-2]
+
+                result_dict[node_type][node_id] = self.graph.vertex_pose(
                     self.convert_names_to_int(vertex_id, last_time_stamp))
         # print(result_dict)
         return result_dict
