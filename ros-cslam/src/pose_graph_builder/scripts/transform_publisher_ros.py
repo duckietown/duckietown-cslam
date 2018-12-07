@@ -7,7 +7,7 @@ import random
 
 
 def talker():
-    pub = rospy.Publisher('transform_stamped', TransformStamped, queue_size=10)
+    pub = rospy.Publisher('/pose_odometry', TransformStamped, queue_size=10)
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10)  # 10hz
     seq = 0
@@ -19,21 +19,26 @@ def talker():
         h.stamp = rospy.Time.now()
         s0 = random.randint(0, 5)
         node_type = "duckie"
-        h.frame_id = "%s_%d" % (node_type, s0)
+        h.frame_id = "duckie_88"
+        # h.frame_id = "%s_%d" % (node_type, s0)
+
         myTransformStamped.header = h
         d = random.randint(0, 5)
 
-        rotation = [random.random(), random.random(),
-                    random.random(), random.random()]
-        rotation = rotation/np.linalg.norm(rotation)
-        rotation = Quaternion(
-            rotation[0], rotation[1], rotation[2], rotation[3])
-        translation = Vector3(
-            d - s0, d - s0 + random.random(), d - s0 + random.random())
+        # rotation = [random.random(), random.random(),
+        #             random.random(), random.random()]
+        # rotation = rotation/np.linalg.norm(rotation)
+        # rotation = Quaternion(
+        #     rotation[0], rotation[1], rotation[2], rotation[3])
+        # translation = Vector3(
+        #     d - s0, d - s0 + random.random(), d - s0 + random.random())
         node_type = random.choice(["duckie", "watchtower"])
 
-        myTransformStamped.transform = Transform(translation, rotation)
-        myTransformStamped.child_frame_id = "%s_%d" % (node_type, d)
+        myTransformStamped.transform = Transform(
+            Vector3(0, 0, 0), Quaternion(0, 0, 0, 1))
+        myTransformStamped.child_frame_id = "duckie_88"
+        # myTransformStamped.child_frame_id = "%s_%d" % (node_type, d)
+
         pub.publish(myTransformStamped)
 
         rate.sleep()
