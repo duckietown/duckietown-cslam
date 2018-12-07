@@ -1,79 +1,97 @@
 version: '3'
 services:
   acquisition_node_wt05:
-      image: aleksandarpetrov/duckietown-cslam-acquisition
-      environment:
+    image: aleksandarpetrov/duckietown-cslam-acquisition
+    environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower05.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.48
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower05
-        - ACQ_SOCKET_PORT=45405
-        - ACQ_BEAUTIFY 0
-      network_mode: "host"
-      restart: always
+        - ACQ_SOCKET_PORT=43405
+        - ACQ_BEAUTIFY=0
+        - ACQ_UPDATE_RATE=30
+        - ACQ_TEST_STREAM=0
+        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
+    network_mode: "host"
+    restart: always
 
   acquisition_node_wt06:
-      image: aleksandarpetrov/duckietown-cslam-acquisition
-      environment:
+    image: aleksandarpetrov/duckietown-cslam-acquisition
+    environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower06.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.58
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower06
-        - ACQ_SOCKET_PORT=45406
-        - ACQ_BEAUTIFY 0
-      network_mode: "host"
-      restart: always
+        - ACQ_SOCKET_PORT=43406
+        - ACQ_BEAUTIFY=0
+        - ACQ_UPDATE_RATE=30
+        - ACQ_TEST_STREAM=0
+        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
+    network_mode: "host"
+    restart: always
 
   acquisition_node_wt09:
-      image: aleksandarpetrov/duckietown-cslam-acquisition
-      environment:
+    image: aleksandarpetrov/duckietown-cslam-acquisition
+    environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower09.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.159
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower09
-        - ACQ_SOCKET_PORT=45409
-        - ACQ_BEAUTIFY 0
-      network_mode: "host"
-      restart: always
+        - ACQ_SOCKET_PORT=43409
+        - ACQ_BEAUTIFY=0
+        - ACQ_UPDATE_RATE=30
+        - ACQ_TEST_STREAM=0
+        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
+    network_mode: "host"
+    restart: always
 
   acquisition_node_wt10:
     image: aleksandarpetrov/duckietown-cslam-acquisition
     environment:
-      - ACQ_ROS_MASTER_URI_DEVICE=watchtower10.local
-      - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.81
-      - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
-      - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
-      - ACQ_DEVICE_NAME=watchtower10
-      - ACQ_SOCKET_PORT=45410
-      - ACQ_BEAUTIFY 0
+        - ACQ_ROS_MASTER_URI_DEVICE=watchtower10.local
+        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.81
+        - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
+        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
+        - ACQ_DEVICE_NAME=watchtower10
+        - ACQ_SOCKET_PORT=43410
+        - ACQ_BEAUTIFY=0
+        - ACQ_UPDATE_RATE=30
+        - ACQ_TEST_STREAM=0
+        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
     network_mode: "host"
     restart: always
 
   acquisition_node_wt11:
     image: aleksandarpetrov/duckietown-cslam-acquisition
     environment:
-      - ACQ_ROS_MASTER_URI_DEVICE=watchtower11.local
-      - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.247
-      - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
-      - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
-      - ACQ_DEVICE_NAME=watchtower11
-      - ACQ_SOCKET_PORT=45411
-      - ACQ_BEAUTIFY 0
+        - ACQ_ROS_MASTER_URI_DEVICE=watchtower11.local
+        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.247
+        - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
+        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
+        - ACQ_DEVICE_NAME=watchtower11
+        - ACQ_SOCKET_PORT=43411
+        - ACQ_BEAUTIFY=0
+        - ACQ_UPDATE_RATE=30
+        - ACQ_TEST_STREAM=0
+        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
     network_mode: "host"
     restart: always
 
   acquisition_node_wt12:
     image: aleksandarpetrov/duckietown-cslam-acquisition
     environment:
-      - ACQ_ROS_MASTER_URI_DEVICE=watchtower12.local
-      - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.113
-      - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
-      - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
-      - ACQ_DEVICE_NAME=watchtower12
-      - ACQ_SOCKET_PORT=45412
-      - ACQ_BEAUTIFY 0
+        - ACQ_ROS_MASTER_URI_DEVICE=watchtower12.local
+        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.113
+        - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
+        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
+        - ACQ_DEVICE_NAME=watchtower12
+        - ACQ_SOCKET_PORT=43412
+        - ACQ_BEAUTIFY=0
+        - ACQ_UPDATE_RATE=30
+        - ACQ_TEST_STREAM=0
+        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
     network_mode: "host"
     restart: always

@@ -28,7 +28,7 @@ class ImageRectifier():
 
         newCameraMatrix, validPixROI = cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, (image.shape[1], image.shape[0]), 1.0)
         map1, map2 = cv2.initUndistortRectifyMap(cameraMatrix, distCoeffs, np.eye(3), newCameraMatrix, (image.shape[1], image.shape[0]), cv2.CV_32FC1)
-        remappedIm = cv2.remap(image, map1, map2, cv2.INTER_CUBIC)
+        remappedIm = cv2.remap(image, map1, map2, cv2.INTER_NEAREST)
 
         return remappedIm, newCameraMatrix
 

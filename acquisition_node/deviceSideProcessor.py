@@ -114,15 +114,16 @@ class deviceSideProcessor():
         aprilTags = self.aprilTagProcessor.resultsToPose(aprilTags)
 
         # 4. Package output
-        outputDict = []
+        outputDict = dict()
+        outputDict["rect_image"] = rect_image
+        outputDict["new_camera_matrix"] = newCameraMatrix
+        outputDict["apriltags"] = list()
         for atag in aprilTags:
-            outputDict.append({ 'rect_image': rect_image,
-                                'new_camera_matrix': newCameraMatrix,
-                                'tag_id': atag.tag_id,
-                                'goodness': atag.goodness,
-                                'corners': atag.corners,
-                                'qvec': atag.qvec,
-                                'tvec': atag.tvec })
+            outputDict["apriltags"].append({'tag_id': atag.tag_id,
+                                            'goodness': atag.goodness,
+                                            'corners': atag.corners,
+                                            'qvec': atag.qvec,
+                                            'tvec': atag.tvec })
         return outputDict
 
 

@@ -8,23 +8,23 @@ echo "${ACQ_ROS_MASTER_URI_SERVER_IP} ${ACQ_ROS_MASTER_URI_SERVER}" >> /etc/host
 
 # Start the first process
 ./startServerSide.sh &
-# status=$?
-# if [ $status -ne 0 ]; then
-#   echo "Failed to start serverSidePublisher.py: $status"
-#   exit $status
-# else
-#   echo "Started serverSidePublisher.py!"
-# fi
+status=$?
+if [ $status -ne 0 ]; then
+  echo "Failed to start serverSidePublisher.py: $status"
+  exit $status
+else
+  echo "Started serverSidePublisher.py!"
+fi
 
 # Start the second process
 ./startDeviceSide.sh &
-# status=$?
-# if [ $status -ne 0 ]; then
-#   echo "Failed to start deviceSideProcessor.py: $status"
-#   exit $status
-# else
-#   echo "Started deviceSideProcessor.py!"
-# fi
+status=$?
+if [ $status -ne 0 ]; then
+  echo "Failed to start deviceSideProcessor.py: $status"
+  exit $status
+else
+  echo "Started deviceSideProcessor.py!"
+fi
 
 # Naive check runs checks once a second to see if either of the processes exited.
 # If one has, it kills the container
@@ -38,9 +38,6 @@ while sleep 1; do
   # If they are not both 0, then something is wrong
   if [ $PROCESS_1_STATUS -ne 0 ]; then
     echo "deviceSideSubscriber.py has exited."
-    ps aux
-    cat startServerSide.out
-    cat startDeviceSide.out
     exit 1
   fi
   if [ $PROCESS_2_STATUS -ne 0 ]; then
