@@ -64,13 +64,16 @@ class transform_listener():
         node_type = id1.split("_")[0]
         if(node_type == "duckie"):
             # do some transform
-            t = [0.1, 0.0, 0.1]
+            t = [0.0, 0.0, 0.1]
             z_angle = -90
             z_angle = np.deg2rad(z_angle)
-
+            x_angle = np.deg2rad(180)
             R_z = g.rotation_from_axis_angle(
                 np.array([0, 0, 1]), z_angle)
-            rectification = g2o.Isometry3d(R_z, t)
+            R_x = g.rotation_from_axis_angle(
+                np.array([1, 0, 0]), x_angle)
+            R = np.matmul(R_x, R_z)
+            rectification = g2o.Isometry3d(R, t)
             transform = transform * rectification
 
         self.mygraph.add_edge(id0, id1, transform,
@@ -93,7 +96,7 @@ class transform_listener():
                 np.array([0, 0, 1]), z_angle)
             R = np.matmul(R_y, R_z)
             rectification = g2o.Isometry3d(R, t)
-            transform = transform * rectification
+            transform = rectification * transform
         else:
             print("This should not be here!")
         self.mygraph.add_edge(id0, id1, transform,
@@ -120,7 +123,7 @@ class transform_listener():
         id0 = self.filter_name(id0)
         id1 = self.filter_name(id1)
 
-        if(id0 == "watchtower_5" or id0 == "watchtower_9" or id0 == "watchtower_11"):
+        if(id0 == "watchtower_5"):
             # self.lock.release()
             return 0
 
@@ -154,9 +157,9 @@ class transform_listener():
             self.handle_duckiebot_message(id0, id1, transform, time_stamp)
 
         self.n += 1
-        if(self.n == 10):
+        if(self.n == 100):
             self.mygraph.optimize(
-                15,  save_result=True, verbose=False, output_name="/home/amaury/test2.g2o")
+                3,  save_result=True, verbose=True, output_name="/home/amaury/test2.g2o")
             self.n = 0
         # self.lock.release()
         if(self.n % 20 == 0):
@@ -212,7 +215,7 @@ class transform_listener():
         rospy.Subscriber("/poses_acquisition/poses",
                          TransformStamped, self.callback)
 
-        rospy.Subscriber("/poses_acquisition/odometry",
+        rospy.Subscriber("/poses_acquisition/odomdcvetry",
                          TransformStamped, self.callback)
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()

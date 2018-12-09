@@ -15,7 +15,7 @@ class duckietownGraphBuilder():
         initial_dicts = [initial_duckie_dict,
                          initial_watchtower_dict, initial_april_dict]
         self.lists = dict(zip(self.types, initial_dicts))
-        self.movable = ["duckie"]
+        self.movable = []
         self.smallest_time_step = smallest_time_step
         self.counters = dict()
         self.lock = threading.Lock()
@@ -26,6 +26,9 @@ class duckietownGraphBuilder():
         with open(initial_floor_april_tag_file, 'r') as stream:
             try:
                 complete_dict = yaml.safe_load(stream)
+                vertexPose = g2o.Isometry3d(np.eye(3), [0, 0, 0])
+                self.graph.add_vertex(0, vertexPose, fixed=True)
+
                 for key, value in complete_dict.iteritems():
                     if key == "objects":
                         for myobject, object_value in value.iteritems():
@@ -37,41 +40,53 @@ class duckietownGraphBuilder():
                                     theta = object_value['pose']['~SE2Transform']['theta_deg']
                                 vertex_id = "apriltag_%d" % tag_id
                                 self.add_vertex(
-                                    vertex_id, theta, position, fixed=True)
+                                    vertex_id, theta, position, True, fixed=True)
                 print(self.lists)
             except yaml.YAMLError as exc:
                 print(exc)
 
     def add_node_to_list(self, node_type, node_id, time_stamp):
         if node_type not in self.counters:
-            self.counters[node_type] = {}
+            self.counters[node_type] = dict()
         if node_id not in self.counters[node_type]:
             self.counters[node_type][node_id] = 0
         count = self.counters[node_type][node_id]
 
         if node_type not in self.lists:
-            self.lists[node_type] = {}
+            self.lists[node_type] = dict()
         if node_id not in self.lists[node_type]:
-            self.lists[node_type][node_id] = {}
-        if time_step not in self.lists[node_type][node_id] and (node_type in self.movable or count == 0):
+            self.lists[node_type][node_id] = dict()
+        if time_stamp not in self.lists[node_type][node_id] and (node_type in self.movable or count == 0):
+            if(time_stamp in self.lists[node_type][node_id]):
+                print("nonsensen!!!!!!!!!!!!!!!!!!")
             self.lists[node_type][node_id][time_stamp] = count
             self.counters[node_type][node_id] = self.counters[node_type][node_id] + 1
-
+            # print("counter is %d and len(time_stamp_list) is %d" % (
+            #     self.counters[node_type][node_id], len(self.lists[node_type][node_id])))
+            # print(self.lists[node_type][node_id])
             return True
 
         return False
 
-    def add_vertex(self, vertex_id, theta, p, fixed=False):
+    def add_vertex(self, vertex_id, theta, p, isinitialfloortag=False, fixed=False, time_stamp=0.0):
         [node_type, node_id] = vertex_id.split("_")
-        added = self.add_node_to_list(node_type, node_id, 0)
+        added = self.add_node_to_list(node_type, node_id, time_stamp)
         if(not added):
             print("add_vertex did not add : node as already there")
-        p = [p[0], p[1], 0.0]
-        R = g.rotation_from_axis_angle(np.array([0, 0, 1]), np.deg2rad(theta))
-        # print(R, theta)
-        vertexPose = g2o.Isometry3d(R, p)
-        vertex_id = self.convert_names_to_int(vertex_id, 0)
-        self.graph.add_vertex(vertex_id, vertexPose, fixed=fixed)
+        else:
+            p = [p[0], p[1], 0.0]
+            R = g.rotation_from_axis_angle(
+                np.array([0, 0, 1]), np.deg2rad(theta))
+            if(isinitialfloortag):
+                R2 = g.rotation_from_axis_angle(
+                    np.array([1, 0, 0]), np.deg2rad(180))
+                R = np.matmul(R, R2)
+            # print(R, theta)
+            vertexPose = g2o.Isometry3d(R, p)
+            vertex_id = self.convert_names_to_int(vertex_id, time_stamp)
+            self.graph.add_vertex(vertex_id, vertexPose, fixed=fixed)
+            if(isinitialfloortag):
+                self.graph.add_edge(0, vertex_id, vertexPose)
 
     def convert_names_to_int(self, s, time_stamp):
         [node_type, node_id] = s.split("_")
@@ -80,14 +95,16 @@ class duckietownGraphBuilder():
 
         if(node_type == "duckie"):
             a = 1
+        elif(node_type == "watchtower"):
+            a = 2
+        elif(node_type == "apriltag"):
+            a = 3
+
+        if(node_type in self.movable):
             c = self.lists[node_type][node_id][time_stamp]
             if(c >= 100000):
                 print("overflow of the time_stamp list")
-        elif(node_type == "watchtower"):
-            a = 2
-            c = 0
-        elif(node_type == "apriltag"):
-            a = 3
+        else:
             c = 0
 
         result = a * 10**8 + b * 10**5 + c
@@ -152,24 +169,19 @@ class duckietownGraphBuilder():
 
             self.graph.add_edge(vertex0Id_int, vertex1Id_int, measure)
         else:
-            old_time_created = False
-            if(old_time_stamp == 0):
-                print(
-                    "Should be given an old_time_stamp when receiving odometry transform. Assuming time step is %f seconds" % time_step)
-                old_time_stamp = time_stamp - time_step
-                old_time_created = True
             [node_type, node_id] = vertex0Id.split("_")
             added = self.add_node_to_list(node_type, node_id, time_stamp)
 
             if(node_type in self.movable):
-                if(old_time_created):
+                if(old_time_stamp == 0):
                     old_time_stamp = sorted(
                         self.lists[node_type][node_id].keys())[0]
                 if(old_time_stamp != time_stamp):
                     self.interpolate(
                         old_time_stamp, time_stamp, node_type, node_id, measure, vertex0Id)
                 else:
-                    self.add_vertex(vertex0Id, 0, [0, 0], time_stamp)
+                    self.add_vertex(vertex0Id, 0, [
+                                    0, 0], isinitialfloortag=False, fixed=False, time_stamp=time_stamp)
             else:
 
                 print(
@@ -181,7 +193,7 @@ class duckietownGraphBuilder():
         for node_type, listdict in self.lists.iteritems():
             result_dict[node_type] = {}
             for node_id, time_stamp_dict in listdict.iteritems():
-                last_time_stamp = sorted(time_stamp_dict.keys())[-1]
+                last_time_stamp = max(time_stamp_dict.keys())
                 vertex_id = "%s_%s" % (node_type, node_id)
                 if(self.convert_names_to_int(vertex_id, last_time_stamp) not in self.graph.optimizer.vertices()):
                     # print("len(time_stamp_dict) = %i for %s %s" %

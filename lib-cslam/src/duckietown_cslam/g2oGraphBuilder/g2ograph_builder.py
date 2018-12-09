@@ -1,5 +1,6 @@
 import numpy as np
 import g2o
+import geometry as g
 
 
 class g2oGraphBuilder():
@@ -42,6 +43,13 @@ class g2oGraphBuilder():
             edge.set_vertex(0, self.optimizer.vertex(vertex0Id))
             edge.set_vertex(1, self.optimizer.vertex(vertex1Id))
             edge.set_measurement(measure)
+            # r = abs(g.rotation_from_axis_angle(
+            #     np.array([1, 0, 0]), np.deg2rad(2)))
+            # ligne1 = np.concatenate((r, r), axis=1)
+            # ligne2 = np.concatenate((r, r), axis=1)
+            # r_final = np.concatenate((ligne1, ligne2), axis=0)
+
+            # edge.set_information(r_final)
 
             finished = self.optimizer.add_edge(edge)
             if(not finished):
@@ -59,6 +67,8 @@ class g2oGraphBuilder():
                 edge.set_vertex(0, self.optimizer.vertex(vertex0Id))
                 edge.set_vertex(1, self.optimizer.vertex(vertex1Id))
                 edge.set_measurement(measure)
+
+                # edge.set_information(np.eye(6) * 2)
                 finished = self.optimizer.add_edge(edge)
 
             else:
@@ -88,15 +98,16 @@ class g2oGraphBuilder():
 
         # optimizing
     def optimize(self, number_of_steps, verbose=True, save_result=True, output_name="output.g2o"):
-        if(not self.already_initialized):
-            self.optimizer.initialize_optimization()
-            self.already_initialized = True
+        # if(not self.already_initialized):
+        self.optimizer.set_verbose(verbose)
+
+        self.optimizer.initialize_optimization()
+        # self.already_initialized = True
         self.optimizer.compute_active_errors()
         if(verbose):
             print('Optimization:')
-            print('Initial chi2 =', self.optimizer.chi2())
+            print('Initial chi2 = %f' % self.optimizer.chi2())
 
-        self.optimizer.set_verbose(verbose)
         self.optimizer.optimize(number_of_steps)
         if(save_result):
             self.optimizer.save(output_name)
