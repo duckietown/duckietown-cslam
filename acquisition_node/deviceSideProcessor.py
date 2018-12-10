@@ -107,7 +107,10 @@ class deviceSideProcessor():
         rect_image, newCameraMatrix = self.ImageRectifier.rectify(raw_image, cameraMatrix, distCoeffs)
 
         # 2. Extract april tags data
-        tect_image_gray = cv2.cvtColor(rect_image, cv2.COLOR_BGR2GRAY)
+        if len(rect_image.shape) == 3:
+            tect_image_gray = cv2.cvtColor(rect_image, cv2.COLOR_BGR2GRAY)
+        else:
+            tect_image_gray = rect_image
         aprilTags = self.aprilTagProcessor.configureDetector(newCameraMatrix).detect(tect_image_gray, return_image=False)
 
         # 3. Extract poses from april tags data

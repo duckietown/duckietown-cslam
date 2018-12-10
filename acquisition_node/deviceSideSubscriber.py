@@ -54,6 +54,8 @@ class acquisitionProcessor():
 
         self.velocityToPose = None
         self.previousVelocityToPose = None
+        self.dummyOdometryTimer = rospy.Timer(rospy.Duration(0.5), lambda event: self.odometry_callback(event, timer_generated=True), oneshot=False)
+
 
         self.socketClient = socketClient(host=ACQ_SOCKET_HOST, port=ACQ_SOCKET_PORT)
 
@@ -64,7 +66,7 @@ class acquisitionProcessor():
                 currRawImage = self.lastRawImage
                 currCameraInfo = self.lastCameraInfo
 
-                cv_image = self.bridge.imgmsg_to_cv2(currRawImage, desired_encoding="rgb8")
+                cv_image = self.bridge.imgmsg_to_cv2(currRawImage, desired_encoding="mono8")
 
                 outputDict = dict()
 
@@ -86,7 +88,7 @@ class acquisitionProcessor():
                         for tag in outputDict["apriltags"]:
                             for idx in range(len(tag["corners"])):
                                 cv2.line(image, tuple(tag["corners"][idx-1, :].astype(int)), tuple(tag["corners"][idx, :].astype(int)), (0, 255, 0))
-
+                                cv2.rectangle(image, (tag["corners"][0, 0].astype(int)-10,tag["corners"][0, 1].astype(int)-10), (tag["corners"][0, 0].astype(int)+15,tag["corners"][0, 1].astype(int)+15), (0, 0, 255), cv2.FILLED)
                                 cv2.putText(image,str(tag["tag_id"]),
                                             org=(tag["corners"][0, 0].astype(int)+10,tag["corners"][0, 1].astype(int)+10),
                                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
@@ -99,7 +101,7 @@ class acquisitionProcessor():
                                     fontScale=0.6,
                                     color=(0, 255, 0))
 
-                        outputDict["test_stream_image"] = self.bridge.cv2_to_imgmsg(image, encoding="rgb8")
+                        outputDict["test_stream_image"] = self.bridge.cv2_to_imgmsg(image, encoding="mono8")
                         outputDict["test_stream_image"].header.stamp.secs = currRawImage.header.stamp.secs
                         outputDict["test_stream_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
                         outputDict["test_stream_image"].header.frame_id = ACQ_DEVICE_NAME
@@ -107,7 +109,7 @@ class acquisitionProcessor():
                         outputDict["raw_image"] = self.lastRawImage
                         outputDict["raw_camera_info"] = self.lastCameraInfo
 
-                        outputDict["rectified_image"] = self.bridge.cv2_to_imgmsg(outputDict["rect_image"], encoding="rgb8")
+                        outputDict["rectified_image"] = self.bridge.cv2_to_imgmsg(outputDict["rect_image"], encoding="mono8")
                         outputDict["rectified_image"].header.stamp.secs = currRawImage.header.stamp.secs
                         outputDict["rectified_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
                         outputDict["rectified_image"].header.frame_id = ACQ_DEVICE_NAME
@@ -127,23 +129,41 @@ class acquisitionProcessor():
                 # print("Image processed and sent to server side to submit via ROS.")
             self.rate.sleep()
 
-    def odometry_callback(self, ros_data):
+    def odometry_callback(self, ros_data, timer_generated=False):
 
-        odometry = TransformStamped()
-        odometry.header.seq = 0
-        odometry.header = ros_data.header
-        odometry.header.frame_id = ACQ_DEVICE_NAME
-        odometry.child_frame_id = ACQ_DEVICE_NAME
-        odometry.transform.translation.x = 0
-        odometry.transform.translation.y = 0
-        odometry.transform.translation.z = 0
-        odometry.transform.rotation.x = 0
-        odometry.transform.rotation.y = 0
-        odometry.transform.rotation.z = 0
-        odometry.transform.rotation.w = 1
+        try:
+            if timer_generated==True:
+                odometry = TransformStamped()
+                odometry.header.seq = 0
+                odometry.header = self.lastRawImage.header
+                odometry.header.frame_id = ACQ_DEVICE_NAME
+                odometry.child_frame_id = ACQ_DEVICE_NAME
+                odometry.transform.translation.x = 0
+                odometry.transform.translation.y = 0
+                odometry.transform.translation.z = 0
+                odometry.transform.rotation.x = 0
+                odometry.transform.rotation.y = 0
+                odometry.transform.rotation.z = 0
+                odometry.transform.rotation.w = 1
+            else:
+                odometry = TransformStamped()
+                odometry.header.seq = 0
+                odometry.header = ros_data.header
+                odometry.header.frame_id = ACQ_DEVICE_NAME
+                odometry.child_frame_id = ACQ_DEVICE_NAME
+                odometry.transform.translation.x = 0
+                odometry.transform.translation.y = 0
+                odometry.transform.translation.z = 0
+                odometry.transform.rotation.x = 0
+                odometry.transform.rotation.y = 0
+                odometry.transform.rotation.z = 0
+                odometry.transform.rotation.w = 1
 
-        self.socketClient.submitData(pickle.dumps({"odometry": odometry}, protocol=-1))
+            self.socketClient.submitData(pickle.dumps({"odometry": odometry}, protocol=-1))
 
+        except Exception as e:
+            print("Odometry data not generated, exception encountered: %s" % str(e))
+            pass
 
     def callback(self, property, ros_data):
         if property=="lastRawImage":
