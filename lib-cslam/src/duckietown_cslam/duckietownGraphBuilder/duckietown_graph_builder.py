@@ -5,11 +5,12 @@ import geometry as g
 import random
 import yaml
 import threading
+
 time_step = 0.5
 
 
 class duckietownGraphBuilder():
-    def __init__(self, initial_duckie_dict={}, initial_watchtower_dict={}, initial_april_dict={}, smallest_time_step=0.00000010, initial_floor_april_tags=""):
+    def __init__(self, initial_duckie_dict={}, initial_watchtower_dict={}, initial_april_dict={}, smallest_time_step=0.00000010, initial_floor_april_tags="", retro_interpolate=True):
         self.graph = g2oBG.g2oGraphBuilder()
         self.types = ["duckie", "watchtower", "apriltag"]
         initial_dicts = [initial_duckie_dict,
@@ -18,7 +19,10 @@ class duckietownGraphBuilder():
         self.movable = ["duckie"]
         self.smallest_time_step = smallest_time_step
         self.counters = dict()
+        self.last_time_stamp = dict()
         self.lock = threading.Lock()
+        self.retro_interpolate = retro_interpolate
+
         if(initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
 
@@ -46,10 +50,14 @@ class duckietownGraphBuilder():
                 print(exc)
 
     def add_node_to_list(self, node_type, node_id, time_stamp):
+        vertexId = "%s_%s" % (node_type, node_id)
         if node_type not in self.counters:
             self.counters[node_type] = dict()
+            self.last_time_stamp[node_type] = dict()
         if node_id not in self.counters[node_type]:
             self.counters[node_type][node_id] = 0
+            self.last_time_stamp[node_type][node_id] = 0.0
+
         count = self.counters[node_type][node_id]
 
         if node_type not in self.lists:
@@ -61,11 +69,33 @@ class duckietownGraphBuilder():
                 print("nonsensen!!!!!!!!!!!!!!!!!!")
             self.lists[node_type][node_id][time_stamp] = count
             self.counters[node_type][node_id] = self.counters[node_type][node_id] + 1
+            if(time_stamp > self.last_time_stamp[node_type][node_id]):
+                self.last_time_stamp[node_type][node_id] = time_stamp
+            else:
+                if(self.retro_interpolate):
+                    time_stamps = sorted(self.lists[node_type][node_id].keys())
+                    time_stamp_index = time_stamps.index(time_stamp)
+                    if(time_stamp_index > 0 and time_stamp_index < len(time_stamps)-1):
+                        side_stamps = [time_stamps[time_stamp_index-1],
+                                       time_stamps[time_stamp_index+1]]
+                        before = self.convert_names_to_int(
+                            vertexId, time_stamps[time_stamp_index-1])
+                        after = self.convert_names_to_int(
+                            vertexId, time_stamps[time_stamp_index+1])
+                        transform = self.graph.get_transform(before, after)
+                        if(transform != 0):
+                            print(
+                                "Will perform retro-interpolation")
+
+                            self.interpolate(time_stamps[time_stamp_index-1],
+                                             time_stamps[time_stamp_index+1], node_type, node_id, transform)
+                        else:
+                            print("will not perform retro_interpolation with %d and %d " % (
+                                before, after))
             # print("counter is %d and len(time_stamp_list) is %d" % (
             #     self.counters[node_type][node_id], len(self.lists[node_type][node_id])))
             # print(self.lists[node_type][node_id])
             return True
-
         return False
 
     def add_vertex(self, vertex_id, theta, p, isinitialfloortag=False, fixed=False, time_stamp=0.0):
@@ -111,11 +141,12 @@ class duckietownGraphBuilder():
         result = a * 10**8 + b * 10**5 + c
         return result
 
-    def interpolate(self, old_time_stamp, new_time_stamp, node_type, node_id, measure, vertexId):
+    def interpolate(self, old_time_stamp, new_time_stamp, node_type, node_id, measure):
+        vertexId = "%s_%s" % (node_type, node_id)
         to_interpolate = {time_stamp: self.lists[node_type][node_id][time_stamp] for time_stamp in self.lists[node_type][node_id].keys() if (
             time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)}
-        print("interpolating one odometry measure on %d nodes" %
-              len(to_interpolate))
+        # print("interpolating one odometry measure on %d nodes" %
+        #       len(to_interpolate))
         sorted_time_stamps = sorted(to_interpolate.keys())
 
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
@@ -145,7 +176,7 @@ class duckietownGraphBuilder():
                 vertexId, sorted_time_stamps[i+1])
             self.graph.add_edge(
                 vertex0Id_int, vertex1Id_int, interpolated_measure)
-        print("end interpolation")
+        # print("end interpolation")
         if(check != 1.0):
             # print("damn, check is %.4f instead of 1.0" % check)
             pass
@@ -179,7 +210,7 @@ class duckietownGraphBuilder():
                         self.lists[node_type][node_id].keys())[0]
                 if(old_time_stamp != time_stamp):
                     self.interpolate(
-                        old_time_stamp, time_stamp, node_type, node_id, measure, vertex0Id)
+                        old_time_stamp, time_stamp, node_type, node_id, measure)
                 else:
                     self.add_vertex(vertex0Id, 0, [
                                     0, 0], isinitialfloortag=False, fixed=False, time_stamp=time_stamp)

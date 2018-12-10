@@ -104,6 +104,15 @@ class g2oGraphBuilder():
             self.last_lost = vertexId
         return (self.optimizer.vertex(vertexId).estimate())
 
+    def get_transform(self, vertex1, vertex2):
+        if(vertex1 not in self.optimizer.vertices() or vertex2 not in self.optimizer.vertices()):
+            print("Requesting transform between non existant vertices")
+            return 0
+        vc1 = self.optimizer.vertex(vertex1).estimate()
+        vc2 = self.optimizer.vertex(vertex2).estimate()
+        transfom = vc1.inverse() * vc2
+        return transfom
+
     def remove_vertex(self, vertexId):
         self.optimizer.remove_vertex(vertexId)
 
