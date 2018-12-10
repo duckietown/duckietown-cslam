@@ -12,6 +12,8 @@ class g2oGraphBuilder():
         self.optimizer.set_algorithm(self.algorithm)
         self.already_initialized = False
         self.last_lost = 0
+        self.set_of_new_edges = set()
+        self.set_of_new_vertex = set()
 
     def add_vertex(self, vertex_id, vertexPose, fixed=False):
         # vertexPose has to be Isometry3D
@@ -22,6 +24,7 @@ class g2oGraphBuilder():
         if fixed:
             vc.set_fixed(True)
         self.optimizer.add_vertex(vc)
+        self.set_of_new_vertex.add(vc)
 
     def add_edge(self, vertex0Id, vertex1Id, measure):
         '''
@@ -38,6 +41,7 @@ class g2oGraphBuilder():
                     vertex0Id).estimate() * measure)
                 vc1.set_fixed(False)
                 self.optimizer.add_vertex(vc1)
+                self.set_of_new_vertex.add(vc1)
 
             edge = g2o.EdgeSE3()
             edge.set_vertex(0, self.optimizer.vertex(vertex0Id))
@@ -52,6 +56,8 @@ class g2oGraphBuilder():
             # edge.set_information(r_final)
 
             finished = self.optimizer.add_edge(edge)
+            self.set_of_new_edges.add(edge)
+
             if(not finished):
                 print("Adding edge in g2o is not finished")
 
@@ -63,6 +69,8 @@ class g2oGraphBuilder():
                     vertex1Id).estimate() * measure.inverse())
                 vc0.set_fixed(False)
                 self.optimizer.add_vertex(vc0)
+                self.set_of_new_vertex.add(vc0)
+
                 edge = g2o.EdgeSE3()
                 edge.set_vertex(0, self.optimizer.vertex(vertex0Id))
                 edge.set_vertex(1, self.optimizer.vertex(vertex1Id))
@@ -70,12 +78,15 @@ class g2oGraphBuilder():
 
                 # edge.set_information(np.eye(6) * 2)
                 finished = self.optimizer.add_edge(edge)
+                self.set_of_new_edges.add(edge)
 
             else:
                 vc0 = g2o.VertexSE3()
                 vc0.set_id(vertex0Id)
                 vc0.set_fixed(False)
                 self.optimizer.add_vertex(vc0)
+                self.set_of_new_vertex.add(vc0)
+
                 self.add_edge(vertex0Id, vertex1Id, measure)
 
     def vertices_and_edges(self):
@@ -98,16 +109,24 @@ class g2oGraphBuilder():
 
         # optimizing
     def optimize(self, number_of_steps, verbose=True, save_result=True, output_name="output.g2o"):
-        # if(not self.already_initialized):
         self.optimizer.set_verbose(verbose)
+        if(not self.already_initialized):
 
-        self.optimizer.initialize_optimization()
-        # self.already_initialized = True
+            self.optimizer.initialize_optimization()
+            # self.set_of_new_edges = set()
+            self.already_initialized = True
+        else:
+            self.optimizer.update_initialization(
+                self.set_of_new_vertex, self.set_of_new_edges)
+            self.set_of_new_edges = set()
+            self.set_of_new_vertex = set()
+            # self.optimizer.compute_initial_guess()
         self.optimizer.compute_active_errors()
         if(verbose):
             print('Optimization:')
             print('Initial chi2 = %f' % self.optimizer.chi2())
-
         self.optimizer.optimize(number_of_steps)
         if(save_result):
             self.optimizer.save(output_name)
+        batch_stat = self.optimizer.batch_statistics
+        # print(batch_stat)

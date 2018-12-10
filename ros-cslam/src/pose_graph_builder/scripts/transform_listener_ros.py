@@ -24,7 +24,9 @@ class transform_listener():
         self.mygraph = None
         self.old_stamps = {}
         self.id_map = {}
-        self.n = 0
+        self.last_callback = rospy.get_time()
+        self.optim_period = 0.5
+        self.optim_period_counter = -5.0
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -65,7 +67,7 @@ class transform_listener():
         if(node_type == "duckie"):
             # do some transform
             t = [0.0, 0.0, 0.1]
-            z_angle = -90
+            z_angle = 90
             z_angle = np.deg2rad(z_angle)
             x_angle = np.deg2rad(180)
             R_z = g.rotation_from_axis_angle(
@@ -117,6 +119,8 @@ class transform_listener():
     def callback(self, data):
         # self.lock.acquire()
         a = rospy.get_time()
+        self.optim_period_counter += a - self.last_callback
+        self.last_callback = a
         id0 = data.header.frame_id
         id1 = data.child_frame_id
 
@@ -156,21 +160,22 @@ class transform_listener():
         else:
             self.handle_duckiebot_message(id0, id1, transform, time_stamp)
 
-        self.n += 1
-        if(self.n == 100):
+        if(self.optim_period_counter > self.optim_period):
             self.mygraph.optimize(
-                3,  save_result=True, verbose=True, output_name="/home/amaury/test2.g2o")
-            self.n = 0
+                10,  save_result=True, verbose=True, output_name="/home/amaury/test2.g2o")
+            self.optim_period_counter = 0
         # self.lock.release()
-        if(self.n % 20 == 0):
+        # if(self.n % 50 == 0):
             pose_dict = self.mygraph.get_all_poses()
             for node_type, node_list in pose_dict.iteritems():
                 for node_id, node_pose in node_list.iteritems():
                     self.tfbroadcast(node_type, node_id, node_pose)
+
         b = rospy.get_time()
         diff = b-a
-
-        # print("difference time is %f " % diff)
+        self.last_callback = rospy.get_time()
+        # if(self.n == 0):
+        #     print("listener frequency is %f " % (1.0/diff))
 
     def tfbroadcast(self, node_type, node_id, node_pose):
         br = tf2_ros.TransformBroadcaster()
@@ -205,7 +210,6 @@ class transform_listener():
         # name for our 'listener' node so that multiple listeners can
         # run simultaneously.
 
-        rospy.init_node('listener', anonymous=True)
         initial_floor_april_tags = "%s/%s" % (rospy.get_param(
             "config_folder"), "robotarium1.yaml")
         self.mygraph = dGB.duckietownGraphBuilder(
@@ -215,13 +219,15 @@ class transform_listener():
         rospy.Subscriber("/poses_acquisition/poses",
                          TransformStamped, self.callback)
 
-        rospy.Subscriber("/poses_acquisition/odomdcvetry",
+        rospy.Subscriber("/poses_acquisition/odometry",
                          TransformStamped, self.callback)
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
 
 
 def main():
+    rospy.init_node('listener', anonymous=True)
+
     tflistener = transform_listener()
     tflistener.listen()
 

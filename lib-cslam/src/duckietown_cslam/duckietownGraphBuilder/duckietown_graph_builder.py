@@ -15,7 +15,7 @@ class duckietownGraphBuilder():
         initial_dicts = [initial_duckie_dict,
                          initial_watchtower_dict, initial_april_dict]
         self.lists = dict(zip(self.types, initial_dicts))
-        self.movable = []
+        self.movable = ["duckie"]
         self.smallest_time_step = smallest_time_step
         self.counters = dict()
         self.lock = threading.Lock()
@@ -72,7 +72,8 @@ class duckietownGraphBuilder():
         [node_type, node_id] = vertex_id.split("_")
         added = self.add_node_to_list(node_type, node_id, time_stamp)
         if(not added):
-            print("add_vertex did not add : node as already there")
+            print("add_vertex did not add : node %s at time %f as already there" % (
+                vertex_id, time_stamp))
         else:
             p = [p[0], p[1], 0.0]
             R = g.rotation_from_axis_angle(
@@ -113,8 +114,8 @@ class duckietownGraphBuilder():
     def interpolate(self, old_time_stamp, new_time_stamp, node_type, node_id, measure, vertexId):
         to_interpolate = {time_stamp: self.lists[node_type][node_id][time_stamp] for time_stamp in self.lists[node_type][node_id].keys() if (
             time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)}
-        # print("interpolating one odometry measure on %d nodes" %
-        #   len(to_interpolate))
+        print("interpolating one odometry measure on %d nodes" %
+              len(to_interpolate))
         sorted_time_stamps = sorted(to_interpolate.keys())
 
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
@@ -144,7 +145,7 @@ class duckietownGraphBuilder():
                 vertexId, sorted_time_stamps[i+1])
             self.graph.add_edge(
                 vertex0Id_int, vertex1Id_int, interpolated_measure)
-        # print("end interpolation")
+        print("end interpolation")
         if(check != 1.0):
             # print("damn, check is %.4f instead of 1.0" % check)
             pass
