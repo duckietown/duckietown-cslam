@@ -19,7 +19,7 @@ class TransformListener():
        duckietown-visualization.
 
        Attributes:
-           pose_graph: Pose graph
+           pose_graph: Pose graph.
            old_odometry_stamps: Stores, for each ID, the time stamp of the last
                                 odometry message read for the object with that
                                 ID.
