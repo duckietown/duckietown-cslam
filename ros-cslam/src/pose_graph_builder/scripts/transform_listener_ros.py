@@ -26,7 +26,7 @@ class transform_listener():
         self.id_map = {}
         self.last_callback = rospy.get_time()
         self.optim_period = 0.5
-        self.optim_period_counter = -5.0
+        self.optim_period_counter = -10.0
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -75,8 +75,8 @@ class transform_listener():
             R_x = g.rotation_from_axis_angle(
                 np.array([1, 0, 0]), x_angle)
             R = np.matmul(R_x, R_z)
-            rectification = g2o.Isometry3d(R, t)
-            transform = transform * rectification
+            H_apriltag_to_base = g2o.Isometry3d(R, t)
+            transform = transform * H_apriltag_to_base
 
         self.mygraph.add_edge(id0, id1, transform,
                               time_stamp)
@@ -97,8 +97,8 @@ class transform_listener():
             R_z = g.rotation_from_axis_angle(
                 np.array([0, 0, 1]), z_angle)
             R = np.matmul(R_y, R_z)
-            rectification = g2o.Isometry3d(R, t)
-            transform = rectification * transform
+            H_base_to_camera = g2o.Isometry3d(R, t)
+            transform = H_base_to_camera * transform
         else:
             print("This should not be here!")
         self.mygraph.add_edge(id0, id1, transform,
@@ -142,6 +142,8 @@ class transform_listener():
         t = [data.transform.translation.x,
              data.transform.translation.y, data.transform.translation.z]
         # to transform to a rotation matrix!
+        # Careful, in Pygeometry, quaternion is (w, x, y, z)
+
         q = [data.transform.rotation.w, data.transform.rotation.x,
              data.transform.rotation.y, data.transform.rotation.z]
         M = g.rotations.rotation_from_quaternion(np.array(q))
@@ -162,7 +164,7 @@ class transform_listener():
 
         if(self.optim_period_counter > self.optim_period):
             self.mygraph.optimize(
-                10,  save_result=True, verbose=True, output_name="/home/amaury/test2.g2o")
+                10,  save_result=True, verbose=True, output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
         # self.lock.release()
         # if(self.n % 50 == 0):
@@ -195,6 +197,7 @@ class transform_listener():
         if(det < 0):
             print("after optim : det = %f" % det)
         q = g.rotations.quaternion_from_rotation(node_pose.R)
+        # Careful, in Pygeometry, quaternion is (w, x, y, z)
         t.transform.rotation.w = q[0]
         t.transform.rotation.x = q[1]
         t.transform.rotation.y = q[2]

@@ -26,7 +26,7 @@ class g2oGraphBuilder():
         self.optimizer.add_vertex(vc)
         self.set_of_new_vertex.add(vc)
 
-    def add_edge(self, vertex0Id, vertex1Id, measure):
+    def add_edge(self, vertex0Id, vertex1Id, measure, measure_information=None):
         '''
         Helper function to add an edge
         vertex 0 and 1 are valid IDs of vertex inside optimizer.
@@ -54,7 +54,8 @@ class g2oGraphBuilder():
             # r_final = np.concatenate((ligne1, ligne2), axis=0)
 
             # edge.set_information(r_final)
-
+            if(measure_information):
+                edge.set_information(measure_information)
             finished = self.optimizer.add_edge(edge)
             self.set_of_new_edges.add(edge)
 
@@ -75,7 +76,8 @@ class g2oGraphBuilder():
                 edge.set_vertex(0, self.optimizer.vertex(vertex0Id))
                 edge.set_vertex(1, self.optimizer.vertex(vertex1Id))
                 edge.set_measurement(measure)
-
+                if(measure_information):
+                    edge.set_information(measure_information)
                 # edge.set_information(np.eye(6) * 2)
                 finished = self.optimizer.add_edge(edge)
                 self.set_of_new_edges.add(edge)

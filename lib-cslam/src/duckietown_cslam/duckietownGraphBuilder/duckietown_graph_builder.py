@@ -10,14 +10,13 @@ time_step = 0.5
 
 
 class duckietownGraphBuilder():
-    def __init__(self, initial_duckie_dict={}, initial_watchtower_dict={}, initial_april_dict={}, smallest_time_step=0.00000010, initial_floor_april_tags="", retro_interpolate=True):
+    def __init__(self, initial_duckie_dict={}, initial_watchtower_dict={}, initial_april_dict={}, initial_floor_april_tags="", retro_interpolate=True):
         self.graph = g2oBG.g2oGraphBuilder()
         self.types = ["duckie", "watchtower", "apriltag"]
         initial_dicts = [initial_duckie_dict,
                          initial_watchtower_dict, initial_april_dict]
         self.lists = dict(zip(self.types, initial_dicts))
         self.movable = ["duckie"]
-        self.smallest_time_step = smallest_time_step
         self.counters = dict()
         self.last_time_stamp = dict()
         self.lock = threading.Lock()
@@ -65,30 +64,29 @@ class duckietownGraphBuilder():
         if node_id not in self.lists[node_type]:
             self.lists[node_type][node_id] = dict()
         if time_stamp not in self.lists[node_type][node_id] and (node_type in self.movable or count == 0):
-            if(time_stamp in self.lists[node_type][node_id]):
-                print("nonsensen!!!!!!!!!!!!!!!!!!")
             self.lists[node_type][node_id][time_stamp] = count
             self.counters[node_type][node_id] = self.counters[node_type][node_id] + 1
+
             if(time_stamp > self.last_time_stamp[node_type][node_id]):
                 self.last_time_stamp[node_type][node_id] = time_stamp
             else:
                 if(self.retro_interpolate):
-                    time_stamps = sorted(self.lists[node_type][node_id].keys())
-                    time_stamp_index = time_stamps.index(time_stamp)
-                    if(time_stamp_index > 0 and time_stamp_index < len(time_stamps)-1):
-                        side_stamps = [time_stamps[time_stamp_index-1],
-                                       time_stamps[time_stamp_index+1]]
+                    sorted_time_stamp = sorted(
+                        self.lists[node_type][node_id].keys())
+                    time_stamp_index = sorted_time_stamp.index(time_stamp)
+                    if(time_stamp_index > 0 and time_stamp_index < len(sorted_time_stamp)-1):
+
                         before = self.convert_names_to_int(
-                            vertexId, time_stamps[time_stamp_index-1])
+                            vertexId, sorted_time_stamp[time_stamp_index-1])
                         after = self.convert_names_to_int(
-                            vertexId, time_stamps[time_stamp_index+1])
+                            vertexId, sorted_time_stamp[time_stamp_index+1])
                         transform = self.graph.get_transform(before, after)
                         if(transform != 0):
                             print(
                                 "Will perform retro-interpolation")
 
-                            self.interpolate(time_stamps[time_stamp_index-1],
-                                             time_stamps[time_stamp_index+1], node_type, node_id, transform)
+                            self.interpolate(sorted_time_stamp[time_stamp_index-1],
+                                             sorted_time_stamp[time_stamp_index+1], node_type, node_id, transform)
                         else:
                             print("will not perform retro_interpolation with %d and %d " % (
                                 before, after))
@@ -119,8 +117,8 @@ class duckietownGraphBuilder():
             if(isinitialfloortag):
                 self.graph.add_edge(0, vertex_id, vertexPose)
 
-    def convert_names_to_int(self, s, time_stamp):
-        [node_type, node_id] = s.split("_")
+    def convert_names_to_int(self, id, time_stamp):
+        [node_type, node_id] = id.split("_")
         a = 0
         b = int(node_id) % 1000
 
@@ -225,7 +223,7 @@ class duckietownGraphBuilder():
         for node_type, listdict in self.lists.iteritems():
             result_dict[node_type] = {}
             for node_id, time_stamp_dict in listdict.iteritems():
-                last_time_stamp = max(time_stamp_dict.keys())
+                last_time_stamp = self.last_time_stamp[node_type][node_id]
                 vertex_id = "%s_%s" % (node_type, node_id)
                 if(self.convert_names_to_int(vertex_id, last_time_stamp) not in self.graph.optimizer.vertices()):
                     # print("len(time_stamp_dict) = %i for %s %s" %
