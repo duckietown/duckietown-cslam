@@ -10,9 +10,9 @@ services:
         - ACQ_DEVICE_NAME=watchtower05
         - ACQ_SOCKET_PORT=43405
         - ACQ_BEAUTIFY=0
-        - ACQ_UPDATE_RATE=30
+        - ACQ_ODOMETRY_UPDATE_RATE=0
+        - ACQ_POSES_UPDATE_RATE=10
         - ACQ_TEST_STREAM=0
-        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
     network_mode: "host"
     restart: always
 
@@ -26,9 +26,9 @@ services:
         - ACQ_DEVICE_NAME=watchtower06
         - ACQ_SOCKET_PORT=43406
         - ACQ_BEAUTIFY=0
-        - ACQ_UPDATE_RATE=30
+        - ACQ_ODOMETRY_UPDATE_RATE=0
+        - ACQ_POSES_UPDATE_RATE=10
         - ACQ_TEST_STREAM=0
-        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
     network_mode: "host"
     restart: always
 
@@ -42,25 +42,9 @@ services:
         - ACQ_DEVICE_NAME=watchtower09
         - ACQ_SOCKET_PORT=43409
         - ACQ_BEAUTIFY=0
-        - ACQ_UPDATE_RATE=30
+        - ACQ_ODOMETRY_UPDATE_RATE=0
+        - ACQ_POSES_UPDATE_RATE=10
         - ACQ_TEST_STREAM=0
-        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
-    network_mode: "host"
-    restart: always
-
-  acquisition_node_wt10:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
-    environment:
-        - ACQ_ROS_MASTER_URI_DEVICE=watchtower10.local
-        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.81
-        - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
-        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
-        - ACQ_DEVICE_NAME=watchtower10
-        - ACQ_SOCKET_PORT=43410
-        - ACQ_BEAUTIFY=0
-        - ACQ_UPDATE_RATE=30
-        - ACQ_TEST_STREAM=0
-        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
     network_mode: "host"
     restart: always
 
@@ -74,9 +58,9 @@ services:
         - ACQ_DEVICE_NAME=watchtower11
         - ACQ_SOCKET_PORT=43411
         - ACQ_BEAUTIFY=0
-        - ACQ_UPDATE_RATE=30
+        - ACQ_ODOMETRY_UPDATE_RATE=0
+        - ACQ_POSES_UPDATE_RATE=10
         - ACQ_TEST_STREAM=0
-        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
     network_mode: "host"
     restart: always
 
@@ -90,8 +74,6 @@ services:
         - ACQ_DEVICE_NAME=watchtower12
         - ACQ_SOCKET_PORT=43412
         - ACQ_BEAUTIFY=0
-        - ACQ_UPDATE_RATE=30
+        - ACQ_ODOMETRY_UPDATE_RATE=0
+        - ACQ_POSES_UPDATE_RATE=10
         - ACQ_TEST_STREAM=0
-        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
-    network_mode: "host"
-    restart: always
