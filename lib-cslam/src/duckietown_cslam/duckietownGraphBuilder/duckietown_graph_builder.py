@@ -9,7 +9,7 @@ import threading
 time_step = 0.5
 
 
-class duckietownGraphBuilder():
+class DuckietownGraphBuilder():
 
     def __init__(self,
                  initial_duckie_dict={},
