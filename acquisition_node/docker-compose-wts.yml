@@ -8,7 +8,6 @@ services:
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower05
-        - ACQ_SOCKET_PORT=43405
         - ACQ_BEAUTIFY=0
         - ACQ_ODOMETRY_UPDATE_RATE=0
         - ACQ_POSES_UPDATE_RATE=10
@@ -24,7 +23,6 @@ services:
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower06
-        - ACQ_SOCKET_PORT=43406
         - ACQ_BEAUTIFY=0
         - ACQ_ODOMETRY_UPDATE_RATE=0
         - ACQ_POSES_UPDATE_RATE=10
@@ -40,7 +38,6 @@ services:
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower09
-        - ACQ_SOCKET_PORT=43409
         - ACQ_BEAUTIFY=0
         - ACQ_ODOMETRY_UPDATE_RATE=0
         - ACQ_POSES_UPDATE_RATE=10
@@ -56,7 +53,6 @@ services:
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower11
-        - ACQ_SOCKET_PORT=43411
         - ACQ_BEAUTIFY=0
         - ACQ_ODOMETRY_UPDATE_RATE=0
         - ACQ_POSES_UPDATE_RATE=10
@@ -72,7 +68,6 @@ services:
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.85
         - ACQ_DEVICE_NAME=watchtower12
-        - ACQ_SOCKET_PORT=43412
         - ACQ_BEAUTIFY=0
         - ACQ_ODOMETRY_UPDATE_RATE=0
         - ACQ_POSES_UPDATE_RATE=10

@@ -16,11 +16,9 @@ ENV ACQ_ROS_MASTER_URI_SERVER_PORT 11311
 ENV ACQ_POSES_UPDATE_RATE 10
 ENV ACQ_ODOMETRY_UPDATE_RATE 30
 ENV ACQ_STATIONARY_ODOMETRY 0
-ENV ACQ_SOCKET_HOST 127.0.0.1
-ENV ACQ_SOCKET_PORT 65432
 ENV ACQ_TOPIC_RAW camera_node/image/compressed
-# ENV ACQ_TOPIC_CAMERAINFO camera_node/camera_info
-ENV ACQ_TOPIC_VELOCITY_TO_POSE velocity_to_pose_node/pose
+ENV ACQ_TOPIC_CAMERAINFO camera_node/camera_info
+# ENV ACQ_TOPIC_VELOCITY_TO_POSE velocity_to_pose_node/pose
 ENV ACQ_TAG_SIZE 0.065
 ENV ACQ_POSES_TOPIC poses
 ENV ACQ_ODOMETRY_TOPIC odometry
@@ -50,17 +48,12 @@ COPY duckietown_msgs /catkin-ws/src/duckietown_msgs
 RUN /bin/bash -c "source /catkin-ws/devel/setup.bash; cd /catkin-ws/; catkin_make"
 
 # Copy the Python files
-COPY deviceSideProcessor.py /acquisition_node
-COPY deviceSideSubscriber.py /acquisition_node
+COPY acquisitionProcessor.py /acquisition_node
 COPY image_rectifier.py /acquisition_node
-COPY interprocess_communication.py /acquisition_node
 COPY serverSidePublisher.py /acquisition_node
+COPY acquire_and_publish.py /acquisition_node
 
-# Copy the bash wrappers (needed to configure the right environment
-# (ROS_MASTER_URI) and to make sure the python modules
-# are restarted if they exit for whatever reason)
-COPY startDeviceSide.sh /acquisition_node
-COPY startServerSide.sh /acquisition_node
+# Copy the bash wrapper
 COPY wrapper.sh /acquisition_node
 RUN chmod +x /acquisition_node/*.sh
 

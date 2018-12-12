@@ -8,7 +8,6 @@ services:
         - ACQ_ROS_MASTER_URI_SERVER=Exia.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.115
         - ACQ_DEVICE_NAME=donaldthegreat
-        - ACQ_SOCKET_PORT=41455
         - ACQ_BEAUTIFY=0
         - ACQ_UPDATE_RATE=30
         - ACQ_TEST_STREAM=1

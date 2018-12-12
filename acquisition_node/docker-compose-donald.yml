@@ -8,7 +8,6 @@ services:
         - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.103
         - ACQ_DEVICE_NAME=donaldthegreat
-        - ACQ_SOCKET_PORT=46455
         - ACQ_BEAUTIFY=0
         - ACQ_STATIONARY_ODOMETRY=0
         - ACQ_ODOMETRY_UPDATE_RATE=15
