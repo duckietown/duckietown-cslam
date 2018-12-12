@@ -46,8 +46,6 @@ if __name__ == '__main__':
     ros_master_uri_server = "http://"+ACQ_ROS_MASTER_URI_SERVER+":"+ACQ_ROS_MASTER_URI_SERVER_PORT
     ros_master_uri_device = "http://"+ACQ_ROS_MASTER_URI_DEVICE+":"+ACQ_ROS_MASTER_URI_DEVICE_PORT
 
-    print("GOT A")
-
     outputDictQueue = multiprocessing.Queue(maxsize=20)
 
     deviceSideProcess = multiprocessing.Process(target=runDeviceSideProcess,
@@ -57,12 +55,8 @@ if __name__ == '__main__':
                                                 args=(ros_master_uri_server,outputDictQueue,quitEvent,),
                                                 name="serverSideProcess")
 
-    print("GOT B")
-
     deviceSideProcess.start()
     serverSideProcess.start()
-
-    print("GOT C")
 
     # Exit if any of the two processes exits:
     while True:
