@@ -1,6 +1,8 @@
-FROM ros:kinetic-ros-core
+FROM duckietown/rpi-ros-kinetic-roscore:master18
 
 MAINTAINER Aleksandar Petrov <alpetrov@ethz.ch>
+
+RUN [ "cross-build-start" ]
 
 # YOU ALWAYS NEED TO SPECIFY:
 # ACQ_ROS_MASTER_URI_DEVICE
@@ -63,6 +65,8 @@ COPY startDeviceSide.sh /acquisition_node
 COPY startServerSide.sh /acquisition_node
 COPY wrapper.sh /acquisition_node
 RUN chmod +x /acquisition_node/*.sh
+
+RUN [ "cross-build-end" ]
 
 # Start the processes
 CMD /bin/bash -c "cd /acquisition_node; source /catkin-ws/devel/setup.bash; /acquisition_node/wrapper.sh"

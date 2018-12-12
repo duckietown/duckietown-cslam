@@ -190,7 +190,7 @@ class acquisitionProcessor():
                                 fontScale=0.6,
                                 color=(0, 255, 0))
 
-                    outputDict["test_stream_image"] = self.bridge.cv2_to_imgmsg(image)#, dst_format='jpg')
+                    outputDict["test_stream_image"] = self.bridge.cv2_to_compressed_imgmsg(image, dst_format='png')
                     outputDict["test_stream_image"].header.stamp.secs = currRawImage.header.stamp.secs
                     outputDict["test_stream_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
                     outputDict["test_stream_image"].header.frame_id = ACQ_DEVICE_NAME
@@ -198,7 +198,7 @@ class acquisitionProcessor():
                     outputDict["raw_image"] = self.lastCameraImage
                     outputDict["raw_camera_info"] = self.lastCameraInfo
 
-                    outputDict["rectified_image"] = self.bridge.cv2_to_imgmsg(outputDict["rect_image"])#, dst_format='jpg')
+                    outputDict["rectified_image"] = self.bridge.cv2_to_compressed_imgmsg(outputDict["rect_image"], dst_format='png')
                     outputDict["rectified_image"].header.stamp.secs = currRawImage.header.stamp.secs
                     outputDict["rectified_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
                     outputDict["rectified_image"].header.frame_id = ACQ_DEVICE_NAME
