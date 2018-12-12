@@ -560,22 +560,4 @@ class DuckietownGraphBuilder():
                 result_dict[node_type][node_id] = self.graph.vertex_pose(
                     self.convert_names_to_int(vertex_id, last_time_stamp))
 
-        print("timestamp_local_indices:")
-        for node_type in self.timestamp_local_indices.keys():
-            print("* {}:".format(node_type))
-            for node_id in self.timestamp_local_indices[node_type].keys():
-                print("  - {}:".format(node_id))
-                for time_stamp in self.timestamp_local_indices[node_type][
-                        node_id].keys():
-                    print("    - {0}: {1}".format(
-                        time_stamp, self.timestamp_local_indices[node_type][
-                            node_id][time_stamp]))
-        print("num_local_indices_assigned:")
-        for node_type in self.num_local_indices_assigned.keys():
-            print("* {}:".format(node_type))
-            for node_id in self.num_local_indices_assigned[node_type].keys():
-                print("  - {0}: {1}".format(
-                    node_id,
-                    self.num_local_indices_assigned[node_type][node_id]))
-
         return result_dict
