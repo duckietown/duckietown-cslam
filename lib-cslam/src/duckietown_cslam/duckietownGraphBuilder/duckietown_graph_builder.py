@@ -28,16 +28,16 @@ class DuckietownGraphBuilder():
                   at a certain instant of time (timestamp) and is identified in
                   the internal g2o representation with a strictly integer index.
                   Since each node (i.e., object) can be seen or see another
-                  nodes several times, multiple vertices are added to the graph
+                  node several times, multiple vertices are added to the graph
                   for the same node, with each vertex identifying the node at a
                   specific timestamp. To define the integer index that g2o needs
                   to associate to each vertex, we define an encoding (cf.
                   convert_names_to_int) based on the type of the node, the ID of
-                  the node and the timestamp. Furthermore, to use compress the
+                  the node and the timestamp. Furthermore, to compress the
                   representation, for the encoding we do not use the timestamp
                   itself but rather a 'local index' that defines the order in
                   which new timestamps are associated to a node. For instance,
-                  if a Duckiebot first (node_type="duckie", node_id=88) sees an
+                  if a Duckiebot (node_type="duckie", node_id=88) first sees an
                   April tag and sends the corresponding message at timestamp t1,
                   the latter timestamp is assigned 'local index' 0 for that
                   node. If the Duckiebot is later detected by a watchtower, with
