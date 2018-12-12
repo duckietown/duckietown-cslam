@@ -92,7 +92,7 @@ class DuckietownGraphBuilder():
         self.last_time_stamp = dict()
         # Set retro-interpolate mode as inputted.
         self.retro_interpolate = retro_interpolate
-        # Load the initial floor April tags if not done yet.
+       # Load the initial floor April tags if given an input file name
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
 
@@ -153,8 +153,8 @@ class DuckietownGraphBuilder():
            Returns:
                True if the operation is successful, False otherwise (i.e., if
                the timestamp is already associated to the node with a 'local
-               index' or if the the node is not movable and the number of 'local
-               indices' assigned is greater than zero).
+               index' or if the the node is not movable and already has
+               an associated timestamp).
         """
         vertex_id = "%s_%s" % (node_type, node_id)
         # If no nodes of the input node type were ever associated to a timestamp
@@ -184,7 +184,7 @@ class DuckietownGraphBuilder():
                 time_stamp] = num_local_indices_assigned
             self.num_local_indices_assigned[node_type][
                 node_id] = self.num_local_indices_assigned[node_type][node_id] + 1
-            # If the new timestamp is posterior to all previosly-received
+            # If the new timestamp is posterior to all previously-received
             # timestamps simply set it to be the timestamp furthest in time
             # among those associated to the node. If, on the contrary, due to
             # delays in the transmission/reception of the messages this is not
@@ -207,6 +207,8 @@ class DuckietownGraphBuilder():
                    time_stamp=0.0):
         """Adds a vertex with an ID given in the format outputted from the
           transform_listener and with a given pose to the g2o graph.
+
+TODO : add a more general add_vertex function that takes a 3D pose and not only a 2D one.
 
            Args:
                vertex_id: ID of the node whose pose should be added as a vertex
