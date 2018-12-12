@@ -58,6 +58,8 @@ def publishOnServer(outputDictQueue, quitEvent):
             if "odometry" in incomingData:
                 publisherOdometry.publish(incomingData["odometry"])
 
+                    publisherPoses.publish(newTransformStamped)
+                    print("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
 
             # Publish the test and raw data if submitted and requested:
             if ACQ_TEST_STREAM:
@@ -81,6 +83,14 @@ def publishOnServer(outputDictQueue, quitEvent):
 
                 if "rectified_camera_info" in incomingData:
                     publisherCameraInfoRectified.publish(incomingData["rectified_camera_info"])
+
+            seq_stamper+=1
+
+        except KeyboardInterrupt:
+            raise( Exception("Exiting") )
+        except Exception as e:
+            print("Exception: %s", str(e))
+            pass
 
             seq_stamper+=1
 

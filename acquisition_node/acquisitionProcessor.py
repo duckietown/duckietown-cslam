@@ -29,6 +29,7 @@ class acquisitionProcessor():
     def __init__(self, outputDictQueue):
 
         # Get the environment variables
+<<<<<<< HEAD
         self.ACQ_POSES_UPDATE_RATE = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10)) #Hz
         self.ACQ_ODOMETRY_UPDATE_RATE = float(os.getenv('ACQ_ODOMETRY_UPDATE_RATE', 30)) #Hz
         self.ACQ_STATIONARY_ODOMETRY = bool(int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
@@ -50,6 +51,29 @@ class acquisitionProcessor():
 
         if self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE>0: #Only if set (probably not for watchtowers)
             self.subscriberCameraInfo = rospy.Subscriber("/"+self.ACQ_DEVICE_NAME+"/"+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
+=======
+        self.ACQPOSES_UPDATE_RATE = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10)) #Hz
+        self.ACQODOMETRY_UPDATE_RATE = float(os.getenv('ACQ_ODOMETRY_UPDATE_RATE', 30)) #Hz
+        self.ACQSTATIONARY_ODOMETRY = bool(int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
+        self.ACQSOCKET_HOST = os.getenv('ACQ_SOCKET_HOST', '127.0.0.1')
+        self.ACQSOCKET_PORT = int(os.getenv('ACQ_SOCKET_PORT', 65432))
+        self.ACQDEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', "watchtower10")
+        self.ACQTOPIC_RAW = os.getenv('ACQ_TOPIC_RAW', "camera_node/image/raw")
+        self.ACQTOPIC_CAMERAINFO = os.getenv('ACQ_TOPIC_CAMERAINFO', "camera_node/camera_info")
+        self.ACQTOPIC_VELOCITY_TO_POSE = os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', None)
+        self.ACQTEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
+        self.ACQBEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
+        self.ACQTAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
+
+        rospy.init_node('acquisition_processor', anonymous=True, disable_signals=True)
+        self.subscriberRawImage = rospy.Subscriber("/"+self.ACQDEVICE_NAME+"/"+self.ACQTOPIC_RAW, CompressedImage,
+                                                    self.camera_image_callback,  queue_size = 1)
+        self.subscriberCameraInfo = rospy.Subscriber("/"+self.ACQDEVICE_NAME+"/"+self.ACQTOPIC_CAMERAINFO, CameraInfo,
+                                                    self.camera_info_callback,  queue_size = 1)
+
+        if self.ACQTOPIC_VELOCITY_TO_POSE and self.ACQODOMETRY_UPDATE_RATE>0: #Only if set (probably not for watchtowers)
+            self.subscriberCameraInfo = rospy.Subscriber("/"+self.ACQDEVICE_NAME+"/"+self.ACQTOPIC_VELOCITY_TO_POSE, Pose2DStamped,
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
                                                         self.odometry_callback,  queue_size = 1)
 
         self.bridge = CvBridge()
@@ -71,12 +95,21 @@ class acquisitionProcessor():
     def update(self, quitEvent):
         while not quitEvent.is_set():
             #check if we want odometry and if it has been sent in the last X secs
+<<<<<<< HEAD
             if self.ACQ_STATIONARY_ODOMETRY and self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE>0 and rospy.get_time() - self.timeLastPub_odometry >= 1.0/self.ACQ_ODOMETRY_UPDATE_RATE:
                 odometry = TransformStamped()
                 odometry.header.seq = 0
                 odometry.header.stamp = rospy.get_rostime()
                 odometry.header.frame_id = self.ACQ_DEVICE_NAME
                 odometry.child_frame_id = self.ACQ_DEVICE_NAME
+=======
+            if self.ACQSTATIONARY_ODOMETRY and self.ACQTOPIC_VELOCITY_TO_POSE and self.ACQODOMETRY_UPDATE_RATE>0 and rospy.get_time() - self.timeLastPub_odometry >= 1.0/self.ACQODOMETRY_UPDATE_RATE:
+                odometry = TransformStamped()
+                odometry.header.seq = 0
+                odometry.header.stamp = rospy.get_rostime()
+                odometry.header.frame_id = self.ACQDEVICE_NAME
+                odometry.child_frame_id = self.ACQDEVICE_NAME
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
                 odometry.transform.translation.x = 0
                 odometry.transform.translation.y = 0
                 odometry.transform.translation.z = 0
@@ -91,7 +124,11 @@ class acquisitionProcessor():
                                          block=True,
                                          timeout=None)
 
+<<<<<<< HEAD
             if rospy.get_time() - self.timeLastPub_poses >= 1.0/self.ACQ_POSES_UPDATE_RATE and not self.lastImageProcessed:
+=======
+            if rospy.get_time() - self.timeLastPub_poses >= 1.0/self.ACQPOSES_UPDATE_RATE and not self.lastImageProcessed:
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
                 self.timeLastPub_poses = rospy.get_time()
                 outputDict = self.camera_image_process()
                 if outputDict is not None:
@@ -106,8 +143,13 @@ class acquisitionProcessor():
             odometry = TransformStamped()
             odometry.header.seq = 0
             odometry.header = ros_data.header
+<<<<<<< HEAD
             odometry.header.frame_id = self.ACQ_DEVICE_NAME
             odometry.child_frame_id = self.ACQ_DEVICE_NAME
+=======
+            odometry.header.frame_id = self.ACQDEVICE_NAME
+            odometry.child_frame_id = self.ACQDEVICE_NAME
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
 
             transform_current = np.array([[math.cos(ros_data.theta), -1.0 * math.sin(ros_data.theta), ros_data.x],
                                           [math.sin(ros_data.theta), math.cos(ros_data.theta), ros_data.y],
@@ -175,7 +217,11 @@ class acquisitionProcessor():
             outputDict = dict()
 
             # Process the image and extract the apriltags
+<<<<<<< HEAD
             dsp_options={"beautify": self.ACQ_BEAUTIFY, "tag_size": self.ACQ_TAG_SIZE}
+=======
+            dsp_options={"beautify": self.ACQBEAUTIFY, "tag_size": self.ACQTAG_SIZE}
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
             dsp = deviceSideProcessor(dsp_options)
             outputDict = dsp.process(cv_image,  np.array(currCameraInfo.K).reshape((3,3)), currCameraInfo.D)
 
@@ -183,10 +229,17 @@ class acquisitionProcessor():
             for idx in range(len(outputDict["apriltags"])):
                 outputDict["apriltags"][idx]["timestamp_secs"] = currRawImage.header.stamp.secs
                 outputDict["apriltags"][idx]["timestamp_nsecs"] = currRawImage.header.stamp.nsecs
+<<<<<<< HEAD
                 outputDict["apriltags"][idx]["source"] = self.ACQ_DEVICE_NAME
 
             # Generate a diagnostic image
             if self.ACQ_TEST_STREAM==1:
+=======
+                outputDict["apriltags"][idx]["source"] = self.ACQDEVICE_NAME
+
+            # Generate a diagnostic image
+            if self.ACQTEST_STREAM==1:
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
                 try:
                     image = np.copy(outputDict['rect_image'])
                     for tag in outputDict["apriltags"]:
@@ -199,7 +252,11 @@ class acquisitionProcessor():
                                         fontScale=0.4,
                                         color=(255, 0, 0))
 
+<<<<<<< HEAD
                     cv2.putText(image,'device: '+ self.ACQ_DEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+"+"+str(currRawImage.header.stamp.nsecs),
+=======
+                    cv2.putText(image,'device: '+ self.ACQDEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+"+"+str(currRawImage.header.stamp.nsecs),
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
                                 org=(30,30),
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 fontScale=0.6,
@@ -208,7 +265,11 @@ class acquisitionProcessor():
                     outputDict["test_stream_image"] = self.bridge.cv2_to_compressed_imgmsg(image, dst_format='png')
                     outputDict["test_stream_image"].header.stamp.secs = currRawImage.header.stamp.secs
                     outputDict["test_stream_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
+<<<<<<< HEAD
                     outputDict["test_stream_image"].header.frame_id = self.ACQ_DEVICE_NAME
+=======
+                    outputDict["test_stream_image"].header.frame_id = self.ACQDEVICE_NAME
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
 
                     outputDict["raw_image"] = self.lastCameraImage
                     outputDict["raw_camera_info"] = self.lastCameraInfo
@@ -216,7 +277,11 @@ class acquisitionProcessor():
                     outputDict["rectified_image"] = self.bridge.cv2_to_compressed_imgmsg(outputDict["rect_image"], dst_format='png')
                     outputDict["rectified_image"].header.stamp.secs = currRawImage.header.stamp.secs
                     outputDict["rectified_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
+<<<<<<< HEAD
                     outputDict["rectified_image"].header.frame_id = self.ACQ_DEVICE_NAME
+=======
+                    outputDict["rectified_image"].header.frame_id = self.ACQDEVICE_NAME
+>>>>>>> f614bde5dadb9372b676ac7c462a4f9827ec0c82
 
                     #THIS DOESN"T WORK YET
                     # print(outputDict["newCameraMatrix"])
