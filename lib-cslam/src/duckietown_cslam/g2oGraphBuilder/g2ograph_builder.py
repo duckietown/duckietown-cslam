@@ -26,26 +26,26 @@ class g2oGraphBuilder():
         self.optimizer.add_vertex(vc)
         self.set_of_new_vertex.add(vc)
 
-    def add_edge(self, vertex0Id, vertex1Id, measure, measure_information=None):
+    def add_edge(self, vertex0_id, vertex1_id, measure, measure_information=None):
         '''
         Helper function to add an edge
         vertex 0 and 1 are valid IDs of vertex inside optimizer.
         measure is a Isometry3d that map the transform from vertex0 to vertex1
         '''
         # print(optimizer.vertices())
-        if vertex0Id in self.optimizer.vertices():
-            if vertex1Id not in self.optimizer.vertices():
+        if vertex0_id in self.optimizer.vertices():
+            if vertex1_id not in self.optimizer.vertices():
                 vc1 = g2o.VertexSE3()
-                vc1.set_id(vertex1Id)
+                vc1.set_id(vertex1_id)
                 vc1.set_estimate(
-                    self.optimizer.vertex(vertex0Id).estimate() * measure)
+                    self.optimizer.vertex(vertex0_id).estimate() * measure)
                 vc1.set_fixed(False)
                 self.optimizer.add_vertex(vc1)
                 self.set_of_new_vertex.add(vc1)
 
             edge = g2o.EdgeSE3()
-            edge.set_vertex(0, self.optimizer.vertex(vertex0Id))
-            edge.set_vertex(1, self.optimizer.vertex(vertex1Id))
+            edge.set_vertex(0, self.optimizer.vertex(vertex0_id))
+            edge.set_vertex(1, self.optimizer.vertex(vertex1_id))
             edge.set_measurement(measure)
             # r = abs(g.rotation_from_axis_angle(
             #     np.array([1, 0, 0]), np.deg2rad(2)))
@@ -63,19 +63,19 @@ class g2oGraphBuilder():
                 print("Adding edge in g2o is not finished")
 
         else:
-            if vertex1Id in self.optimizer.vertices():
+            if vertex1_id in self.optimizer.vertices():
                 vc0 = g2o.VertexSE3()
-                vc0.set_id(vertex0Id)
+                vc0.set_id(vertex0_id)
                 vc0.set_estimate(
-                    self.optimizer.vertex(vertex1Id).estimate() *
+                    self.optimizer.vertex(vertex1_id).estimate() *
                     measure.inverse())
                 vc0.set_fixed(False)
                 self.optimizer.add_vertex(vc0)
                 self.set_of_new_vertex.add(vc0)
 
                 edge = g2o.EdgeSE3()
-                edge.set_vertex(0, self.optimizer.vertex(vertex0Id))
-                edge.set_vertex(1, self.optimizer.vertex(vertex1Id))
+                edge.set_vertex(0, self.optimizer.vertex(vertex0_id))
+                edge.set_vertex(1, self.optimizer.vertex(vertex1_id))
                 edge.set_measurement(measure)
                 if (measure_information):
                     edge.set_information(measure_information)
@@ -85,12 +85,12 @@ class g2oGraphBuilder():
 
             else:
                 vc0 = g2o.VertexSE3()
-                vc0.set_id(vertex0Id)
+                vc0.set_id(vertex0_id)
                 vc0.set_fixed(False)
                 self.optimizer.add_vertex(vc0)
                 self.set_of_new_vertex.add(vc0)
 
-                self.add_edge(vertex0Id, vertex1Id, measure)
+                self.add_edge(vertex0_id, vertex1_id, measure)
 
     def vertices_and_edges(self):
         return (self.optimizer.vertices(), self.optimizer.edges())
