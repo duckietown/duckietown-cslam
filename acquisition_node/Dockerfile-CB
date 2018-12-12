@@ -52,17 +52,12 @@ COPY duckietown_msgs /catkin-ws/src/duckietown_msgs
 RUN /bin/bash -c "source /catkin-ws/devel/setup.bash; cd /catkin-ws/; catkin_make"
 
 # Copy the Python files
-COPY deviceSideProcessor.py /acquisition_node
-COPY deviceSideSubscriber.py /acquisition_node
+COPY acquisitionProcessor.py /acquisition_node
 COPY image_rectifier.py /acquisition_node
-COPY interprocess_communication.py /acquisition_node
 COPY serverSidePublisher.py /acquisition_node
+COPY acquire_and_publish.py /acquisition_node
 
-# Copy the bash wrappers (needed to configure the right environment
-# (ROS_MASTER_URI) and to make sure the python modules
-# are restarted if they exit for whatever reason)
-COPY startDeviceSide.sh /acquisition_node
-COPY startServerSide.sh /acquisition_node
+# Copy the bash wrapper
 COPY wrapper.sh /acquisition_node
 RUN chmod +x /acquisition_node/*.sh
 
