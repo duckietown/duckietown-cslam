@@ -27,6 +27,7 @@ class transform_listener():
         self.last_callback = rospy.get_time()
         self.optim_period = 0.5
         self.optim_period_counter = -10.0
+        self.n = 0
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -119,6 +120,7 @@ class transform_listener():
     def callback(self, data):
         # self.lock.acquire()
         a = rospy.get_time()
+        self.n += 1
         self.optim_period_counter += a - self.last_callback
         self.last_callback = a
         id0 = data.header.frame_id
@@ -162,13 +164,15 @@ class transform_listener():
         else:
             self.handle_duckiebot_message(id0, id1, transform, time_stamp)
 
-        if(self.optim_period_counter > self.optim_period):
+        if(self.n > 60):
             self.mygraph.optimize(
-                10,  save_result=True, verbose=True, output_name="/tmp/test2.g2o")
-            self.optim_period_counter = 0
+                4,  save_result=True, verbose=True, output_name="/tmp/test2.g2o")
+            self.optim_period_counter = 0.0
+            self.n = 0
         # self.lock.release()
         # if(self.n % 50 == 0):
             pose_dict = self.mygraph.get_all_poses()
+
             for node_type, node_list in pose_dict.iteritems():
                 for node_id, node_pose in node_list.iteritems():
                     self.tfbroadcast(node_type, node_id, node_pose)

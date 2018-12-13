@@ -119,15 +119,8 @@ class duckietownGraphBuilder():
 
     def convert_names_to_int(self, id, time_stamp):
         [node_type, node_id] = id.split("_")
-        a = 0
         b = int(node_id) % 1000
-
-        if(node_type == "duckie"):
-            a = 1
-        elif(node_type == "watchtower"):
-            a = 2
-        elif(node_type == "apriltag"):
-            a = 3
+        a = self.types.index(node_type) + 1
 
         if(node_type in self.movable):
             c = self.lists[node_type][node_id][time_stamp]
