@@ -96,6 +96,7 @@ class DuckietownGraphBuilder():
         # Initialize first-level dictionary of last odometry time stamps.
         # It is there so that we don't retro interpolate anything after the last odometry message
         self.last_odometry_time_stamp = dict()
+
         # Set retro-interpolate mode as inputted.
         self.retro_interpolate = retro_interpolate
        # Load the initial floor April tags if given an input file name
@@ -168,6 +169,8 @@ class DuckietownGraphBuilder():
         if node_type not in self.num_local_indices_assigned:
             self.num_local_indices_assigned[node_type] = dict()
             self.last_time_stamp[node_type] = dict()
+            self.last_odometry_time_stamp[node_type] = dict()
+            self.first_odometry_time_stamp[node_type] = dict()
         if node_type not in self.timestamp_local_indices:
             self.timestamp_local_indices[node_type] = dict()
         # If the input node was never associated to a timestamp initialize the
@@ -198,7 +201,7 @@ class DuckietownGraphBuilder():
             if (time_stamp > self.last_time_stamp[node_type][node_id]):
                 self.last_time_stamp[node_type][node_id] = time_stamp
             else:
-                if (self.retro_interpolate):
+                if (self.retro_interpolate and node_type in self.movable):
                     # Check that message is in the odometry chained part of the graph
                     if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
                        time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
@@ -507,10 +510,8 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                     old_time_stamp = sorted(self.timestamp_local_indices[
                         node_type][node_id].keys())[0]
                     # Create the first known first and last odometry message time_stamps for the node
-                    self.first_odometry_time_stamp[node_type].add(
-                        {node_id: old_time_stamp})
-                    self.last_odometry_time_stamp[node_type].add(
-                        {node_id: time_stamp})
+                    self.first_odometry_time_stamp[node_type][node_id] = old_time_stamp
+                    self.last_odometry_time_stamp[node_type][node_id] = time_stamp
 
                 if (old_time_stamp != time_stamp):
                     # Update the known last odometry message time_stamp for the node
