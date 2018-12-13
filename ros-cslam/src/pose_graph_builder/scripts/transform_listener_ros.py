@@ -13,6 +13,64 @@ import threading
 import random
 
 
+class Broadcaster(threading.Thread):
+    def __init__(self, dictionnary):
+        threading.Thread.__init__(self)
+        self.pose_dict = dictionnary
+        self.br = tf2_ros.TransformBroadcaster()
+
+    def tfbroadcast(self, node_type, node_id, node_pose):
+        """ Brodcasts a node in the tree of transforms with TF.
+
+            Args:
+                node_type: Type of the node. Can be any of the types defined in
+                           the class DuckietownGraphBuilder.
+                node_id: ID of the node.
+                node_pose: Pose of the node.
+        """
+        # Create broadcaster and transform.
+        a = rospy.get_time()
+        t = geometry_msgs.msg.TransformStamped()
+        t.header.stamp = rospy.Time.now()
+
+        # Set frame ID. TODO: change it depending on the node type.
+        if (node_type == "duckie"):
+            t.header.frame_id = "map"
+        else:
+            t.header.frame_id = "map"
+        # Set child frame ID.
+        t.child_frame_id = "%s_%s" % (node_type, node_id)
+        # Set transform:
+        # - Create translation vector.
+        t.transform.translation.x = node_pose.t[0]
+        t.transform.translation.y = node_pose.t[1]
+        t.transform.translation.z = node_pose.t[2]
+        # - Create rotation matrix.
+        #   Verify that the rotation is a proper rotation.
+        # det = np.linalg.det(node_pose.R)
+        # if (det < 0):
+        #     print("after optim : det = %f" % det)
+        #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
+        e = rospy.get_time()
+        q = g.rotations.quaternion_from_rotation(node_pose.R)
+        f = rospy.get_time()
+        t.transform.rotation.w = q[0]
+        t.transform.rotation.x = q[1]
+        t.transform.rotation.y = q[2]
+        t.transform.rotation.z = q[3]
+        # Send the transform.
+        b = rospy.get_time()
+        self.br.sendTransform(t)
+        c = rospy.get_time()
+        # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
+        # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
+
+    def run(self):
+        for node_type, node_list in self.pose_dict.iteritems():
+            for node_id, node_pose in node_list.iteritems():
+                self.tfbroadcast(node_type, node_id, node_pose)
+
+
 class TransformListener():
     """Listens for the transforms published by the acquisition node, associates
        each object in the map to an ID, builds an internal pose graph and
@@ -54,6 +112,7 @@ class TransformListener():
         self.max_number_same_edge = 30
         self.time_means = [0.0, 0.0, 0.0, 0.0]
         self.mode_count = [0, 0, 0, 0]
+
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -300,18 +359,25 @@ class TransformListener():
         if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 100 and
                 self.num_messages_received % 15 == 0):
             isoptimizing = True
+            a = rospy.get_time()
             self.pose_graph.optimize(
                 10,
                 save_result=True,
                 verbose=True,
                 output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
+            b = rospy.get_time()
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
-            for node_type, node_list in pose_dict.iteritems():
-                for node_id, node_pose in node_list.iteritems():
-                    self.tfbroadcast(node_type, node_id, node_pose)
-
+            c = rospy.get_time()
+            broadcaster = Broadcaster(pose_dict)
+            broadcaster.start()
+            # for node_type, node_list in pose_dict.iteritems():
+            #     for node_id, node_pose in node_list.iteritems():
+            #         self.tfbroadcast(node_type, node_id, node_pose)
+            d = rospy.get_time()
+            print("optimize : %f \t get_poses : %f \t broadcast : %f" %
+                  (b-a, c-b, d-c))
         end_time = rospy.get_time()
         diff_time = end_time - start_time
         if(isoptimizing):
@@ -340,46 +406,6 @@ class TransformListener():
         if(interpolation):
             print("Opt + Inter = %f \t Opt = %f \t Inter = %f \t Simple %f" %
                   (self.time_means[0], self.time_means[1], self.time_means[2], self.time_means[3]))
-
-    def tfbroadcast(self, node_type, node_id, node_pose):
-        """ Brodcasts a node in the tree of transforms with TF.
-
-            Args:
-                node_type: Type of the node. Can be any of the types defined in
-                           the class DuckietownGraphBuilder.
-                node_id: ID of the node.
-                node_pose: Pose of the node.
-        """
-        # Create broadcaster and transform.
-        br = tf2_ros.TransformBroadcaster()
-        t = geometry_msgs.msg.TransformStamped()
-        t.header.stamp = rospy.Time.now()
-
-        # Set frame ID. TODO: change it depending on the node type.
-        if (node_type == "duckie"):
-            t.header.frame_id = "map"
-        else:
-            t.header.frame_id = "map"
-        # Set child frame ID.
-        t.child_frame_id = "%s_%s" % (node_type, node_id)
-        # Set transform:
-        # - Create translation vector.
-        t.transform.translation.x = node_pose.t[0]
-        t.transform.translation.y = node_pose.t[1]
-        t.transform.translation.z = node_pose.t[2]
-        # - Create rotation matrix.
-        #   Verify that the rotation is a proper rotation.
-        det = np.linalg.det(node_pose.R)
-        if (det < 0):
-            print("after optim : det = %f" % det)
-        #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
-        q = g.rotations.quaternion_from_rotation(node_pose.R)
-        t.transform.rotation.w = q[0]
-        t.transform.rotation.x = q[1]
-        t.transform.rotation.y = q[2]
-        t.transform.rotation.z = q[3]
-        # Send the transform.
-        br.sendTransform(t)
 
     def listen(self):
         """Initializes the graph based on the floor map and initializes the ID
