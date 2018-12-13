@@ -517,7 +517,9 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                     print("The current timestamp is {}".format(time_stamp))
                     old_time_stamp = sorted(self.timestamp_local_indices[
                         node_type][node_id].keys())[0]
-                    # Create the first known first and last odometry message time_stamps for the node
+                    # Initialize the first and last timestamp at which an odometry message for
+                    # the node was received to be respectively old_time_stamp and the current
+                    # timestamp (time_stamp).
                     self.first_odometry_time_stamp[node_type][node_id] = old_time_stamp
                     self.last_odometry_time_stamp[node_type][node_id] = time_stamp
 
