@@ -31,6 +31,11 @@ class TransformListener():
            optim_period_counter: Stores the time that one should look at to
                                  decide whether to perform a new optimization
                                  step.
+           num_messages_received: Stores the number of transform messages
+                                  received. This is used to ensure that
+                                  optimization is performed only if enough
+                                  messages have been received (i.e. if the graph
+                                  contains enough information).
     """
 
     def __init__(self):
