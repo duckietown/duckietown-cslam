@@ -268,7 +268,8 @@ class TransformListener():
 
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
-        if (self.optim_period_counter > self.optim_period and self.n > 50):
+        if (self.optim_period_counter > self.optim_period and
+            self.num_messages_received > 50):
             self.pose_graph.optimize(
                 10,
                 save_result=True,
