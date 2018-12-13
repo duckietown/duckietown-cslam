@@ -59,6 +59,14 @@ class DuckietownGraphBuilder():
                             last_time_stamp[<node_type>][<node_id>] contains the
                             timestamp latest in time among those associated to
                             the node of type <node_type> and with ID <node_id>.
+           last/first_odometry_time_stamp:
+                    Dictionaries of dictionaries.
+                    last/first_odometry_time_stamp[<node_type>][<node_id>]
+                    contains the timestamp at which the last/first odometry
+                    message for the node with type <node_type> and ID <node_id>
+                    was received. This information is kept track of to ensure
+                    that retro-interpolation is only performed between the
+                    first and the last odometry message.
            retro_interpolate: True if retro-interpolation should be performed,
                               False otherwise. Retro-interpolation allows to
                               handle messages with a timestamp anterior to the
