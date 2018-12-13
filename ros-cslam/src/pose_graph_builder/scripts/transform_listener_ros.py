@@ -10,6 +10,7 @@ import yaml
 import tf_conversions
 import tf2_ros
 import threading
+import random
 
 
 class TransformListener():
@@ -36,6 +37,8 @@ class TransformListener():
                                   optimization is performed only if enough
                                   messages have been received (i.e. if the graph
                                   contains enough information).
+           edge_counters: Store the number of edges between watchotowers and april tags.
+                          This is used to prevent adding too many times the same edge to the graph
     """
 
     def __init__(self):
@@ -46,6 +49,9 @@ class TransformListener():
         self.optim_period = 0.5
         self.optim_period_counter = -5.0
         self.num_messages_received = 0
+        self.edge_counters = dict()
+        self.sampling_int = 30
+        self.max_number_same_edge = 30
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -139,7 +145,19 @@ class TransformListener():
             self.pose_graph.add_edge(id0, id1, transform, time_stamp)
         else:
             # Add edge to the graph.
-            self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+            if id0 not in self.edge_counters:
+                self.edge_counters[id0] = dict()
+            if id1 not in self.edge_counters[id0]:
+                self.edge_counters[id0][id1] = 0
+
+            if(self.edge_counters[id0][id1] < self.max_number_same_edge):
+                self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+                self.edge_counters[id0][id1] += 1
+            else:
+                a = random.randint(0, self.sampling_int)
+                if(a == 0):
+                    self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+                    self.edge_counters[id0][id1] += 1
 
     def handle_duckiebot_message(self, id0, id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a

@@ -327,7 +327,7 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
         time_stamp_before = 0.0
         time_stamp_after = float('inf')
         for time_stamp_it in self.timestamp_local_indices[node_type][
-                node_id].keys():
+                node_id]:
             if time_stamp_it < time_stamp:
                 if time_stamp_before < time_stamp_it:
                     time_stamp_before = time_stamp_it
@@ -389,7 +389,7 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
             time_stamp:
             self.timestamp_local_indices[node_type][node_id][time_stamp]
             for time_stamp in self.timestamp_local_indices[node_type][
-                node_id].keys()
+                node_id]
             if (time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)
         }
         # Sort the time stamps.
@@ -511,11 +511,11 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                               len(self.timestamp_local_indices[node_type][
                                   node_id].keys())))
                     for timestamp in self.timestamp_local_indices[node_type][
-                            node_id].keys():
+                            node_id]:
                         print(timestamp)
                     print("The current timestamp is {}".format(time_stamp))
-                    old_time_stamp = sorted(self.timestamp_local_indices[
-                        node_type][node_id].keys())[0]
+                    old_time_stamp = min(self.timestamp_local_indices[
+                        node_type][node_id].keys())
                     # Initialize the first and last timestamp at which an odometry message for
                     # the node was received to be respectively old_time_stamp and the current
                     # timestamp (time_stamp).
@@ -558,7 +558,7 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
             Considered as useless are edges that are anterior to the first odometry message
         """
         for node_type in self.movable:
-            for node_id in self.timestamp_local_indices[node_type].keys():
+            for node_id in self.timestamp_local_indices[node_type]:
                 if(node_id in self.first_odometry_time_stamp[node_type]):
                     first_odometry_time_stamp = self.first_odometry_time_stamp[node_type][node_id]
                     anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
