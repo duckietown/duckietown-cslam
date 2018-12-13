@@ -45,7 +45,7 @@ class TransformListener():
         self.last_callback = rospy.get_time()
         self.optim_period = 0.5
         self.optim_period_counter = -5.0
-        self.n = 0
+        self.num_messages_received = 0
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
