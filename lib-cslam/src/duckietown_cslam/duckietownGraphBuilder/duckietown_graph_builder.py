@@ -73,6 +73,7 @@ class DuckietownGraphBuilder():
                               latest timestamp of the already-processed
                               messages. See retrointerpolate method for further
                               details.
+           chi2 : The measure of the uncertainty of the graph, given by the optimizer in g2o
     """
 
     def __init__(self,
@@ -102,7 +103,8 @@ class DuckietownGraphBuilder():
         self.first_odometry_time_stamp = dict()
         # Initialize first-level dictionary of last odometry time stamps.
         self.last_odometry_time_stamp = dict()
-
+        # Initialize chi2
+        self.chi2 = 0.0
         # Set retro-interpolate mode as inputted.
         self.retro_interpolate = retro_interpolate
        # Load the initial floor April tags if given an input file name
@@ -209,10 +211,13 @@ class DuckietownGraphBuilder():
             else:
                 if (self.retro_interpolate and node_type in self.movable):
                     # Check that message is in the odometry chained part of the graph
-                    if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
-                       time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
-                        self.retrointerpolate(time_stamp, node_type, node_id,
-                                              vertex_id)
+                    if(node_id in self.last_odometry_time_stamp[node_type] and node_id in self.first_odometry_time_stamp[node_type]):
+                        if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
+                           time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
+                            # check that optimization was made at least once, so that no absurd edge is created
+                            if(self.chi2 != 0.0):
+                                self.retrointerpolate(time_stamp, node_type, node_id,
+                                                      vertex_id)
             return True
         return False
 
@@ -319,27 +324,21 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
         """
         # Find timestamps immediately before and immediately after the given
         # timestamp.
-        time_stamp_before_is_set = False
-        time_stamp_after_is_set = False
+        time_stamp_before = 0.0
+        time_stamp_after = float('inf')
         for time_stamp_it in self.timestamp_local_indices[node_type][
                 node_id].keys():
             if time_stamp_it < time_stamp:
-                if time_stamp_before_is_set:
-                    if time_stamp_before < time_stamp_it:
-                        time_stamp_before = time_stamp_it
-                else:
+                if time_stamp_before < time_stamp_it:
                     time_stamp_before = time_stamp_it
-                    time_stamp_before_is_set = True
+
             if time_stamp < time_stamp_it:
-                if time_stamp_after_is_set:
-                    if time_stamp_it < time_stamp_after:
-                        time_stamp_after = time_stamp_it
-                else:
+                if time_stamp_it < time_stamp_after:
                     time_stamp_after = time_stamp_it
-                    time_stamp_after_is_set = True
+
         # If the timestamp is neither the first nor the last (i.e., both
         # timestamp before and timestamp after exist) we can go ahead.
-        if (time_stamp_before_is_set and time_stamp_after_is_set):
+        if (time_stamp_before != 0.0 and time_stamp_after != float('inf')):
             before = self.convert_names_to_int(vertex_id, time_stamp_before)
             after = self.convert_names_to_int(vertex_id, time_stamp_after)
             transform = self.graph.get_transform(before, after)
@@ -448,7 +447,9 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                              to file.
                 output_name: Output filename of the result of the optimization.
          """
-        self.graph.optimize(
+        self.clean_graph()
+
+        self.chi2 = self.graph.optimize(
             number_of_steps,
             verbose=verbose,
             save_result=save_result,
@@ -545,6 +546,27 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                     "Node type %s should be movable if given odometry transform"
                     % node_type)
                 exit(-1)
+
+    def remove_vertex(self, node_type, node_id, time_stamp):
+        vertex_id = "%s_%s" % (node_type, node_id)
+        self.graph.remove_vertex(
+            self.convert_names_to_int(vertex_id, time_stamp))
+
+    def clean_graph(self):
+        """
+            Gets rid of useless edges in the graph
+            Considered as useless are edges that are anterior to the first odometry message
+        """
+        for node_type in self.movable:
+            for node_id in self.timestamp_local_indices[node_type].keys():
+                if(node_id in self.first_odometry_time_stamp[node_type]):
+                    first_odometry_time_stamp = self.first_odometry_time_stamp[node_type][node_id]
+                    anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
+                    ) if time_stamp < first_odometry_time_stamp]
+                    for time_stamp in anterior_time_stamps:
+                        self.remove_vertex(node_type, node_id, time_stamp)
+                        self.timestamp_local_indices[node_type][node_id].pop(
+                            time_stamp)
 
     def get_all_poses(self):
         """Obtains all poses in the graph.

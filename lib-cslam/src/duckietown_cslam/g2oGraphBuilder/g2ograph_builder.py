@@ -118,10 +118,28 @@ class g2oGraphBuilder():
         transfom = vc1.inverse() * vc2
         return transfom
 
-    def remove_vertex(self, vertexId):
-        self.optimizer.remove_vertex(vertexId)
+    def remove_vertex(self, vertex_id):
+        print("trying to remove %i" % vertex_id)
+        if(vertex_id in self.optimizer.vertices()):
+            vc = self.optimizer.vertex(vertex_id)
+            # print("it is here, let's remove it")
+            if(vc in self.set_of_new_vertex):
+                # print("removing %i or the set of new vertex" % vertex_id)
+                self.set_of_new_vertex.remove(vc)
+            edge_to_remove = []
+            for edge in self.set_of_new_edges:
+                # print(edge.vertices())
+                if vc in edge.vertices():
+                    # print("edges to remove added edge")
+                    edge_to_remove.append(edge)
+            for edge in edge_to_remove:
+                self.set_of_new_edges.remove(edge)
+            self.optimizer.remove_vertex(vc, detach=True)
 
-        # optimizing
+            print("success")
+        else:
+            print("was not in optimizer")
+
     def optimize(self,
                  number_of_steps,
                  verbose=True,
@@ -146,5 +164,6 @@ class g2oGraphBuilder():
         self.optimizer.optimize(number_of_steps)
         if (save_result):
             self.optimizer.save(output_name)
+        return self.optimizer.chi2()
         # batch_stat = self.optimizer.batch_statistics
         # print(batch_stat)

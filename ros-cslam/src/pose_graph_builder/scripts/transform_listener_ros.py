@@ -135,8 +135,11 @@ class TransformListener():
             H_apriltag_to_base = g2o.Isometry3d(R, t)
             transform = transform * H_apriltag_to_base
 
-        # Add edge to the graph.
-        self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+            # Add edge to the graph.
+            self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+        else:
+            # Add edge to the graph.
+            self.pose_graph.add_edge(id0, id1, transform, time_stamp)
 
     def handle_duckiebot_message(self, id0, id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a
@@ -269,7 +272,7 @@ class TransformListener():
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
         if (self.optim_period_counter > self.optim_period and
-            self.num_messages_received > 50):
+                self.num_messages_received > 50):
             self.pose_graph.optimize(
                 10,
                 save_result=True,
