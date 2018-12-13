@@ -90,6 +90,12 @@ class DuckietownGraphBuilder():
         self.num_local_indices_assigned = dict()
         # Initialize first-level dictionary of last_time_stamp.
         self.last_time_stamp = dict()
+        # Initialize first-level dictionary of first odometry time stamps.
+        # It is there so that we don't retro interpolate anything before the first odometry message
+        self.first_odometry_time_stamp = dict()
+        # Initialize first-level dictionary of last odometry time stamps.
+        # It is there so that we don't retro interpolate anything after the last odometry message
+        self.last_odometry_time_stamp = dict()
         # Set retro-interpolate mode as inputted.
         self.retro_interpolate = retro_interpolate
        # Load the initial floor April tags if given an input file name
@@ -193,8 +199,11 @@ class DuckietownGraphBuilder():
                 self.last_time_stamp[node_type][node_id] = time_stamp
             else:
                 if (self.retro_interpolate):
-                    self.retrointerpolate(time_stamp, node_type, node_id,
-                                          vertex_id)
+                    # Check that message is in the odometry chained part of the graph
+                    if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
+                       time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
+                        self.retrointerpolate(time_stamp, node_type, node_id,
+                                              vertex_id)
             return True
         return False
 
@@ -497,7 +506,16 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                     print("The current timestamp is {}".format(time_stamp))
                     old_time_stamp = sorted(self.timestamp_local_indices[
                         node_type][node_id].keys())[0]
+                    # Create the first known first and last odometry message time_stamps for the node
+                    self.first_odometry_time_stamp[node_type].add(
+                        {node_id: old_time_stamp})
+                    self.last_odometry_time_stamp[node_type].add(
+                        {node_id: time_stamp})
+
                 if (old_time_stamp != time_stamp):
+                    # Update the known last odometry message time_stamp for the node
+                    self.last_odometry_time_stamp[node_type][node_id] = time_stamp
+
                     # Some other messages might have been received for that node
                     # (object), e.g. a Duckiebot might be seen by a watchtower
                     # before receiving an odometry message => Interpolate.

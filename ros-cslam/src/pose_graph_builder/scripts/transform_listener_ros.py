@@ -39,7 +39,7 @@ class TransformListener():
         self.id_map = {}
         self.last_callback = rospy.get_time()
         self.optim_period = 0.5
-        self.optim_period_counter = -10.0
+        self.optim_period_counter = -5.0
         self.n = 0
         # self.lock = threading.Lock()
 
@@ -202,6 +202,7 @@ class TransformListener():
         start_time = rospy.get_time()
         self.optim_period_counter += start_time - self.last_callback
         self.last_callback = start_time
+        self.n += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
         id0 = data.header.frame_id
         id1 = data.child_frame_id
