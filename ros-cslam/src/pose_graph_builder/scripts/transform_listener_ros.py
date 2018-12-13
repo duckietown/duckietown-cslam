@@ -52,6 +52,8 @@ class TransformListener():
         self.edge_counters = dict()
         self.sampling_int = 30
         self.max_number_same_edge = 30
+        self.time_means = [0.0, 0.0, 0.0, 0.0]
+        self.mode_count = [0, 0, 0, 0]
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -111,7 +113,7 @@ class TransformListener():
         self.old_odometry_stamps[id] = time_stamp
 
         # Add edge to the graph.
-        self.pose_graph.add_edge(id, id, transform, time_stamp, old_time_stamp)
+        return self.pose_graph.add_edge(id, id, transform, time_stamp, old_time_stamp)
 
     def handle_watchtower_message(self, id0, id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a
@@ -142,7 +144,7 @@ class TransformListener():
             transform = transform * H_apriltag_to_base
 
             # Add edge to the graph.
-            self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+            return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
         else:
             # Add edge to the graph.
             if id0 not in self.edge_counters:
@@ -156,8 +158,9 @@ class TransformListener():
             else:
                 a = random.randint(0, self.sampling_int)
                 if(a == 0):
-                    self.pose_graph.add_edge(id0, id1, transform, time_stamp)
                     self.edge_counters[id0][id1] += 1
+
+                    return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
 
     def handle_duckiebot_message(self, id0, id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a
@@ -195,7 +198,7 @@ class TransformListener():
             print("This should not be here!")
 
         # Add edge to the graph.
-        self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+        return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
 
     def filter_name(self, id):
         """ Converts the frame IDs of the objects in the ROS messages (e.g.,
@@ -276,28 +279,33 @@ class TransformListener():
         time = Time(data.header.stamp)
         time_stamp = time.data.secs + time.data.nsecs * 10**(-9)
 
+        interpolation = False
         if (id1 == id0):
             # Same ID: odometry message, e.g. the same Duckiebot sending
             # odometry information at different instances in time.
-            self.handle_odometry_message(id1, transform, time_stamp)
+            interpolation = self.handle_odometry_message(
+                id1, transform, time_stamp)
         elif (is_from_watchtower):
             # Tag detected by a watchtower.
-            self.handle_watchtower_message(id0, id1, transform, time_stamp)
+            interpolation = self.handle_watchtower_message(
+                id0, id1, transform, time_stamp)
         else:
             # Tag detected by a Duckiebot.
-            self.handle_duckiebot_message(id0, id1, transform, time_stamp)
+            interpolation = self.handle_duckiebot_message(
+                id0, id1, transform, time_stamp)
 
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
-        if (self.optim_period_counter > self.optim_period and
-                self.num_messages_received > 50):
+        isoptimizing = False
+        if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 100 and
+                self.num_messages_received % 15 == 0):
+            isoptimizing = True
             self.pose_graph.optimize(
                 10,
                 save_result=True,
                 verbose=True,
                 output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
-            self.num_messages_received = 0
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
             for node_type, node_list in pose_dict.iteritems():
@@ -306,7 +314,32 @@ class TransformListener():
 
         end_time = rospy.get_time()
         diff_time = end_time - start_time
+        if(isoptimizing):
+            if(interpolation):
+                count = self.mode_count[0]
+                self.time_means[0] = (
+                    count * self.time_means[0] + diff_time)/(count + 1)
+                self.mode_count[0] += 1
+            else:
+                count = self.mode_count[1]
+                self.time_means[1] = (
+                    count * self.time_means[1] + diff_time)/(count + 1)
+                self.mode_count[1] += 1
+        else:
+            if(interpolation):
+                count = self.mode_count[2]
+                self.time_means[2] = (
+                    count * self.time_means[2] + diff_time)/(count + 1)
+                self.mode_count[2] += 1
+            else:
+                count = self.mode_count[3]
+                self.time_means[3] = (
+                    count * self.time_means[3] + diff_time)/(count + 1)
+                self.mode_count[3] += 1
         self.last_callback = rospy.get_time()
+        if(interpolation):
+            print("Opt + Inter = %f \t Opt = %f \t Inter = %f \t Simple %f" %
+                  (self.time_means[0], self.time_means[1], self.time_means[2], self.time_means[3]))
 
     def tfbroadcast(self, node_type, node_id, node_pose):
         """ Brodcasts a node in the tree of transforms with TF.

@@ -4,6 +4,7 @@ import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oBG
 import geometry as g
 import random
 import yaml
+import threading
 
 time_step = 0.5
 
@@ -110,6 +111,7 @@ class DuckietownGraphBuilder():
        # Load the initial floor April tags if given an input file name
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
+        self.lock = threading.Lock()
 
     def load_initial_floor_april_tags(self, initial_floor_april_tag_file):
         """Adds the poses of the initial floor April tags to the graph by
@@ -191,7 +193,7 @@ class DuckietownGraphBuilder():
 
         num_local_indices_assigned = self.num_local_indices_assigned[node_type][
             node_id]
-
+        interpolation = False
         if (time_stamp not in self.timestamp_local_indices[node_type][node_id]
                 and
                 (node_type in self.movable or num_local_indices_assigned == 0)):
@@ -218,8 +220,10 @@ class DuckietownGraphBuilder():
                             if(self.chi2 != 0.0):
                                 self.retrointerpolate(time_stamp, node_type, node_id,
                                                       vertex_id)
-            return True
-        return False
+                                interpolation = True
+
+            return (True, interpolation)
+        return (False, interpolation)
 
     def add_vertex(self,
                    vertex_id,
@@ -231,7 +235,7 @@ class DuckietownGraphBuilder():
         """Adds a vertex with an ID given in the format outputted from the
           transform_listener and with a given pose to the g2o graph.
 
-TODO : add a more general add_vertex function that takes a 3D pose and not only a 2D one.
+           TODO : add a more general add_vertex function that takes a 3D pose and not only a 2D one.
 
            Args:
                vertex_id: ID of the node whose pose should be added as a vertex
@@ -248,7 +252,8 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
         [node_type, node_id] = vertex_id.split("_")
         # Adds (assigns) a timestamp to a node, by giving it a 'local index'
         # w.r.t. the node.
-        added = self.add_timestamp_to_node(node_type, node_id, time_stamp)
+        added, interpolation = self.add_timestamp_to_node(
+            node_type, node_id, time_stamp)
         if (not added):
             print(
                 "add_vertex did not add : node %s at time %f as already there" %
@@ -394,6 +399,7 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
         }
         # Sort the time stamps.
         sorted_time_stamps = sorted(to_interpolate.keys())
+        print("perfoming interpolation on %d nodes" % len(sorted_time_stamps))
         # Find the total time (time between the last and the first timestamp).
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
         if (total_delta_t == 0.0):
@@ -447,6 +453,7 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                              to file.
                 output_name: Output filename of the result of the optimization.
          """
+        self.lock.acquire()
         self.clean_graph()
 
         self.chi2 = self.graph.optimize(
@@ -454,6 +461,7 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
             verbose=verbose,
             save_result=save_result,
             output_name=output_name)
+        self.lock.release()
 
     def add_edge(self,
                  vertex0_id,
@@ -479,14 +487,15 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                                vertex1_id, since the two match).
         """
         if (vertex0_id != vertex1_id):
+            interpolation = False
             for vertex_id in [vertex0_id, vertex1_id]:
                 if (len(vertex_id.split("_")) == 1):
                     print("Error, vertexname is %s. Exiting" % vertex_id)
                     exit(-1)
                 [node_type, node_id] = vertex_id.split("_")
                 # Associate timestamps to the vertices.
-                added = self.add_timestamp_to_node(node_type, node_id,
-                                                   time_stamp)
+                added, interpolation = self.add_timestamp_to_node(node_type, node_id,
+                                                                  time_stamp)
                 if not added:
                     pass
             # Obtain ID of the vertices in the graph in the integer format.
@@ -495,43 +504,24 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
             # Add edge between the two vertices (and automatically also add the
             # vertices if not there already).in the g2o graph.
             self.graph.add_edge(vertex0_id_int, vertex1_id_int, measure)
+            return interpolation
         else:
             [node_type, node_id] = vertex0_id.split("_")
             # Associate timestamps to the vertex.
-            added = self.add_timestamp_to_node(node_type, node_id, time_stamp)
+            added, interpolation = self.add_timestamp_to_node(
+                node_type, node_id, time_stamp)
 
             if (node_type in self.movable):
                 # Odometry edge: same vertices, movable object.
                 if (old_time_stamp == 0):
                     # No previous odometry messages -> Update old timestamp for
                     # the node to be the oldest timestamp received..
-                    print("timestamp_local_indices[node_type={0}][node_id={1}] "
-                          "contains the following {2} timestamps:".format(
-                              node_type, node_id,
-                              len(self.timestamp_local_indices[node_type][
-                                  node_id].keys())))
-                    for timestamp in self.timestamp_local_indices[node_type][
-                            node_id]:
-                        print(timestamp)
-                    print("The current timestamp is {}".format(time_stamp))
-                    old_time_stamp = min(self.timestamp_local_indices[
-                        node_type][node_id].keys())
+
                     # Initialize the first and last timestamp at which an odometry message for
                     # the node was received to be respectively old_time_stamp and the current
                     # timestamp (time_stamp).
-                    self.first_odometry_time_stamp[node_type][node_id] = old_time_stamp
+                    self.first_odometry_time_stamp[node_type][node_id] = time_stamp
                     self.last_odometry_time_stamp[node_type][node_id] = time_stamp
-
-                if (old_time_stamp != time_stamp):
-                    # Update the known last odometry message time_stamp for the node
-                    self.last_odometry_time_stamp[node_type][node_id] = time_stamp
-
-                    # Some other messages might have been received for that node
-                    # (object), e.g. a Duckiebot might be seen by a watchtower
-                    # before receiving an odometry message => Interpolate.
-                    self.interpolate(old_time_stamp, time_stamp, node_type,
-                                     node_id, measure)
-                else:
                     # Add vertex corresponding to the new timestamp to the
                     # graph.
                     self.add_vertex(
@@ -541,6 +531,19 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
                         is_initial_floor_tag=False,
                         fixed=False,
                         time_stamp=time_stamp)
+                    return interpolation
+
+                else:
+                    # Update the known last odometry message time_stamp for the node
+                    self.last_odometry_time_stamp[node_type][node_id] = time_stamp
+
+                    # Some other messages might have been received for that node
+                    # (object), e.g. a Duckiebot might be seen by a watchtower
+                    # before receiving an odometry message => Interpolate.
+                    self.interpolate(old_time_stamp, time_stamp, node_type,
+                                     node_id, measure)
+                    return True
+
             else:
                 print(
                     "Node type %s should be movable if given odometry transform"
