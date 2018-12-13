@@ -1,5 +1,6 @@
 import numpy as np
 import g2o
+import duckietown_cslam.graphVisualizer.graph_visualizer as gv
 import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oBG
 import geometry as g
 import random
@@ -105,7 +106,7 @@ class DuckietownGraphBuilder():
 
         # Set retro-interpolate mode as inputted.
         self.retro_interpolate = retro_interpolate
-       # Load the initial floor April tags if given an input file name
+        # Load the initial floor April tags if given an input file name
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
 
@@ -298,6 +299,32 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
 
         result = a * 10**8 + b * 10**5 + c
         return result
+
+    def convert_int_to_name_and_timestamp(self, name):
+        """Given an integer used as index for a node in g2o, with the format
+           outputted by the method convert_names_to_int, outputs a node name in
+           the form <node_type>_<node_id> and the local index of the timestamp
+           associated to the vertex with the given name. Note: node_id will be
+           an integer less than 1000 (cf. definition of b in
+           convert_names_to_int).
+
+           Args:
+               name: Name in the integer format returned by the method
+                     convert_names_to_int.
+
+           Returns:
+               Tuple of the form (<node_name>, <timestamp>), where <node_name>
+               is a string of the form <node_type>_<node_id> and <timestamp> is
+               the 'local index' of the timestamp of the vertex w.r.t to the
+               node.
+        """
+        a = int(name / 10**8)
+        name -= a * 10**8
+        b = int(name / 10**5)
+        c = name - b * 10**5
+
+        return (self.types[a - 1] + str(b), str(c))
+
 
     def retrointerpolate(self, time_stamp, node_type, node_id, vertex_id):
         """Due to delays in the communication network, it might happen that a
@@ -581,5 +608,7 @@ TODO : add a more general add_vertex function that takes a 3D pose and not only 
 
                 result_dict[node_type][node_id] = self.graph.vertex_pose(
                     self.convert_names_to_int(vertex_id, last_time_stamp))
+        self.graph_visualizer_ = gv.GraphVisualizer(self)
+        self.graph_visualizer_.draw_graph()
 
         return result_dict
