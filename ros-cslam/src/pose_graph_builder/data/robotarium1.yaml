@@ -389,6 +389,7 @@ objects:
                 p:
                 - 1.423
                 - -0.12
+                theta_deg: 180
     tag02:
         attach:
             slot: 6
@@ -779,6 +780,7 @@ objects:
                 p:
                 - 2.4400000000000004
                 - 0.825
+                theta_deg: -90
     J10:
         kind: floor_tag
         tag:
@@ -1089,6 +1091,7 @@ objects:
                 p:
                 - 2.661
                 - -0.12
+                theta_deg: 180
     A8:
         kind: floor_tag
         tag:
@@ -1345,6 +1348,7 @@ objects:
                 p:
                 - 2.585
                 - 1.695
+                theta_deg: 180
     D4:
         kind: floor_tag
         tag:
@@ -1357,6 +1361,7 @@ objects:
                 p:
                 - 1.395
                 - 1.687
+                theta_deg: 180
     tag19:
         attach:
             slot: 0

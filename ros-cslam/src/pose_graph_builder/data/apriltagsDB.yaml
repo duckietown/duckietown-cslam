@@ -527,10 +527,10 @@
   traffic_sign_type: t-light-ahead
 
 - tag_id: 88
-  tag_type: TrafficSign
+  tag_type: Vehicle
   street_name:
-  vehicle_name:
-  traffic_sign_type: t-light-ahead
+  vehicle_name: temp_donaldthegreat
+  traffic_sign_type: 
 
 - tag_id: 89
   tag_type: TrafficSign
@@ -1576,7 +1576,6 @@
   vehicle_name:
   traffic_sign_type: 4-way-intersect
 
-- tag_id: 263
   tag_type: TrafficSign
   street_name:
   vehicle_name:

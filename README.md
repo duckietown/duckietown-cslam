@@ -8,14 +8,14 @@
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/duckietown_cslam.svg)](https://pypi.python.org/pypi/duckietown_cslam/)
 
 
-# cslam
+# cSLAM
 
 A contralized slam
 
 
 ## Installation from source
 
-This is the way to install within a virtual environment created by 
+This is the way to install within a virtual environment created by
 using `pipenv`:
 
     $ pipenv install
@@ -23,21 +23,21 @@ using `pipenv`:
     $ cd lib-cslam
     $ pip install -r requirements.txt
     $ python setup.py develop --no-deps
-    
-   
+
+
 ## Unit tests
 
 Run this:
 
     $ make -C lib-cslam tests-clean tests
-    
+
 The output is generated in the folder in `lib-cslam/out-comptests/`.
 
 ## To test ongoing work with g2o
 To test the ongoing work on g2o, do this :
 
     $ cd lib-cslam
-    $ python setup.py develop --no-deps --user 
+    $ python setup.py develop --no-deps --user
     the --user is because I dont use a virtual env right now
     $ cd ../ros-cslam
     $ catkin_make install

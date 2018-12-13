@@ -4,10 +4,7 @@ import cv2
 import numpy as np
 
 class ImageRectifier():
-    def __init__(self):
-        pass
-
-    def rectify(self, image, cameraMatrix, distCoeffs):
+    def __init__(self, image, cameraMatrix, distCoeffs):
         """
         Rectifies an image with a particular cameraMatrix(K) and distCoeffs(D); based on opencv undistort function
         see: https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=initundistort#undistort
@@ -26,11 +23,15 @@ class ImageRectifier():
 
         # return cv2.undistort(image, cameraMatrix, distCoeffs)
 
-        newCameraMatrix, validPixROI = cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, (image.shape[1], image.shape[0]), 1.0)
-        map1, map2 = cv2.initUndistortRectifyMap(cameraMatrix, distCoeffs, np.eye(3), newCameraMatrix, (image.shape[1], image.shape[0]), cv2.CV_32FC1)
-        remappedIm = cv2.remap(image, map1, map2, cv2.INTER_NEAREST)
+        self.newCameraMatrix, self.validPixROI = cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, (image.shape[1], image.shape[0]), 1.0)
+        self.map1, self.map2 = cv2.initUndistortRectifyMap(cameraMatrix, distCoeffs, np.eye(3), self.newCameraMatrix, (image.shape[1], image.shape[0]), cv2.CV_32FC1)
 
-        return remappedIm, newCameraMatrix
+        self.rectify(image)
+
+    def rectify(self, image):
+        remappedIm = cv2.remap(image, self.map1, self.map2, cv2.INTER_NEAREST)
+
+        return remappedIm, self.newCameraMatrix
 
     def beautify(self, image):
 
