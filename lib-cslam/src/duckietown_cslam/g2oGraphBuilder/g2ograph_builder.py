@@ -146,5 +146,5 @@ class g2oGraphBuilder():
         self.optimizer.optimize(number_of_steps)
         if (save_result):
             self.optimizer.save(output_name)
-        batch_stat = self.optimizer.batch_statistics
+        # batch_stat = self.optimizer.batch_statistics
         # print(batch_stat)

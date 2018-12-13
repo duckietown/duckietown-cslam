@@ -31,6 +31,11 @@ class TransformListener():
            optim_period_counter: Stores the time that one should look at to
                                  decide whether to perform a new optimization
                                  step.
+           num_messages_received: Stores the number of transform messages
+                                  received. This is used to ensure that
+                                  optimization is performed only if enough
+                                  messages have been received (i.e. if the graph
+                                  contains enough information).
     """
 
     def __init__(self):
@@ -39,7 +44,8 @@ class TransformListener():
         self.id_map = {}
         self.last_callback = rospy.get_time()
         self.optim_period = 0.5
-        self.optim_period_counter = -10.0
+        self.optim_period_counter = -5.0
+        self.num_messages_received = 0
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -201,6 +207,7 @@ class TransformListener():
         start_time = rospy.get_time()
         self.optim_period_counter += start_time - self.last_callback
         self.last_callback = start_time
+        self.num_messages_received += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
         id0 = data.header.frame_id
         id1 = data.child_frame_id
@@ -261,14 +268,15 @@ class TransformListener():
 
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
-        if (self.optim_period_counter > self.optim_period):
+        if (self.optim_period_counter > self.optim_period and
+            self.num_messages_received > 50):
             self.pose_graph.optimize(
                 10,
                 save_result=True,
                 verbose=True,
                 output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
-
+            self.num_messages_received = 0
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
             for node_type, node_list in pose_dict.iteritems():
