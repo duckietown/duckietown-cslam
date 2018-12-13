@@ -207,7 +207,7 @@ class TransformListener():
         start_time = rospy.get_time()
         self.optim_period_counter += start_time - self.last_callback
         self.last_callback = start_time
-        self.n += 1
+        self.num_messages_received += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
         id0 = data.header.frame_id
         id1 = data.child_frame_id
@@ -276,7 +276,7 @@ class TransformListener():
                 verbose=True,
                 output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
-            self.n = 0
+            self.num_messages_received = 0
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
             for node_type, node_list in pose_dict.iteritems():

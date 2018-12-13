@@ -99,10 +99,8 @@ class DuckietownGraphBuilder():
         # Initialize first-level dictionary of last_time_stamp.
         self.last_time_stamp = dict()
         # Initialize first-level dictionary of first odometry time stamps.
-        # It is there so that we don't retro interpolate anything before the first odometry message
         self.first_odometry_time_stamp = dict()
         # Initialize first-level dictionary of last odometry time stamps.
-        # It is there so that we don't retro interpolate anything after the last odometry message
         self.last_odometry_time_stamp = dict()
 
         # Set retro-interpolate mode as inputted.
