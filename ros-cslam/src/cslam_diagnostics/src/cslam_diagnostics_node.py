@@ -14,51 +14,68 @@ class DiagnosticsPanel(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.devices = {}
+        self.at_devices = {}
+        self.odom_devices = {}
 
         rospy.Subscriber('/poses_acquisition/poses', TransformStamped, self.poses_callback)
+        rospy.Subscriber('/poses_acquisition/odometry', TransformStamped, self.poses_callback)
     
-        header = self.ui.tableWidget.horizontalHeader()
-        header.setResizeMode(0, QtGui.QHeaderView.Stretch)
-        header.setResizeMode(1, QtGui.QHeaderView.ResizeToContents)
-        header.setResizeMode(2, QtGui.QHeaderView.ResizeToContents)
 
+        self.setup_table(self.ui.table_apriltags)
+        self.setup_table(self.ui.table_odometry)
+        
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self.update)
         self._timer.start(30)
 
+    def setup_table(self, table):
+        header = table.horizontalHeader()
+        table.setColumnWidth(0,150)        
+        table.setColumnWidth(1,121)
+        table.setColumnWidth(2,121)
+        table.setColumnWidth(3,120)
 
     def poses_callback(self, msg):
         this_device = msg.header.frame_id
-        if this_device not in self.devices:
-            self.devices[this_device] = {}
-            self.devices[this_device]['first'] = msg.header.stamp.secs + \
-                msg.header.stamp.nsecs * 10**-9
+        child_device = msg.child_frame_id
+        
+        if child_device == this_device:
+            if this_device not in self.odom_devices:
+                self.odom_devices[this_device] = {}
+                self.odom_devices[this_device]['first'] = msg.header.stamp.secs + \
+                    msg.header.stamp.nsecs * 10**-9
 
-        self.devices[this_device]['last'] = msg.header.stamp.secs + \
-                msg.header.stamp.nsecs * 10**-9
-        print msg
+            self.odom_devices[this_device]['last'] = msg.header.stamp.secs + \
+                    msg.header.stamp.nsecs * 10**-9
+        else:
+            if this_device not in self.at_devices:
+                self.at_devices[this_device] = {}
+                self.at_devices[this_device]['first'] = msg.header.stamp.secs + \
+                    msg.header.stamp.nsecs * 10**-9
 
-    def update(self):
-        while self.ui.tableWidget.rowCount() < len(self.devices.keys()):
-            self.ui.tableWidget.insertRow(0)
+            self.at_devices[this_device]['last'] = msg.header.stamp.secs + \
+                    msg.header.stamp.nsecs * 10**-9
 
-        for itr, device_id in enumerate(sorted(self.devices.keys())):
+    def update_table(self,table,devices):
+        while table.rowCount() < len(devices.keys()):
+            table.insertRow(0)
+
+        for itr, device_id in enumerate(sorted(devices.keys())):
             
             time_now = rospy.get_time()
-            diff = time_now - self.devices[device_id]['last']
+            diff = time_now - devices[device_id]['last']
 
-            self.ui.tableWidget.setItem(itr , 0, \
+            table.setItem(itr , 0, \
                 QtGui.QTableWidgetItem(device_id))
             
-            self.ui.tableWidget.setItem(itr , 1, \
-                QtGui.QTableWidgetItem(str(self.devices[device_id]['last'])))            
+            table.setItem(itr , 1, \
+                QtGui.QTableWidgetItem(str(devices[device_id]['last'])))            
             
-            self.ui.tableWidget.setItem(itr , 2, \
+            table.setItem(itr , 2, \
                 QtGui.QTableWidgetItem(str(diff)))
             
-            self.ui.tableWidget.setItem(itr , 3, \
-                QtGui.QTableWidgetItem(str(self.devices[device_id]['first'])))
+            table.setItem(itr , 3, \
+                QtGui.QTableWidgetItem(str(devices[device_id]['first'])))
             
             status_val = 'OK'
             color = QtGui.QColor(50,255,50)
@@ -75,10 +92,15 @@ class DiagnosticsPanel(QtGui.QMainWindow):
                 status_val = 'ERROR'
                 color = QtGui.QColor(255,50,50)
 
-            self.ui.tableWidget.setItem(itr , 4, \
+            table.setItem(itr , 4, \
                 QtGui.QTableWidgetItem(status_val))
 
-            self.ui.tableWidget.item(itr, 4).setBackground(color)
+            table.item(itr, 4).setBackground(color)
+
+    def update(self):
+        self.update_table(self.ui.table_apriltags,self.at_devices)
+        self.update_table(self.ui.table_odometry,self.odom_devices)
+
             
 
 def main():
