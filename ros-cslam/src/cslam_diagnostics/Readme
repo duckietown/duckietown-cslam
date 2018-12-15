@@ -1,0 +1,6 @@
+Diagnostics
+
+docker build --file Dockerfile_diagnostics --tag bensonkuan:cslam-diagnostics .
+
+docker run -it --rm --net=host -e ROS_MASTER_URI=http://Exia:11311 bensonkuan:cslam-diagnostics
+
