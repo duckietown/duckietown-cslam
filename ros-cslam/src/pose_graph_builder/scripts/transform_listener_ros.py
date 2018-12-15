@@ -10,6 +10,65 @@ import yaml
 import tf_conversions
 import tf2_ros
 import threading
+import random
+
+
+class Broadcaster(threading.Thread):
+    def __init__(self, dictionnary):
+        threading.Thread.__init__(self)
+        self.pose_dict = dictionnary
+        self.br = tf2_ros.TransformBroadcaster()
+
+    def tfbroadcast(self, node_type, node_id, node_pose):
+        """ Brodcasts a node in the tree of transforms with TF.
+
+            Args:
+                node_type: Type of the node. Can be any of the types defined in
+                           the class DuckietownGraphBuilder.
+                node_id: ID of the node.
+                node_pose: Pose of the node.
+        """
+        # Create broadcaster and transform.
+        a = rospy.get_time()
+        t = geometry_msgs.msg.TransformStamped()
+        t.header.stamp = rospy.Time.now()
+
+        # Set frame ID. TODO: change it depending on the node type.
+        if (node_type == "duckie"):
+            t.header.frame_id = "map"
+        else:
+            t.header.frame_id = "map"
+        # Set child frame ID.
+        t.child_frame_id = "%s_%s" % (node_type, node_id)
+        # Set transform:
+        # - Create translation vector.
+        t.transform.translation.x = node_pose.t[0]
+        t.transform.translation.y = node_pose.t[1]
+        t.transform.translation.z = node_pose.t[2]
+        # - Create rotation matrix.
+        #   Verify that the rotation is a proper rotation.
+        # det = np.linalg.det(node_pose.R)
+        # if (det < 0):
+        #     print("after optim : det = %f" % det)
+        #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
+        e = rospy.get_time()
+        q = g.rotations.quaternion_from_rotation(node_pose.R)
+        f = rospy.get_time()
+        t.transform.rotation.w = q[0]
+        t.transform.rotation.x = q[1]
+        t.transform.rotation.y = q[2]
+        t.transform.rotation.z = q[3]
+        # Send the transform.
+        b = rospy.get_time()
+        self.br.sendTransform(t)
+        c = rospy.get_time()
+        # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
+        # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
+
+    def run(self):
+        for node_type, node_list in self.pose_dict.iteritems():
+            for node_id, node_pose in node_list.iteritems():
+                self.tfbroadcast(node_type, node_id, node_pose)
 
 
 class TransformListener():
@@ -31,6 +90,13 @@ class TransformListener():
            optim_period_counter: Stores the time that one should look at to
                                  decide whether to perform a new optimization
                                  step.
+           num_messages_received: Stores the number of transform messages
+                                  received. This is used to ensure that
+                                  optimization is performed only if enough
+                                  messages have been received (i.e. if the graph
+                                  contains enough information).
+           edge_counters: Store the number of edges between watchotowers and april tags.
+                          This is used to prevent adding too many times the same edge to the graph
     """
 
     def __init__(self):
@@ -39,7 +105,14 @@ class TransformListener():
         self.id_map = {}
         self.last_callback = rospy.get_time()
         self.optim_period = 0.5
-        self.optim_period_counter = -10.0
+        self.optim_period_counter = -5.0
+        self.num_messages_received = 0
+        self.edge_counters = dict()
+        self.sampling_int = 30
+        self.max_number_same_edge = 30
+        self.time_means = [0.0, 0.0, 0.0, 0.0]
+        self.mode_count = [0, 0, 0, 0]
+
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -99,7 +172,7 @@ class TransformListener():
         self.old_odometry_stamps[id] = time_stamp
 
         # Add edge to the graph.
-        self.pose_graph.add_edge(id, id, transform, time_stamp, old_time_stamp)
+        return self.pose_graph.add_edge(id, id, transform, time_stamp, old_time_stamp)
 
     def handle_watchtower_message(self, id0, id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a
@@ -129,8 +202,24 @@ class TransformListener():
             H_apriltag_to_base = g2o.Isometry3d(R, t)
             transform = transform * H_apriltag_to_base
 
-        # Add edge to the graph.
-        self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+            # Add edge to the graph.
+            return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+        else:
+            # Add edge to the graph.
+            if id0 not in self.edge_counters:
+                self.edge_counters[id0] = dict()
+            if id1 not in self.edge_counters[id0]:
+                self.edge_counters[id0][id1] = 0
+
+            if(self.edge_counters[id0][id1] < self.max_number_same_edge):
+                self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+                self.edge_counters[id0][id1] += 1
+            else:
+                a = random.randint(0, self.sampling_int)
+                if(a == 0):
+                    self.edge_counters[id0][id1] += 1
+
+                    return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
 
     def handle_duckiebot_message(self, id0, id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a
@@ -168,7 +257,7 @@ class TransformListener():
             print("This should not be here!")
 
         # Add edge to the graph.
-        self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+        return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
 
     def filter_name(self, id):
         """ Converts the frame IDs of the objects in the ROS messages (e.g.,
@@ -201,6 +290,7 @@ class TransformListener():
         start_time = rospy.get_time()
         self.optim_period_counter += start_time - self.last_callback
         self.last_callback = start_time
+        self.num_messages_received += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
         id0 = data.header.frame_id
         id1 = data.child_frame_id
@@ -248,76 +338,74 @@ class TransformListener():
         time = Time(data.header.stamp)
         time_stamp = time.data.secs + time.data.nsecs * 10**(-9)
 
+        interpolation = False
         if (id1 == id0):
             # Same ID: odometry message, e.g. the same Duckiebot sending
             # odometry information at different instances in time.
-            self.handle_odometry_message(id1, transform, time_stamp)
+            interpolation = self.handle_odometry_message(
+                id1, transform, time_stamp)
         elif (is_from_watchtower):
             # Tag detected by a watchtower.
-            self.handle_watchtower_message(id0, id1, transform, time_stamp)
+            interpolation = self.handle_watchtower_message(
+                id0, id1, transform, time_stamp)
         else:
             # Tag detected by a Duckiebot.
-            self.handle_duckiebot_message(id0, id1, transform, time_stamp)
+            interpolation = self.handle_duckiebot_message(
+                id0, id1, transform, time_stamp)
 
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
-        if (self.optim_period_counter > self.optim_period):
+        isoptimizing = False
+        if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 100 and
+                self.num_messages_received % 15 == 0):
+            isoptimizing = True
+            a = rospy.get_time()
             self.pose_graph.optimize(
                 10,
                 save_result=True,
                 verbose=True,
                 output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
-
+            b = rospy.get_time()
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
-            for node_type, node_list in pose_dict.iteritems():
-                for node_id, node_pose in node_list.iteritems():
-                    self.tfbroadcast(node_type, node_id, node_pose)
-
+            c = rospy.get_time()
+            broadcaster = Broadcaster(pose_dict)
+            broadcaster.start()
+            # for node_type, node_list in pose_dict.iteritems():
+            #     for node_id, node_pose in node_list.iteritems():
+            #         self.tfbroadcast(node_type, node_id, node_pose)
+            d = rospy.get_time()
+            print("optimize : %f \t get_poses : %f \t broadcast : %f" %
+                  (b-a, c-b, d-c))
         end_time = rospy.get_time()
         diff_time = end_time - start_time
-        self.last_callback = rospy.get_time()
-
-    def tfbroadcast(self, node_type, node_id, node_pose):
-        """ Brodcasts a node in the tree of transforms with TF.
-
-            Args:
-                node_type: Type of the node. Can be any of the types defined in
-                           the class DuckietownGraphBuilder.
-                node_id: ID of the node.
-                node_pose: Pose of the node.
-        """
-        # Create broadcaster and transform.
-        br = tf2_ros.TransformBroadcaster()
-        t = geometry_msgs.msg.TransformStamped()
-        t.header.stamp = rospy.Time.now()
-
-        # Set frame ID. TODO: change it depending on the node type.
-        if (node_type == "duckie"):
-            t.header.frame_id = "map"
+        if(isoptimizing):
+            if(interpolation):
+                count = self.mode_count[0]
+                self.time_means[0] = (
+                    count * self.time_means[0] + diff_time)/(count + 1)
+                self.mode_count[0] += 1
+            else:
+                count = self.mode_count[1]
+                self.time_means[1] = (
+                    count * self.time_means[1] + diff_time)/(count + 1)
+                self.mode_count[1] += 1
         else:
-            t.header.frame_id = "map"
-        # Set child frame ID.
-        t.child_frame_id = "%s_%s" % (node_type, node_id)
-        # Set transform:
-        # - Create translation vector.
-        t.transform.translation.x = node_pose.t[0]
-        t.transform.translation.y = node_pose.t[1]
-        t.transform.translation.z = node_pose.t[2]
-        # - Create rotation matrix.
-        #   Verify that the rotation is a proper rotation.
-        det = np.linalg.det(node_pose.R)
-        if (det < 0):
-            print("after optim : det = %f" % det)
-        #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
-        q = g.rotations.quaternion_from_rotation(node_pose.R)
-        t.transform.rotation.w = q[0]
-        t.transform.rotation.x = q[1]
-        t.transform.rotation.y = q[2]
-        t.transform.rotation.z = q[3]
-        # Send the transform.
-        br.sendTransform(t)
+            if(interpolation):
+                count = self.mode_count[2]
+                self.time_means[2] = (
+                    count * self.time_means[2] + diff_time)/(count + 1)
+                self.mode_count[2] += 1
+            else:
+                count = self.mode_count[3]
+                self.time_means[3] = (
+                    count * self.time_means[3] + diff_time)/(count + 1)
+                self.mode_count[3] += 1
+        self.last_callback = rospy.get_time()
+        if(interpolation):
+            print("Opt + Inter = %f \t Opt = %f \t Inter = %f \t Simple %f" %
+                  (self.time_means[0], self.time_means[1], self.time_means[2], self.time_means[3]))
 
     def listen(self):
         """Initializes the graph based on the floor map and initializes the ID
