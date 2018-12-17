@@ -44,15 +44,20 @@ class DiagnosticsPanel(QtGui.QMainWindow):
                 self.odom_devices[this_device] = {}
                 self.odom_devices[this_device]['first'] = msg.header.stamp.secs + \
                     msg.header.stamp.nsecs * 10**-9
-
+                self.odom_devices[this_device]['timestamps'] = []
+            
+            self.odom_devices[this_device]['timestamps'].append(rospy.get_time())
             self.odom_devices[this_device]['last'] = msg.header.stamp.secs + \
                     msg.header.stamp.nsecs * 10**-9
+
         else:
             if this_device not in self.at_devices:
                 self.at_devices[this_device] = {}
                 self.at_devices[this_device]['first'] = msg.header.stamp.secs + \
                     msg.header.stamp.nsecs * 10**-9
+                self.at_devices[this_device]['timestamps'] = []
 
+            self.at_devices[this_device]['timestamps'].append(rospy.get_time())
             self.at_devices[this_device]['last'] = msg.header.stamp.secs + \
                     msg.header.stamp.nsecs * 10**-9
 
@@ -74,8 +79,10 @@ class DiagnosticsPanel(QtGui.QMainWindow):
             table.setItem(itr , 2, \
                 QtGui.QTableWidgetItem(str(diff)))
             
+            trimmed_timestamps = [t for t in devices[device_id]['timestamps'] if rospy.get_time() - t <= 5]
             table.setItem(itr , 3, \
-                QtGui.QTableWidgetItem(str(devices[device_id]['first'])))
+                QtGui.QTableWidgetItem(str(len(trimmed_timestamps))))
+            devices[device_id]['timestamps'] = trimmed_timestamps
             
             status_val = 'OK'
             color = QtGui.QColor(50,255,50)

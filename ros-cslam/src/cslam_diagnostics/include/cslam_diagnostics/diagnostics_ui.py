@@ -81,7 +81,7 @@ class Ui_MainWindow(object):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(_translate("MainWindow", "CSLAM Diagnostics", None))
+        MainWindow.setWindowTitle(_translate("MainWindow", "cSLAM Diagnostics", None))
         item = self.table_apriltags.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "Device", None))
         item = self.table_apriltags.horizontalHeaderItem(1)
@@ -89,7 +89,7 @@ class Ui_MainWindow(object):
         item = self.table_apriltags.horizontalHeaderItem(2)
         item.setText(_translate("MainWindow", "Diff", None))
         item = self.table_apriltags.horizontalHeaderItem(3)
-        item.setText(_translate("MainWindow", "First Msg", None))
+        item.setText(_translate("MainWindow", "Last 5 sec", None))
         item = self.table_apriltags.horizontalHeaderItem(4)
         item.setText(_translate("MainWindow", "Status", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Apriltags", None))
@@ -100,7 +100,7 @@ class Ui_MainWindow(object):
         item = self.table_odometry.horizontalHeaderItem(2)
         item.setText(_translate("MainWindow", "Diff", None))
         item = self.table_odometry.horizontalHeaderItem(3)
-        item.setText(_translate("MainWindow", "First Msg", None))
+        item.setText(_translate("MainWindow", "Last 5 sec", None))
         item = self.table_odometry.horizontalHeaderItem(4)
         item.setText(_translate("MainWindow", "Status", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Odometry", None))

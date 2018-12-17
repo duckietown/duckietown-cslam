@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>CSLAM Diagnostics</string>
+   <string>cSLAM Diagnostics</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QTabWidget" name="tabWidget">
@@ -56,7 +56,7 @@
       </column>
       <column>
        <property name="text">
-        <string>First Msg</string>
+        <string>Last 5 sec</string>
        </property>
       </column>
       <column>
@@ -96,7 +96,7 @@
       </column>
       <column>
        <property name="text">
-        <string>First Msg</string>
+        <string>Last 5 sec</string>
        </property>
       </column>
       <column>
