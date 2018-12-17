@@ -55,7 +55,7 @@ To test the ongoing work on g2o, do this :
 This will launch a dummy publisher that publishes 6 duckies and relative pose randomly.  
 The transform_listener_ros.py listens to it, and creates a graph using duckietown_graph_builder (that itself uses g2o_graph_builder, both are in lib-cslam)
 
-To actually launch just the listener, do:
+To actually launch just the listener, do:  
     $ roslaunch pose_graph_builder transform_listener.launch
 
 To visualize, run rviz on another terminal, add the topic type TF. Et voilà!  
