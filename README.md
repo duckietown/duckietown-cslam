@@ -12,6 +12,13 @@
 
 A contralized slam
 
+## Prerequisite
+!! True as long as the graph part has not yet been dockerized !!
+
+In order for this to work, you will need to install g2opy on the computer that runs the graph part.
+
+g2opy : https://github.com/uoip/g2opy 
+Warning : you will need to run  `cmake -DPYBIND11_PYTHON_VERSION=2.7 ..` to have it build for python2
 
 ## Installation from source
 
@@ -33,7 +40,7 @@ Run this:
 
 The output is generated in the folder in `lib-cslam/out-comptests/`.
 
-## To test ongoing work with g2o
+## Graph part with g2o
 To test the ongoing work on g2o, do this :
 
     $ cd lib-cslam
@@ -48,4 +55,7 @@ To test the ongoing work on g2o, do this :
 This will launch a dummy publisher that publishes 6 duckies and relative pose randomly.  
 The transform_listener_ros.py listens to it, and creates a graph using duckietown_graph_builder (that itself uses g2o_graph_builder, both are in lib-cslam)
 
-To visualize, run rviz on another terminal and set the frame from "map" to "world". Add the topic type TF. Et voilà!  
+To actually launch just the listener, do:  
+    $ roslaunch pose_graph_builder transform_listener.launch
+
+To visualize, run rviz on another terminal, add the topic type TF. Et voilà!  

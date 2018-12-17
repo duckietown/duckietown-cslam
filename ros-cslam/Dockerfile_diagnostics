@@ -1,0 +1,22 @@
+FROM ros:kinetic-ros-core
+
+MAINTAINER Benson Kuan <kbenson@ethz.ch>
+
+# Install rospy
+RUN apt-get update
+RUN apt-get install -y ros-kinetic-rospy
+RUN apt-get install -y python-qt4
+
+# Setup the ros-cslam
+RUN mkdir -p /catkin-ws/src
+COPY src/cslam_diagnostics /catkin-ws/src
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
+
+# Copy the bash wrapper
+COPY wrapper_diagnostics.sh /catkin-ws
+RUN chmod +x /catkin-ws/*.sh
+
+ENV DISPLAY :0
+ENV QT_X11_NO_MITSHM 1
+
+CMD /bin/bash -c "cd /catkin-ws; source /catkin-ws/devel/setup.bash; /catkin-ws/wrapper_diagnostics.sh"

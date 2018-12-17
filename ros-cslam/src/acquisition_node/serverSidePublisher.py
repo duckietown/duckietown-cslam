@@ -58,9 +58,6 @@ def publishOnServer(outputDictQueue, quitEvent):
             if "odometry" in incomingData:
                 publisherOdometry.publish(incomingData["odometry"])
 
-                    publisherPoses.publish(newTransformStamped)
-                    print("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
-
             # Publish the test and raw data if submitted and requested:
             if ACQ_TEST_STREAM:
                 if "test_stream_image" in incomingData:
