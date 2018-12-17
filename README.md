@@ -12,6 +12,13 @@
 
 A contralized slam
 
+## Prerequisite
+!! True as long as the graph part has not yet been dockerized !!
+
+In order for this to work, you will need to install g2opy on the computer that runs the graph part.
+
+g2opy : https://github.com/uoip/g2opy 
+Warning : you will need to run  `cmake -DPYBIND11_PYTHON_VERSION=2.7 ..` to have it build for python2
 
 ## Installation from source
 
@@ -42,7 +49,7 @@ To test the ongoing work on g2o, do this :
     $ cd ../ros-cslam
     $ catkin_make install
     $ source devel/setup.bash
-    $ roslaunch pose_graph_builder test.launch
+    $ roslaunch pose_graph_builder transform_listener.launch
 
 
 This will launch a dummy publisher that publishes 6 duckies and relative pose randomly.  
