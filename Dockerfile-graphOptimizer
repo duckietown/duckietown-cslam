@@ -1,0 +1,28 @@
+FROM ros:kinetic-ros-core
+
+MAINTAINER Benson Kuan <kbenson@ethz.ch>
+
+# Install rospy
+RUN apt-get update
+RUN apt-get install -y ros-kinetic-rospy
+RUN apt-get install -y qtbase5-dev
+RUN apt-get install -y qtdeclarative5-dev
+RUN apt-get install -y libeigen3-dev
+RUN apt-get install -y libsuitesparse-dev
+
+ARG graph_lib_dir=lib-cslam
+ARG ros_nodes=ros-cslam/src/pose_graph_builder
+
+RUN mkdir -p /graph_optimizer/catkin_ws/src
+
+COPY ${graph_lib_dir} /graph_optimizer/lib-cslam
+
+RUN cd /graph_optimizer/lib-cslam/src/g2opy ; mkdir build ; cd build ; cmake -DPYBIND11_PYTHON_VERSION=2.7 ..  ; make -j4; cd ..; python setup.py install
+RUN cd /graph_optimizer/lib-cslam; python setup.py install --no-deps
+
+COPY ${ros_nodes} /graph_optimizer/catkin_ws/src
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /graph_optimizer/catkin_ws/; catkin_make"
+
+RUN export ROS_MASTER_URI=http://${ROS_MASTER_URI_DEVICE}:11311
+
+CMD /bin/bash -c "cd /graph_optimizer/catkin_ws; source /graph_optimizer/catkin-ws/devel/setup.bash; /graph_optimizer/catkin_ws/src/pose_graph_builder/wrapper.sh"
