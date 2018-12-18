@@ -1,0 +1,8 @@
+FROM duckietown/rpi-ros-kinetic-roscore:master18
+
+MAINTAINER Benson Kuan <kbenson@ethz.ch>
+
+# Install rospy
+RUN apt-get update
+RUN apt-get install -y ros-kinetic-rospy
+
