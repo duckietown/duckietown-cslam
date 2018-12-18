@@ -9,11 +9,11 @@ RUN apt-get install -y python-qt4
 
 # Setup the ros-cslam
 RUN mkdir -p /catkin-ws/src
-COPY src/cslam_diagnostics /catkin-ws/src
+COPY ros-cslam/src/cslam_diagnostics /catkin-ws/src
 RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
 
 # Copy the bash wrapper
-COPY wrapper_diagnostics.sh /catkin-ws
+COPY ros-cslam/wrapper_diagnostics.sh /catkin-ws
 RUN chmod +x /catkin-ws/*.sh
 
 ENV DISPLAY $DISPLAY
