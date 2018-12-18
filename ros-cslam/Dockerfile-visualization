@@ -1,0 +1,26 @@
+FROM ros:kinetic-ros-core
+
+MAINTAINER Rohit Suri <suriro@student.ethz.ch>
+
+ENV DISPLAY $DISPLAY
+ENV QT_X11_NO_MITSHM 1
+
+# Install rospy
+RUN apt-get update
+RUN apt-get install -y ros-kinetic-rospy ros-kinetic-rviz
+RUN apt-get install -y python-pip python-numpy python-scipy python-catkin-tools
+RUN pip install --upgrade pip
+
+# Set up prerequisites
+RUN git clone https://github.com/duckietown/duckietown-world.git /duckietown-world; cd /duckietown-world; pip install -r requirements.txt; python setup.py develop --no-deps
+
+RUN git clone https://github.com/AndreaCensi/geometry.git /geometry; cd /geometry; pip install -r requirements.txt; python setup.py install
+
+# Setup the ros-cslam
+RUN mkdir -p /catkin-ws/src
+COPY src/cslam_visualization /catkin-ws/src/cslam_visualization
+COPY src/duckietown-visualization/duckietown_visualization /catkin-ws/src/duckietown_visualization
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin build"
+
+#TODO
+CMD /bin/bash -c "cd /catkin-ws; source /catkin-ws/devel/setup.bash;"
