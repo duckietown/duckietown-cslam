@@ -324,7 +324,7 @@ class deviceSideProcessor():
     def process(self, raw_image, cameraMatrix, distCoeffs):
 
         # 0. Beautify if wanted:
-        if self.opt_beautify:
+        if self.opt_beautify and self.ImageRectifier:
             raw_image = self.ImageRectifier.beautify(raw_image)
 
         # 0. Initialize the image rectifier if it hasn't been already (that's done so that we don't recompute the remapping)
