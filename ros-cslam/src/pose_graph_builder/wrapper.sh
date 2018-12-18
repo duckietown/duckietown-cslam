@@ -7,5 +7,5 @@ export ROS_MASTER_URI=http://${ROS_MASTER_URI_DEVICE}:11311
 export ROS_IP=${ROS_MASTER_URI_DEVICE_IP}
 
 # Start the diagnostics
-roslaunch pose_graph_builder grapher_builder.launch
+roslaunch pose_graph_builder graph_builder.launch
 
