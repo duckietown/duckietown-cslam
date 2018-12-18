@@ -111,7 +111,7 @@ class DiagnosticsPanel(QtGui.QMainWindow):
             
 
 def main():
-    rospy.init_node("cslam_debugger")
+    rospy.init_node("cslam_diagnostics")
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     app = QtGui.QApplication(sys.argv)
     diag = DiagnosticsPanel()
