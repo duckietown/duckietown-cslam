@@ -42,7 +42,7 @@ RUN chmod +x /graph_optimizer/catkin_ws/src/pose_graph_builder/*.sh
 # Setup the ros-visualization
 COPY ros-cslam/src/cslam_visualization /graph_optimizer/catkin_ws/src/cslam_visualization
 COPY ros-cslam/src/duckietown-visualization/duckietown_visualization /graph_optimizer/catkin_ws/src/duckietown_visualization
-RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin_ws/; catkin_make"
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /graph_optimizer/catkin_ws/; catkin_make"
 
 
 CMD /bin/bash -c "/graph_optimizer/catkin_ws/src/pose_graph_builder/wrapper.sh"

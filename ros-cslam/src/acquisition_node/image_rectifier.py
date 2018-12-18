@@ -29,7 +29,7 @@ class ImageRectifier():
         self.rectify(image)
 
     def rectify(self, image):
-        remappedIm = cv2.remap(image, self.map1, self.map2, cv2.INTER_NEAREST)
+        remappedIm = cv2.remap(image, self.map1, self.map2, cv2.INTER_LINEAR)
 
         return remappedIm, self.newCameraMatrix
 
