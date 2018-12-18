@@ -182,7 +182,9 @@ class TransformListener():
         self.max_number_same_edge = 30
         self.time_means = [0.0, 0.0, 0.0, 0.0]
         self.mode_count = [0, 0, 0, 0]
-
+        self.verbose = rospy.get_param("optim_verbose")
+        self.optim_vertices_period = int(rospy.get_param("optim_vertices_period"))
+        self.save_output = rospy.get_param("save_g2o_output")
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -425,12 +427,12 @@ class TransformListener():
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
         if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 80 and
-                self.num_messages_received % 12 == 0):
+                self.num_messages_received % self.optim_vertices_period == 0):
             a = rospy.get_time()
             self.pose_graph.optimize(
                 10,
-                save_result=True,
-                verbose=False,
+                save_result=self.save_output,
+                verbose=self.verbose,
                 output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
             b = rospy.get_time()
