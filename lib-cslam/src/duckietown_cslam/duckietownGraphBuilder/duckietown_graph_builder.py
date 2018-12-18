@@ -193,7 +193,6 @@ class DuckietownGraphBuilder():
 
         num_local_indices_assigned = self.num_local_indices_assigned[node_type][
             node_id]
-        interpolation = False
         if (time_stamp not in self.timestamp_local_indices[node_type][node_id]
                 and
                 (node_type in self.movable or num_local_indices_assigned == 0)):
@@ -220,10 +219,9 @@ class DuckietownGraphBuilder():
                             if(self.chi2 != 0.0):
                                 self.retrointerpolate(time_stamp, node_type, node_id,
                                                       vertex_id)
-                                interpolation = True
 
-            return (True, interpolation)
-        return (False, interpolation)
+            return True
+        return False
 
     def add_vertex(self,
                    vertex_id,
@@ -252,7 +250,7 @@ class DuckietownGraphBuilder():
         [node_type, node_id] = vertex_id.split("_")
         # Adds (assigns) a timestamp to a node, by giving it a 'local index'
         # w.r.t. the node.
-        added, interpolation = self.add_timestamp_to_node(
+        added = self.add_timestamp_to_node(
             node_type, node_id, time_stamp)
         if (not added):
             print(
@@ -487,15 +485,14 @@ class DuckietownGraphBuilder():
                                vertex1_id, since the two match).
         """
         if (vertex0_id != vertex1_id):
-            interpolation = False
             for vertex_id in [vertex0_id, vertex1_id]:
                 if (len(vertex_id.split("_")) == 1):
                     print("Error, vertexname is %s. Exiting" % vertex_id)
                     exit(-1)
                 [node_type, node_id] = vertex_id.split("_")
                 # Associate timestamps to the vertices.
-                added, interpolation = self.add_timestamp_to_node(node_type, node_id,
-                                                                  time_stamp)
+                added = self.add_timestamp_to_node(node_type, node_id,
+                                                   time_stamp)
                 if not added:
                     pass
             # Obtain ID of the vertices in the graph in the integer format.
@@ -504,11 +501,10 @@ class DuckietownGraphBuilder():
             # Add edge between the two vertices (and automatically also add the
             # vertices if not there already).in the g2o graph.
             self.graph.add_edge(vertex0_id_int, vertex1_id_int, measure)
-            return interpolation
         else:
             [node_type, node_id] = vertex0_id.split("_")
             # Associate timestamps to the vertex.
-            added, interpolation = self.add_timestamp_to_node(
+            added = self.add_timestamp_to_node(
                 node_type, node_id, time_stamp)
 
             if (node_type in self.movable):
@@ -531,7 +527,6 @@ class DuckietownGraphBuilder():
                         is_initial_floor_tag=False,
                         fixed=False,
                         time_stamp=time_stamp)
-                    return interpolation
 
                 else:
                     # Update the known last odometry message time_stamp for the node
@@ -606,5 +601,43 @@ class DuckietownGraphBuilder():
 
                 result_dict[node_type][node_id] = self.graph.vertex_pose(
                     self.convert_names_to_int(vertex_id, last_time_stamp))
+
+        return result_dict
+
+    def get_movable_paths(self):
+        """Obtains the history of poses for each movable object.
+
+           Returns:
+               Dictionary of dictionaries, containing for each type of movable node and
+               each node ID the history of poses
+               available in the graph. For instance,
+               result_dict[node_type][node_id] contains all the poses
+               in the g2o graph for the node with type <node_type> and
+               ID <node_id>.
+        """
+        result_dict = {}
+        # For all node types <node_type>:
+        # timestamp_local_indices[<node_type>] = {<node_id0> : {node_id0_dict},
+        #                                         <node_id1> : {node_id1_dict},
+        #                                         ...} =: node_id_dict
+        for node_type, node_id_dict in self.timestamp_local_indices.iteritems():
+            if node_type in self.movable:
+                result_dict[node_type] = {}
+                # For all node types <node_type>, all node IDs <node_id>:
+                # timestamp_local_indices[<node_type>][<node_id>] =
+                #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
+                #      <time_stamp1> : local_index_of_time_stamp1_in_node_node_id,
+                #      ...} =: time_stamp_dict
+                for node_id, time_stamp_dict in node_id_dict.iteritems():
+                    result_dict[node_type][node_id] = dict()
+                    vertex_id = "%s_%s" % (node_type, node_id)
+                    g2o_vertices = self.graph.optimizer.vertices()
+                    for time_stamp, _ in time_stamp_dict.iteritems():
+                        if (self.convert_names_to_int(vertex_id, time_stamp) not in
+                                g2o_vertices):
+                            pass
+                        else:
+                            result_dict[node_type][node_id][time_stamp] = self.graph.vertex_pose(
+                                self.convert_names_to_int(vertex_id, time_stamp))
 
         return result_dict
