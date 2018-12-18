@@ -2,6 +2,8 @@
 import rospy
 from std_msgs.msg import String, Header, Time
 from geometry_msgs.msg import *
+from visualization_msgs.msg import *
+
 import duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder as dGB
 import g2o
 import numpy as np
@@ -13,7 +15,7 @@ import threading
 import random
 
 
-class Broadcaster(threading.Thread):
+class PointBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
         threading.Thread.__init__(self)
         self.pose_dict = dictionnary
@@ -29,7 +31,6 @@ class Broadcaster(threading.Thread):
                 node_pose: Pose of the node.
         """
         # Create broadcaster and transform.
-        a = rospy.get_time()
         t = geometry_msgs.msg.TransformStamped()
         t.header.stamp = rospy.Time.now()
 
@@ -71,6 +72,75 @@ class Broadcaster(threading.Thread):
                 self.tfbroadcast(node_type, node_id, node_pose)
 
 
+class PathBroadcaster(threading.Thread):
+    def __init__(self, dictionnary):
+        threading.Thread.__init__(self)
+        self.path_dict = dictionnary
+        self.publisher = rospy.Publisher('/movable_path', Marker)
+        self.colors = [[0,0,1],[0,1,0], [1,0,0], [0,1,1],[1,0,1], [1,1,0], [1,1,1]]
+
+    def path_broadcast(self, node_type, node_id, node_path, color_index):
+        """ Brodcasts the path for the node
+
+            Args:
+                node_type: Type of the node. Can be any of the types defined in
+                           the class DuckietownGraphBuilder.
+                node_id: ID of the node.
+                node_path: Path of the node. Dictionnary of {timestamp : g2oTransform}
+        """
+        # Create broadcaster and transform.
+        line_strip = visualization_msgs.msg.Marker()
+        line_strip.header.stamp = rospy.Time.now()
+        line_strip.type = 4  # line_strip
+        # Set frame ID. TODO: change it depending on the node type.
+        if (node_type == "duckie"):
+            line_strip.header.frame_id = "map"
+        else:
+            line_strip.header.frame_id = "map"
+        # Set frame ID.
+        line_strip.ns = node_type
+        line_strip.id = int(node_id)
+        line_strip.color.r = self.colors[color_index][0]
+        line_strip.color.g = self.colors[color_index][1]
+        line_strip.color.b = self.colors[color_index][2]
+        line_strip.color.a = 1.0
+        line_strip.scale.x = 0.01
+        # Set transform:
+        # - Create translation vector.
+        for time_stamp in sorted(node_path.keys()):
+            node_pose = self.path_dict[node_type][node_id][time_stamp]
+            point = geometry_msgs.msg.Point()
+            point.x = node_pose.t[0]
+            point.y = node_pose.t[1]
+            # point.z = node_pose.t[2]
+            point.z = 0.001
+            line_strip.points.append(point)
+        # - Create rotation matrix.
+        #   Verify that the rotation is a proper rotation.
+        # det = np.linalg.det(node_pose.R)
+        # if (det < 0):
+        #     print("after optim : det = %f" % det)
+        #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
+        # q = g.rotations.quaternion_from_rotation(node_pose.R)
+        # t.transform.rotation.w = q[0]
+        # t.transform.rotation.x = q[1]
+        # t.transform.rotation.y = q[2]
+        # t.transform.rotation.z = q[3]
+        # Send the transform.
+        self.publisher.publish(line_strip)
+        # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
+        # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
+
+    def run(self):
+        color_index = 0
+        for node_type, node_list in self.path_dict.iteritems():
+            for node_id, node_path in node_list.iteritems():
+                self.path_broadcast(node_type, node_id, node_path, color_index)
+                color_index += 1
+                if(color_index == len(self.colors)):
+                    color_index = 0
+
+
 class TransformListener():
     """Listens for the transforms published by the acquisition node, associates
        each object in the map to an ID, builds an internal pose graph and
@@ -104,7 +174,7 @@ class TransformListener():
         self.old_odometry_stamps = {}
         self.id_map = {}
         self.last_callback = rospy.get_time()
-        self.optim_period = 0.5
+        self.optim_period = 0.3
         self.optim_period_counter = -5.0
         self.num_messages_received = 0
         self.edge_counters = dict()
@@ -338,40 +408,42 @@ class TransformListener():
         time = Time(data.header.stamp)
         time_stamp = time.data.secs + time.data.nsecs * 10**(-9)
 
-        interpolation = False
         if (id1 == id0):
             # Same ID: odometry message, e.g. the same Duckiebot sending
             # odometry information at different instances in time.
-            interpolation = self.handle_odometry_message(
+            self.handle_odometry_message(
                 id1, transform, time_stamp)
         elif (is_from_watchtower):
             # Tag detected by a watchtower.
-            interpolation = self.handle_watchtower_message(
+            self.handle_watchtower_message(
                 id0, id1, transform, time_stamp)
         else:
             # Tag detected by a Duckiebot.
-            interpolation = self.handle_duckiebot_message(
+            self.handle_duckiebot_message(
                 id0, id1, transform, time_stamp)
 
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
-        isoptimizing = False
-        if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 100 and
-                self.num_messages_received % 15 == 0):
-            isoptimizing = True
+        if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 80 and
+                self.num_messages_received % 12 == 0):
             a = rospy.get_time()
             self.pose_graph.optimize(
                 10,
                 save_result=True,
-                verbose=True,
+                verbose=False,
                 output_name="/tmp/test2.g2o")
             self.optim_period_counter = 0
             b = rospy.get_time()
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
             c = rospy.get_time()
-            broadcaster = Broadcaster(pose_dict)
-            broadcaster.start()
+            point_broadcaster = PointBroadcaster(pose_dict)
+            point_broadcaster.start()
+
+            path_dict = self.pose_graph.get_movable_paths()
+            # print(path_dict)
+            path_broadcaster = PathBroadcaster(path_dict)
+            path_broadcaster.start()
             # for node_type, node_list in pose_dict.iteritems():
             #     for node_id, node_pose in node_list.iteritems():
             #         self.tfbroadcast(node_type, node_id, node_pose)
@@ -380,32 +452,8 @@ class TransformListener():
                   (b-a, c-b, d-c))
         end_time = rospy.get_time()
         diff_time = end_time - start_time
-        if(isoptimizing):
-            if(interpolation):
-                count = self.mode_count[0]
-                self.time_means[0] = (
-                    count * self.time_means[0] + diff_time)/(count + 1)
-                self.mode_count[0] += 1
-            else:
-                count = self.mode_count[1]
-                self.time_means[1] = (
-                    count * self.time_means[1] + diff_time)/(count + 1)
-                self.mode_count[1] += 1
-        else:
-            if(interpolation):
-                count = self.mode_count[2]
-                self.time_means[2] = (
-                    count * self.time_means[2] + diff_time)/(count + 1)
-                self.mode_count[2] += 1
-            else:
-                count = self.mode_count[3]
-                self.time_means[3] = (
-                    count * self.time_means[3] + diff_time)/(count + 1)
-                self.mode_count[3] += 1
+        # print(diff_time)
         self.last_callback = rospy.get_time()
-        if(interpolation):
-            print("Opt + Inter = %f \t Opt = %f \t Inter = %f \t Simple %f" %
-                  (self.time_means[0], self.time_means[1], self.time_means[2], self.time_means[3]))
 
     def listen(self):
         """Initializes the graph based on the floor map and initializes the ID
