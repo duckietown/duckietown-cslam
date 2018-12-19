@@ -12,11 +12,7 @@ RUN mkdir -p /catkin-ws/src
 COPY ros-cslam/src/cslam_diagnostics /catkin-ws/src
 RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
 
-# Copy the bash wrapper
-COPY ros-cslam/wrapper_diagnostics.sh /catkin-ws
-RUN chmod +x /catkin-ws/*.sh
-
 ENV DISPLAY $DISPLAY
 ENV QT_X11_NO_MITSHM 1
 
-CMD /bin/bash -c "cd /catkin-ws; source /catkin-ws/devel/setup.bash; /catkin-ws/wrapper_diagnostics.sh"
+CMD /bin/bash -c "cd /catkin-ws; source /catkin-ws/devel/setup.bash; /catkin-ws/src/cslam_diagnostics/wrapper_diagnostics.sh"
