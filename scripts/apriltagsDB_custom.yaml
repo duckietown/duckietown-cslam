@@ -1,11 +1,11 @@
-- tag_id: 01
+- tag_id: 00
   tag_type: Vehicle
   street_name:
   vehicle_name: donaldthegreat
   traffic_sign_type: 
 
-- tag_id: 88
+- tag_id: 407
   tag_type: Vehicle
   street_name:
-  vehicle_name: donaldthegreat
+  vehicle_name: psyduck
   traffic_sign_type: 

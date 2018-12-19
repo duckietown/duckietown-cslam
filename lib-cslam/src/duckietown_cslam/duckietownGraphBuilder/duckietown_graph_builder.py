@@ -598,9 +598,9 @@ class DuckietownGraphBuilder():
                     if (node_type in self.movable):
                         # For odometry nodes that
                         last_time_stamp = sorted(time_stamp_dict.keys())[-2]
-
-                result_dict[node_type][node_id] = self.graph.vertex_pose(
-                    self.convert_names_to_int(vertex_id, last_time_stamp))
+                else:
+                    result_dict[node_type][node_id] = self.graph.vertex_pose(
+                        self.convert_names_to_int(vertex_id, last_time_stamp))
 
         return result_dict
 
@@ -632,7 +632,8 @@ class DuckietownGraphBuilder():
                     result_dict[node_type][node_id] = dict()
                     vertex_id = "%s_%s" % (node_type, node_id)
                     g2o_vertices = self.graph.optimizer.vertices()
-                    for time_stamp, _ in time_stamp_dict.iteritems():
+                    time_stamp_copy = time_stamp_dict.copy()
+                    for time_stamp, _ in time_stamp_copy.iteritems():
                         if (self.convert_names_to_int(vertex_id, time_stamp) not in
                                 g2o_vertices):
                             pass

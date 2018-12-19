@@ -37,10 +37,13 @@ class PointBroadcaster(threading.Thread):
         # Set frame ID. TODO: change it depending on the node type.
         if (node_type == "duckie"):
             t.header.frame_id = "map"
+            t.child_frame_id = "%s_%s" % ("duckiebot", node_id)
+
         else:
             t.header.frame_id = "map"
+            t.child_frame_id = "%s_%s" % (node_type, node_id)
+
         # Set child frame ID.
-        t.child_frame_id = "%s_%s" % (node_type, node_id)
         # Set transform:
         # - Create translation vector.
         t.transform.translation.x = node_pose.t[0]
@@ -389,11 +392,6 @@ class TransformListener():
         # Convert the frame IDs to the right format.
         id0 = self.filter_name(id0)
         id1 = self.filter_name(id1)
-
-        # For debug. TODO: remove.
-        if (id0 == "watchtower_5"):
-            # self.lock.release()
-            return 0
 
         # Ignore messages from one watchtower to another watchtower (i.e.,
         # odometry messages between watchtowers). TODO: check if we can avoid
