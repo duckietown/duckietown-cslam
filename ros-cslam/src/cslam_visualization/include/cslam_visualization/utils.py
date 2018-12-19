@@ -16,7 +16,7 @@ def get_trafficsign_marker(marker_id, x, y, q, marker_type):
 
     marker.header.frame_id = "/map"
     marker.id = marker_id
-    marker.ns = "ground_tags" #TODO
+    marker.ns = "traffic_signs"
 
     marker.type = marker.MESH_RESOURCE
     marker.action = marker.ADD
@@ -48,7 +48,7 @@ def get_apriltag_marker(marker_id, x, y, q):
 
     marker.header.frame_id = "/map"
     marker.id = marker_id
-    marker.ns = "ground_tags" #TODO
+    marker.ns = "ground_tags"
 
     marker.type = marker.MESH_RESOURCE
     marker.action = marker.ADD
@@ -79,7 +79,7 @@ def get_watchtower_marker(marker_id, x, y, q):
 
     marker.type = marker.MESH_RESOURCE
     marker.action = marker.ADD
-    marker.mesh_resource = "package://cslam_visualization/meshes/watchtower/watchtower.dae"
+    marker.mesh_resource = "package://duckietown_visualization/meshes/watchtower/watchtower.dae"
     marker.mesh_use_embedded_materials = True
     
     marker.pose.position.x = x
