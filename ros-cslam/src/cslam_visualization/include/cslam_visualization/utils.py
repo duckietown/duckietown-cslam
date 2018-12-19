@@ -82,14 +82,17 @@ def get_watchtower_marker(marker_id, x, y, q):
     marker.mesh_resource = "package://duckietown_visualization/meshes/watchtower/watchtower.dae"
     marker.mesh_use_embedded_materials = True
     
-    marker.pose.position.x = x
-    marker.pose.position.y = y
+    
+    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    marker.pose.position.x = x - 0.05*math.cos(yaw)
+    marker.pose.position.y = y - 0.05*math.sin(yaw)
     marker.pose.position.z = 0
 
     marker.scale.x = 1
     marker.scale.y = 1
     marker.scale.z = 1
-
+    
+    q = tf.transformations.quaternion_from_euler(0, 0, yaw)
     marker.pose.orientation.x = 0
     marker.pose.orientation.y = 0
     marker.pose.orientation.z = 0
@@ -137,7 +140,8 @@ def get_markers(duckiebots,watchtowers,apriltags,listener):
         except (tf.LookupException, tf.ConnectivityException, 
             tf.ExtrapolationException):
             continue
-        marker_array.markers.append(get_duckiebot_marker(it,trans[0],trans[1],rot))
+        tag_id = int(duckiebots[it].split('_')[-1])
+        marker_array.markers.append(get_duckiebot_marker(tag_id,trans[0],trans[1],rot))
     
     for it in range(len(watchtowers)): 
         try:
@@ -146,7 +150,8 @@ def get_markers(duckiebots,watchtowers,apriltags,listener):
         except (tf.LookupException, tf.ConnectivityException, 
             tf.ExtrapolationException):
             continue
-        marker_array.markers.append(get_watchtower_marker(it,trans[0],trans[1],rot))
+        tag_id = int(watchtowers[it].split('_')[-1])
+        marker_array.markers.append(get_watchtower_marker(tag_id,trans[0],trans[1],rot))
     
     for it in range(len(apriltags)): 
         try:
@@ -158,10 +163,10 @@ def get_markers(duckiebots,watchtowers,apriltags,listener):
         tag_id = int(apriltags[it].split('_')[-1])
 
         if tag_id not in trafficsign_apriltags:
-            marker_array.markers.append(get_apriltag_marker(it,trans[0],trans[1],rot))
+            marker_array.markers.append(get_apriltag_marker(tag_id,trans[0],trans[1],rot))
         else:
             marker_type = trafficsign_apriltags[tag_id]
-            marker_array.markers.append(get_trafficsign_marker(it,trans[0],trans[1],rot,marker_type))
+            marker_array.markers.append(get_trafficsign_marker(tag_id,trans[0],trans[1],rot,marker_type))
 
     return marker_array
 
