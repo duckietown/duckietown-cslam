@@ -177,7 +177,7 @@ class TransformListener():
         self.old_odometry_stamps = {}
         self.id_map = {}
         self.last_callback = rospy.get_time()
-        self.optim_period = 0.3
+        self.optim_period = 0.15
         self.optim_period_counter = -5.0
         self.num_messages_received = 0
         self.edge_counters = dict()
