@@ -5,7 +5,7 @@ services:
       environment:
         - ACQ_ROS_MASTER_URI_DEVICE=duckiebotHostname.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=XXX.XXX.XXX.XXX
-        - ACQ_ROS_MASTER_URI_SERVER=ROS_MASTER_Hostname.local
+        - ACQ_ROS_MASTER_URI_SERVER=ROS_MASTER_HOSTNAME.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=XXX.XXX.XXX.XXX
         - ACQ_DEVICE_NAME=duckiebotHostname
         - ACQ_BEAUTIFY=0
