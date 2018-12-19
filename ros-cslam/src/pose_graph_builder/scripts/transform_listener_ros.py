@@ -13,7 +13,7 @@ import tf_conversions
 import tf2_ros
 import threading
 import random
-
+import os
 
 class PointBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
@@ -196,21 +196,24 @@ class TransformListener():
         aprilstagDB_custom = "%s/%s" % (config_folder, "apriltagsDB_custom.yaml")
         # Read YAML file.
         for apriltagfile in [aprilstagDB, aprilstagDB_custom]:
-            with open(apriltagfile, 'r') as stream:
-                try:
-                    complete_dict = yaml.safe_load(stream)
-                    for myobject in complete_dict:
-                        tag_id = myobject["tag_id"]
-                        mytype = myobject['tag_type']
-                        vehicle_name = myobject['vehicle_name']
-                        self.id_map[str(tag_id)] = mytype
-                        if vehicle_name:
-                            # print(vehicle_name)
-                            self.id_map[str(vehicle_name)] = str(tag_id)
+            if os.path.isfile(apriltagfile):
 
-                except yaml.YAMLError as exc:
-                    print(exc)
+                with open(apriltagfile, 'r') as stream:
+                    try:
+                        complete_dict = yaml.safe_load(stream)
+                        for myobject in complete_dict:
+                            tag_id = myobject["tag_id"]
+                            mytype = myobject['tag_type']
+                            vehicle_name = myobject['vehicle_name']
+                            self.id_map[str(tag_id)] = mytype
+                            if vehicle_name:
+                                # print(vehicle_name)
+                                self.id_map[str(vehicle_name)] = str(tag_id)
 
+                    except yaml.YAMLError as exc:
+                        print(exc)
+            else:
+                print("apriltagDB file not found at %s" %apriltagfile)
     def find_vertex_name(self, id):
         """ Returns the format ID of an object in the ID map based on its type.
 
