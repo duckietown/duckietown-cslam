@@ -84,8 +84,8 @@ def get_watchtower_marker(marker_id, x, y, q):
     
     
     (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
-    marker.pose.position.x = x - 0.05*math.cos(yaw)
-    marker.pose.position.y = y - 0.05*math.sin(yaw)
+    marker.pose.position.x = x - 0.1*math.cos(yaw)
+    marker.pose.position.y = y - 0.1*math.sin(yaw)
     marker.pose.position.z = 0
 
     marker.scale.x = 1
@@ -93,10 +93,10 @@ def get_watchtower_marker(marker_id, x, y, q):
     marker.scale.z = 1
     
     q = tf.transformations.quaternion_from_euler(0, 0, yaw)
-    marker.pose.orientation.x = 0
-    marker.pose.orientation.y = 0
-    marker.pose.orientation.z = 0
-    marker.pose.orientation.w = 1
+    marker.pose.orientation.x = q[0]
+    marker.pose.orientation.y = q[1]
+    marker.pose.orientation.z = q[2]
+    marker.pose.orientation.w = q[3]
 
     return marker
 
