@@ -32,8 +32,8 @@ def get_trafficsign_marker(marker_id, x, y, q, marker_type):
     marker.scale.y = 1
     marker.scale.z = 1
 
-    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
-    q = tf.transformations.quaternion_from_euler(0, 0, yaw)
+    (_,pitch,yaw) = tf.transformations.euler_from_quaternion(q)
+    q = tf.transformations.quaternion_from_euler(0, pitch+math.pi/2, yaw)
 
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
@@ -62,7 +62,9 @@ def get_apriltag_marker(marker_id, x, y, q):
     marker.scale.x = 0.064
     marker.scale.y = 0.064
     marker.scale.z = 1
-
+    
+    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    q = tf.transformations.quaternion_from_euler(0, 0, yaw)
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
     marker.pose.orientation.z = q[2]
@@ -82,16 +84,15 @@ def get_watchtower_marker(marker_id, x, y, q):
     marker.mesh_resource = "package://duckietown_visualization/meshes/watchtower/watchtower.dae"
     marker.mesh_use_embedded_materials = True
     
-    
-    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
-    marker.pose.position.x = x - 0.1*math.cos(yaw)
-    marker.pose.position.y = y - 0.1*math.sin(yaw)
+    marker.pose.position.x = x
+    marker.pose.position.y = y
     marker.pose.position.z = 0
 
     marker.scale.x = 1
     marker.scale.y = 1
     marker.scale.z = 1
     
+    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
     q = tf.transformations.quaternion_from_euler(0, 0, yaw)
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
@@ -119,7 +120,9 @@ def get_duckiebot_marker(marker_id, x, y, q):
     marker.scale.x = 1
     marker.scale.y = 1
     marker.scale.z = 1
-
+    
+    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    q = tf.transformations.quaternion_from_euler(0, 0, yaw)
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
     marker.pose.orientation.z = q[2]
