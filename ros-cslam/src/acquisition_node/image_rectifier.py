@@ -29,22 +29,23 @@ class ImageRectifier():
         self.rectify(image)
 
     def rectify(self, image):
-        remappedIm = cv2.remap(image, self.map1, self.map2, cv2.INTER_NEAREST)
+        remappedIm = cv2.remap(image, self.map1, self.map2, cv2.INTER_LINEAR)
 
         return remappedIm, self.newCameraMatrix
 
     def beautify(self, image):
+        # assumes a grayscale image
 
         # CLAHE (Contrast Limited Adaptive Histogram Equalization)
         clahe = cv2.createCLAHE(clipLimit=3., tileGridSize=(8,8))
 
-        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)  # convert from BGR to LAB color space
-        l, a, b = cv2.split(lab)  # split on 3 different channels
+        # lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)  # convert from BGR to LAB color space
+        # l, a, b = cv2.split(lab)  # split on 3 different channels
 
-        l2 = clahe.apply(l)  # apply CLAHE to the L-channel
+        img2 = clahe.apply(image)  # apply CLAHE to the L-channel
 
-        lab = cv2.merge((l2,a,b))  # merge channels
-        img2 = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)  # convert from LAB to BGR
+        # lab = cv2.merge((l2,a,b))  # merge channels
+        # img2 = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)  # convert from LAB to BGR
 
         return img2
 

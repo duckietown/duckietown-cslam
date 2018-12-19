@@ -1,7 +1,7 @@
 version: '3'
 services:
   acquisition_node_donald:
-      image: aleksandarpetrov/duckietown-cslam-acquisition-cb
+      image: duckietown/cslam-acquisition:rpi
       environment:
         - ACQ_ROS_MASTER_URI_DEVICE=donaldthegreat.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.181
