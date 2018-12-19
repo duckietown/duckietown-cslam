@@ -13,7 +13,7 @@ RUN apt-get install -y libeigen3-dev
 RUN apt-get install -y libsuitesparse-dev
 RUN apt-get install -y python-pip python-numpy python-scipy 
 
-RUN pip install --upgrade pip
+# RUN pip install --upgrade pip
 RUN pip install PyGeometry 
 
 ## Pose graph optimizer
