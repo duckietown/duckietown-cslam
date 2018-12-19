@@ -32,8 +32,8 @@ def get_trafficsign_marker(marker_id, x, y, q, marker_type):
     marker.scale.y = 1
     marker.scale.z = 1
 
-    (_,pitch,yaw) = tf.transformations.euler_from_quaternion(q)
-    q = tf.transformations.quaternion_from_euler(0, pitch+math.pi/2, yaw)
+    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    q = tf.transformations.quaternion_from_euler(0, 0, yaw+math.pi/2)
 
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
