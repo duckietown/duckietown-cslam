@@ -1,7 +1,7 @@
 version: '3'
 services:
   acquisition_node_wt05:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower05.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.48
@@ -16,7 +16,7 @@ services:
     restart: always
 
   acquisition_node_wt06:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower06.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.58
@@ -31,7 +31,7 @@ services:
     restart: always
 
   acquisition_node_wt07:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower07.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.179
@@ -46,7 +46,7 @@ services:
     restart: always
 
   acquisition_node_wt08:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower08.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.227
@@ -61,7 +61,7 @@ services:
     restart: always
 
   acquisition_node_wt09:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower09.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.159
@@ -76,7 +76,7 @@ services:
     restart: always
 
   acquisition_node_wt10:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower10.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.81
@@ -91,7 +91,7 @@ services:
     restart: always
 
   acquisition_node_wt11:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower11.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.247
@@ -106,7 +106,7 @@ services:
     restart: always
 
   acquisition_node_wt12:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower12.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.113
@@ -119,7 +119,7 @@ services:
         - ACQ_TEST_STREAM=0
 
   acquisition_node_wt13:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower13.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.183
@@ -132,7 +132,7 @@ services:
         - ACQ_TEST_STREAM=0
 
   acquisition_node_wt15:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower15.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.249
@@ -145,7 +145,7 @@ services:
         - ACQ_TEST_STREAM=0
 
   acquisition_node_wt16:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower16.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.199
@@ -158,7 +158,7 @@ services:
         - ACQ_TEST_STREAM=0
 
   acquisition_node_wt20:
-    image: aleksandarpetrov/duckietown-cslam-acquisition
+    image: duckietown/cslam-acquisition:x86
     environment:
         - ACQ_ROS_MASTER_URI_DEVICE=watchtower20.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.210

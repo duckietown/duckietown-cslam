@@ -1,7 +1,7 @@
 - tag_id: 0
-  tag_type: Vehicle
+  tag_type:
   street_name:
-  vehicle_name: donaldthegreat
+  vehicle_name:
   traffic_sign_type:
 
 - tag_id: 1

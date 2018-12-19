@@ -1,6 +1,6 @@
 #!/bin/bash
 
-array=(demowatchtower09 demowatchtower10)
+array=(demowatchtower01 demowatchtower02 demowatchtower03 demowatchtower04 demowatchtower05 demowatchtower06 demowatchtower07 demowatchtower08 demowatchtower09 demowatchtower10 demowatchtower11 demowatchtower12 demowatchtower13 demowatchtower14 demowatchtower15 )
 
 echo "We are stopping ${#array[*]} watchtowers"
 

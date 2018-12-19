@@ -323,9 +323,7 @@ class deviceSideProcessor():
 
     def process(self, raw_image, cameraMatrix, distCoeffs):
 
-        # 0. Beautify if wanted:
-        if self.opt_beautify:
-            raw_image = self.ImageRectifier.beautify(raw_image)
+
 
         # 0. Initialize the image rectifier if it hasn't been already (that's done so that we don't recompute the remapping)
         if self.ImageRectifier is None:
@@ -339,6 +337,11 @@ class deviceSideProcessor():
             tect_image_gray = cv2.cvtColor(rect_image, cv2.COLOR_BGR2GRAY)
         else:
             tect_image_gray = rect_image
+
+        # Beautify if wanted:
+        if self.opt_beautify and self.ImageRectifier:
+            raw_image = self.ImageRectifier.beautify(raw_image)
+
         aprilTags = self.aprilTagProcessor.configureDetector(newCameraMatrix).detect(tect_image_gray, return_image=False)
 
         # 3. Extract poses from april tags data

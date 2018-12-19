@@ -193,21 +193,23 @@ class TransformListener():
         """
         config_folder = rospy.get_param("config_folder")
         aprilstagDB = "%s/%s" % (config_folder, "apriltagsDB.yaml")
+        aprilstagDB_custom = "%s/%s" % (config_folder, "apriltagsDB_custom.yaml")
         # Read YAML file.
-        with open(aprilstagDB, 'r') as stream:
-            try:
-                complete_dict = yaml.safe_load(stream)
-                for myobject in complete_dict:
-                    tag_id = myobject["tag_id"]
-                    mytype = myobject['tag_type']
-                    vehicle_name = myobject['vehicle_name']
-                    self.id_map[str(tag_id)] = mytype
-                    if vehicle_name:
-                        # print(vehicle_name)
-                        self.id_map[str(vehicle_name)] = str(tag_id)
+        for apriltagfile in [aprilstagDB, aprilstagDB_custom]:
+            with open(apriltagfile, 'r') as stream:
+                try:
+                    complete_dict = yaml.safe_load(stream)
+                    for myobject in complete_dict:
+                        tag_id = myobject["tag_id"]
+                        mytype = myobject['tag_type']
+                        vehicle_name = myobject['vehicle_name']
+                        self.id_map[str(tag_id)] = mytype
+                        if vehicle_name:
+                            # print(vehicle_name)
+                            self.id_map[str(vehicle_name)] = str(tag_id)
 
-            except yaml.YAMLError as exc:
-                print(exc)
+                except yaml.YAMLError as exc:
+                    print(exc)
 
     def find_vertex_name(self, id):
         """ Returns the format ID of an object in the ID map based on its type.
