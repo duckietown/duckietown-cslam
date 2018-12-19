@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ALWAYS SET THESE TWO:
-SERVER_HOSTNAME=ubuntu-Aleks.local
-SERVER_IP=192.168.1.104
+SERVER_HOSTNAME=amaury-FX503VM
+SERVER_IP=192.168.1.116
 
 array=(demowatchtower12 demowatchtower13 demowatchtower14 demowatchtower15 demowatchtower06 demowatchtower01 demowatchtower02 demowatchtower03 demowatchtower04 demowatchtower05 demowatchtower07 demowatchtower08 demowatchtower09 demowatchtower10)
 

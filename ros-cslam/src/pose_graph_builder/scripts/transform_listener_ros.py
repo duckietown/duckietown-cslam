@@ -191,7 +191,6 @@ class TransformListener():
         """ Loads April tags into the ID map, assigning each tag in the database
             its ID and its type (e.g. TrafficSign, Localization, etc.).
         """
-        global id_map
         config_folder = rospy.get_param("config_folder")
         aprilstagDB = "%s/%s" % (config_folder, "apriltagsDB.yaml")
         # Read YAML file.
@@ -201,7 +200,12 @@ class TransformListener():
                 for myobject in complete_dict:
                     tag_id = myobject["tag_id"]
                     mytype = myobject['tag_type']
+                    vehicle_name = myobject['vehicle_name']
                     self.id_map[str(tag_id)] = mytype
+                    if vehicle_name:
+                        # print(vehicle_name)
+                        self.id_map[str(vehicle_name)] = str(tag_id)
+
             except yaml.YAMLError as exc:
                 print(exc)
 
@@ -215,7 +219,18 @@ class TransformListener():
                 ID of the objected, formatted by adding "duckie_" or "apriltag_"
                 to it, based on its type.
         """
-        if (self.id_map[id] == "Vehicle"):
+        vertex_type = ""
+        if not id.isdigit():
+            # print(id)
+            id = self.id_map.get(id, "0")
+            # print(id)
+        
+            vertex_type = self.id_map.get(id, "apriltag")
+            # print(vertex_type)
+        else:
+            vertex_type = self.id_map.get(id, "apriltag")
+
+        if (vertex_type == "Vehicle"):
             id = "duckie_%s" % id
         else:
             id = "apriltag_%s" % id
@@ -326,7 +341,7 @@ class TransformListener():
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
         else:
-            print("This should not be here!")
+            print("This should not be here! %s " % id0)
 
         # Add edge to the graph.
         return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
@@ -344,11 +359,11 @@ class TransformListener():
             Returns:
                 Converted frame ID.
         """
-        if (id == "donaldthegreat"):
-            id = "duckie_88"
-
-        elif (id.startswith("watchtower")):
+        if (id.startswith("watchtower")):
             id = "watchtower_%d" % int(id.strip("watchtower"))
+
+        if (id.startswith("demowatchtower")):
+            id = "watchtower_%d" % int(id.strip("demowatchtower"))
 
         elif (len(id.split("_")) == 1):
             id = self.find_vertex_name(id)

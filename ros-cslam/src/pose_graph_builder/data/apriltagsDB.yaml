@@ -1,7 +1,7 @@
 - tag_id: 0
-  tag_type:
+  tag_type: Vehicle
   street_name:
-  vehicle_name:
+  vehicle_name: donaldthegreat
   traffic_sign_type:
 
 - tag_id: 1
@@ -529,7 +529,7 @@
 - tag_id: 88
   tag_type: Vehicle
   street_name:
-  vehicle_name: temp_donaldthegreat
+  vehicle_name: donaldthegreat
   traffic_sign_type: 
 
 - tag_id: 89
