@@ -570,6 +570,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: -90
                 p:
                 - 5.95
                 - 2.62
@@ -582,6 +583,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: 90
                 p:
                 - 5.2250000000000005
                 - 2.625
@@ -606,6 +608,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: -90
                 p:
                 - 0.6569999999999999
                 - 3.571
@@ -667,6 +670,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: 180
                 p:
                 - 4.768
                 - 1.653
@@ -679,6 +683,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: -90
                 p:
                 - 5.95
                 - 1.422
@@ -715,6 +720,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: -90
                 p:
                 - 5.95
                 - 0.4109999999999999
@@ -877,6 +883,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: 90
                 p:
                 - -0.05
                 - 2.685
@@ -901,6 +908,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: 90
                 p:
                 - 3.462
                 - 2.841
@@ -949,6 +957,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: 90
                 p:
                 - 5.242
                 - 1.071
@@ -961,6 +970,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: 180
                 p:
                 - 5.0040000000000004
                 - -0.12
@@ -1101,6 +1111,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: 180
                 p:
                 - 3.8070000000000004
                 - -0.12
@@ -1333,6 +1344,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: -90
                 p:
                 - 4.194
                 - 1.196
@@ -1386,6 +1398,7 @@ objects:
                 size: 0.08
         pose:
             ~SE2Transform:
+                theta_deg: -90
                 p:
                 - 0.6529999999999999
                 - 1.2229999999999999
@@ -1415,4 +1428,5 @@ objects:
                 p:
                 - -0.05
                 - 1.438
+                theta_deg: 90
 

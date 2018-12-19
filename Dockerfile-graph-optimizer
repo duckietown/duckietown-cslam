@@ -25,18 +25,17 @@ RUN mkdir -p /graph_optimizer/catkin_ws/src/pose_graph_builder
 
 COPY ${graph_lib_dir} /graph_optimizer/lib-cslam
 
-RUN cd /graph_optimizer/lib-cslam/src/g2opy ; mkdir build ; cd build ; cmake -DPYBIND11_PYTHON_VERSION=2.7 ..  ; make -j2; cd ..; python setup.py install
+RUN cd /graph_optimizer/lib-cslam/src/g2opy ; mkdir build ; cd build ; cmake -DPYBIND11_PYTHON_VERSION=2.7 ..  ; make -j3; cd ..; python setup.py install
 RUN cd /graph_optimizer/lib-cslam; python setup.py develop --no-deps
+RUN apt-get install -y vim
 
 COPY ${ros_nodes} /graph_optimizer/catkin_ws/src/pose_graph_builder
-
-RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /graph_optimizer/catkin_ws/; catkin_make"
-RUN chmod +x /graph_optimizer/catkin_ws/src/pose_graph_builder/*.sh
 
 # Setup the ros-visualization
 COPY ros-cslam/src/cslam_visualization /graph_optimizer/catkin_ws/src/cslam_visualization
 COPY ros-cslam/src/duckietown-visualization/duckietown_visualization /graph_optimizer/catkin_ws/src/duckietown_visualization
 RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /graph_optimizer/catkin_ws/; catkin_make"
+RUN chmod +x /graph_optimizer/catkin_ws/src/pose_graph_builder/*.sh
 
 
 CMD /bin/bash -c "/graph_optimizer/catkin_ws/src/pose_graph_builder/wrapper.sh"
