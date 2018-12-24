@@ -51,12 +51,11 @@ class ImageRectifier():
 
 if __name__ == "__main__":
     import cv2
-    im = cv2.imread("wt10_sample.png")
+    im = cv2.imread("test_image_rectifier_img_before.png")
     D = np.array([-0.2967039649743125, 0.06795775093662262, 0.0008927768064001824, -0.001327854648098482, 0.0])
     K = np.array([336.7755634193813, 0.0, 333.3575643300718, 0.0, 336.02729840829176, 212.77376312080065, 0.0, 0.0, 1.0]).reshape((3,3))
 
-    rectIm, newCameraMatrix = ImageRectifier().rectify(im, K, D)
-    cv2.imshow('Rectified image',ImageRectifier().beautify(rectIm))
-    while True:
-        if cv2.waitKey(0) and 0xFF == ord('q'):
-            break
+    imRect = ImageRectifier(im, K, D)
+    rectIm, newCameraMatrix = imRect.rectify(im)
+    print(newCameraMatrix)
+    status = cv2.imwrite('test_image_rectifier_img_after.png',rectIm)

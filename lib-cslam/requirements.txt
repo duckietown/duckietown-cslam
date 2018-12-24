@@ -11,4 +11,4 @@ jupyter
 nbconvert
 twine
 PyGeometry
-
+opencv-python

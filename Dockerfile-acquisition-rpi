@@ -30,6 +30,7 @@ ENV ACQ_BEAUTIFY 1
 # Argumens for where the different places from which we will get files from are
 ARG apriltag_dir=lib-cslam/src/apriltag
 ARG acquisition_src_dir=ros-cslam/src
+ARG image_rectifier_dir=lib-cslam/src/duckietown_cslam/image_rectifier
 
 # Create a directory to store the Python files and the April tag library
 RUN mkdir /acquisition_node
@@ -55,7 +56,7 @@ RUN /bin/bash -c "source /catkin-ws/devel/setup.bash; cd /catkin-ws/; catkin_mak
 
 # Copy the Python files
 COPY ${acquisition_src_dir}/acquisition_node/acquisitionProcessor.py /acquisition_node
-COPY ${acquisition_src_dir}/acquisition_node/image_rectifier.py /acquisition_node
+COPY ${image_rectifier_dir}/image_rectifier.py /acquisition_node
 COPY ${acquisition_src_dir}/acquisition_node/serverSidePublisher.py /acquisition_node
 COPY ${acquisition_src_dir}/acquisition_node/acquire_and_publish.py /acquisition_node
 

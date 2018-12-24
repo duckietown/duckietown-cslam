@@ -1,4 +1,4 @@
-# coding=utf-8 
+# coding=utf-8
 __version__ = '0.1.0'
 
 import logging
@@ -10,4 +10,4 @@ logger.setLevel(logging.DEBUG)
 logger.info('duckietown_cslam %s' % __version__)
 
 from .algo import *
-
+from .image_rectifier import *
