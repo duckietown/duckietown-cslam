@@ -18,13 +18,13 @@ def compare_rectified_image():
     logger.info(os.getcwd())
 
 
-    im = cv2.imread("src/duckietown_cslam_tests/test_image_rectifier_img_before.png")
+    im = cv2.imread("src/duckietown_cslam_tests/test_image_before.png")
     print("Before image size", im.shape)
     D = np.array([-0.2967039649743125, 0.06795775093662262, 0.0008927768064001824, -0.001327854648098482, 0.0])
     K = np.array([336.7755634193813, 0.0, 333.3575643300718, 0.0, 336.02729840829176, 212.77376312080065, 0.0, 0.0, 1.0]).reshape((3,3))
 
     groundTruth_newCameraMatrix = np.array([[227.72740173, 0., 330.57516721], [0., 227.81047058, 213.42367165], [0, 0., 1.]])
-    groundTruth_image = cv2.imread("src/duckietown_cslam_tests/test_image_rectifier_img_after.png")
+    groundTruth_image = cv2.imread("src/duckietown_cslam_tests/test_image_after.png")
 
     imRect = ImageRectifier(im, K, D)
     rectIm, newCameraMatrix = imRect.rectify(im)
