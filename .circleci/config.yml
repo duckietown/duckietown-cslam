@@ -58,12 +58,12 @@ jobs:
           cd lib-cslam
           make -C notebooks || true
 
-    - run:
-        name: Coverage analysis
-        when: always
-        command: |
-          cd lib-cslam
-          make coverage-report
+#    - run:
+#        name: Coverage analysis
+#        when: always
+#        command: |
+#          cd lib-cslam
+#          make coverage-report
 
     - run:
         name: Coveralls submission
@@ -112,4 +112,3 @@ jobs:
 #    docker:
 #      - image: python:3.5
 #
-

@@ -1,7 +1,7 @@
 # coding=utf-8
 from comptests import comptest, run_module_tests
 
-from duckietown_cslam import image_rectifier
+from duckietown_cslam import ImageRectifier
 import cv2
 import numpy as np
 
@@ -26,7 +26,7 @@ def compare_rectified_image():
     groundTruth_newCameraMatrix = np.array([[227.72740173, 0., 330.57516721], [0., 227.81047058, 213.42367165], [0, 0., 1.]])
     groundTruth_image = cv2.imread("src/duckietown_cslam_tests/test_image_rectifier_img_after.png")
 
-    imRect = image_rectifier.ImageRectifier(im, K, D)
+    imRect = ImageRectifier(im, K, D)
     rectIm, newCameraMatrix = imRect.rectify(im)
 
     if np.linalg.norm(np.abs(groundTruth_image-rectIm), axis=2, ord=np.inf).any() > 5.0:

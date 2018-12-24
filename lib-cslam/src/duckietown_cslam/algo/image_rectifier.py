@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+__all__ = [
+    'ImageRectifier',
+]
+
 import cv2
 import numpy as np
 

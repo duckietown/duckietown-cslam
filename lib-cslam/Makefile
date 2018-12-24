@@ -4,7 +4,7 @@ all:
 bump-upload:
 	$(MAKE) bump
 	$(MAKE) upload
-	
+
 bump:
 	bumpversion patch
 
