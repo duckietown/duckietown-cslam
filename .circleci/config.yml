@@ -98,7 +98,7 @@ jobs:
         path: lib-cslam/notebooks
         destination: notebooks
 
- test-2.7:
-   <<: *test-template
-   docker:
-   - image: python:2.7
+  test-2.7:
+    <<: *test-template
+    docker:
+    - image: python:2.7
