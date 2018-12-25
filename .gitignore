@@ -6,3 +6,4 @@ ros-cslam/install/
 *.pyc
 lib-cslam/src/duckietown_cslam.egg-info/
 .vscode/
+.idea
