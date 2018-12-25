@@ -38,7 +38,7 @@ jobs:
         command: |
           apt-get install -y cmake
           mkdir /apriltag
-          cp -r lib-cslam/src/apriltag /apriltag
+          cp -r lib-cslam/src/apriltag /
           cd /apriltag
           ls -al
           mkdir build
