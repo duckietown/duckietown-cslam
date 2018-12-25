@@ -6,10 +6,40 @@
 
 <!-- [![PyPI pyversions](https://img.shields.io/pypi/pyversions/duckietown_cslam.svg)](https://pypi.python.org/pypi/duckietown_cslam/) -->
 
+<div figure-id="fig:cslam_logo">
+     <img src="media/cSLAM_logo.png" style='width: 20em'/>
+</div>
+
+# Demo Instructions
+
+Step-by-step instructions for a Robotarium demo of the cSLAM pipeline can be found on the official Duckietown documentation [here]{http://docs.duckietown.org/DT18/opmanual_duckiebot/out/demo_cslam.html}.
 
 # cSLAM
 
-A centralized slam
+It can be incredibly useful to have a system that can localize your Duckiebot. Not only in case you lose it, but also if you want to facilitate autonomous Robotarium operations or to evaluate AIDO submissions. And most importantly, it looks cool! And that's exactly what the cSLAM system does.
+
+The goal of cSLAM is to fuse the observations of watchtowers and Duckiebots in a single optimization that tries to predict as accurately as possible the current and past Duckiebot locations. This is then nicely visualized on a 3D model of the city.
+
+cSLAM was designed such that it is modular, scalable, and with minimum overhead on the Duckiebots. It is a complex system, so modular means that you will need to run quite a few Docker containers. On the other hand, it is easy to support and extend. And don't worry, we've automated the bulk of container work. Scalable means that it can easily be extended to large cities. As the system is modular, the processing can be distributed over more computers as a city grows. Finally, the minimum overhead means that we don't run any special code on the Duckiebots, we only expect them to publish image and odometry data. All the processing is offloaded to a computer.
+
+At the core of cSLAM is a pose graph optimization problem. The watchtowers observe AprilTags on the ground, on top of Duckiebots and even on traffic signs. They can then estimate the relative pose of these AprilTags. Duckiebots similarly see tags on the ground and on traffic signs and estimate relative poses. Duckiebots also estimate their own pose relative to their past position by using odometry data. All these poses, together with the times when they were observed, are combined in a graph optimization problem that is solved by a library called [g2o](https://github.com/RainerKuemmerle/g2o). The solution to this problem is the global positions of all the observed AprilTags, and consequently of the Duckiebots.
+
+<div figure-id="fig:architecture" figure-caption="Architecture of cSLAM.">
+     <img src="media/architecture.png" style='width: 40em'/>
+</div>
+
+As can be seen from the above image there are quite a few devices and containers involved in this demo. Every red box is a physical device; every blue box is a Docker container that can be deployed on a different device. Let's see what the different containers are and what they do:
+
+* The *acquisition containers* are multiple Docker containers, each being responsible for acquiring the raw data from a single robot (watchtower or Duckiebot), processing it (rectifying, April tag pose extraction, odometry calculation), and packaging the processed data as new topics on the Graph optimization ROS Master.
+
+    Using separate containers allow us to scale the system to an almost infinite amount of robots and watchtowers (simply run as many nodes as necessary on a docker swarm). In this demo, we will run the acquisition containers for watchtowers on the towers themselves as this reduces the network delays in the system. The acquisition containers for Duckiebots, however, will be executed on a laptop such that the Duckiebot's computational resources are available for other processes.
+
+* The *Graph optimizer* container aggregates all the AprilTag and odometry information, builds a pose graph out of it, and optimizes this graph. Then it publishes global pose information for all AprilTags and cameras in the system, which includes the positions of Duckiebots, watchtowers, traffic signs, and ground tags.
+
+* The *Visualization* container presents the results of the graph optimization in a human- (and duckie-) friendly interface. It reads the positions of the various objects from the Graph optimizer container and shows them on a 3D map of the city.
+
+* The *Diagnostics* container constantly probes the AprilTag pose and odometry messages that are being published and signals if a device stops publishing. This is useful to detect network or configuration issues.
+
 
 ## Prerequisite
 
@@ -83,7 +113,7 @@ Now, if everything is running smoothly you will start receiving data on the ROS 
 
 ## cSLAM pose_graph_builder package
 
-The cSLAM pose_graph_builder package will generates a graph, where the vertices represents all the AprilTags in the environment and the edges represents the transforms between the AprilTag. The error of the position of a vertex in a time instance within the graph will be reduced by adjusment of the parameters of the transforms that is represented as an edge. 
+The cSLAM pose_graph_builder package will generates a graph, where the vertices represents all the AprilTags in the environment and the edges represents the transforms between the AprilTag. The error of the position of a vertex in a time instance within the graph will be reduced by adjusment of the parameters of the transforms that is represented as an edge.
 
 ### Prerequisites
 
@@ -123,16 +153,12 @@ The cSLAM_diagnostics package will check that the messaging status between the d
 
 Install python-qt4
 
-### Building and running 
+### Building and running
 
-    $ source /opt/ros/kinetic/setup.bash 
+    $ source /opt/ros/kinetic/setup.bash
     $ cd /duckietown-cslam/src
     $ catkin_make
-    $ source /duckietown-cslam/devel/setup.bash 
+    $ source /duckietown-cslam/devel/setup.bash
     $ rosrun cslam_diagnostics cslam_diagnostics_node.py
 
 An interface will appear with the tab AprilTag and Odometry to view the devices that are sending these messsages.
-
-
-
-
