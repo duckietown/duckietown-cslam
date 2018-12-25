@@ -4,6 +4,7 @@
 #from .test1 import *
 #from .test2 import *
 from .test_image_rectifier import *
+from .test_aprilTagProcessor.py import *
 
 def jobs_comptests(context):
     """ Hook for comptests. No need to modify."""
