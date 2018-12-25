@@ -2,9 +2,9 @@
 
 [![Coverage Status](https://coveralls.io/repos/github/duckietown/duckietown-cslam/badge.svg?branch=master18)](https://coveralls.io/github/duckietown/duckietown-cslam?branch=master18)
 
-[![PyPI status](https://img.shields.io/pypi/status/duckietown_cslam.svg)](https://pypi.python.org/pypi/duckietown_cslam/)
+<!-- [![PyPI status](https://img.shields.io/pypi/status/duckietown_cslam.svg)](https://pypi.python.org/pypi/duckietown_cslam/) -->
 
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/duckietown_cslam.svg)](https://pypi.python.org/pypi/duckietown_cslam/)
+<!-- [![PyPI pyversions](https://img.shields.io/pypi/pyversions/duckietown_cslam.svg)](https://pypi.python.org/pypi/duckietown_cslam/) -->
 
 
 # cSLAM
