@@ -7,6 +7,9 @@ import cPickle as pickle
 import os
 
 def publishOnServer(outputDictQueue, quitEvent):
+    """
+    Publishes the processed data on the ROS Master that the graph optimizer uses.
+    """
 
     # Get the environment variables
     ACQ_POSES_TOPIC = os.getenv('ACQ_POSES_TOPIC', "poses")
@@ -19,6 +22,7 @@ def publishOnServer(outputDictQueue, quitEvent):
     publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, TransformStamped, queue_size=1)
     publisherOdometry = rospy.Publisher("/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
 
+    # If the test stream is requested
     if ACQ_TEST_STREAM:
         publisherTestImages = rospy.Publisher("/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
         publisherRawImages = rospy.Publisher("/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
@@ -28,6 +32,7 @@ def publishOnServer(outputDictQueue, quitEvent):
 
     rospy.init_node('acquisition_node_'+ACQ_DEVICE_NAME)
 
+    # Run continuously, check for new data arriving from the acquisitionProcessor and processed it when it arrives
     while not quitEvent.is_set():
         try:
             newQueueData = outputDictQueue.get(block=True, timeout=1)
@@ -80,14 +85,6 @@ def publishOnServer(outputDictQueue, quitEvent):
 
                 if "rectified_camera_info" in incomingData:
                     publisherCameraInfoRectified.publish(incomingData["rectified_camera_info"])
-
-            seq_stamper+=1
-
-        except KeyboardInterrupt:
-            raise( Exception("Exiting") )
-        except Exception as e:
-            print("Exception: %s", str(e))
-            pass
 
             seq_stamper+=1
 

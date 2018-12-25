@@ -20,24 +20,25 @@ class ImageRectifier():
         if len(np.shape(distCoeffs)) !=1 or np.shape(distCoeffs)[0]!=5:
             raise ValueError("distCoeffs should be a vector of length 5! It is of shape %s." % str(np.shape(cameraMatrix)))
 
-        # Enlarge the image such that it is not cropped
-        # vMargin = int(image.shape[0]*0.3)
-        # hMargin = int(image.shape[1]*0.3)
-        # imageLarge = cv2.copyMakeBorder(image, vMargin, hMargin, vMargin, hMargin, borderType=cv2.BORDER_CONSTANT)
-
-        # return cv2.undistort(image, cameraMatrix, distCoeffs)
-
+        # Calculate the new camera matrix
         self.newCameraMatrix, self.validPixROI = cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, (image.shape[1], image.shape[0]), 1.0)
+
+        # Calculate the undistorting maps
         self.map1, self.map2 = cv2.initUndistortRectifyMap(cameraMatrix, distCoeffs, np.eye(3), self.newCameraMatrix, (image.shape[1], image.shape[0]), cv2.CV_32FC1)
 
         self.rectify(image)
 
     def rectify(self, image):
+
+        # Undistort the image
         remappedIm = cv2.remap(image, self.map1, self.map2, cv2.INTER_LINEAR)
 
         return remappedIm, self.newCameraMatrix
 
     def beautify(self, image):
+        """
+        Applies CLAHE (Contrast Limited Adaptive Histogram Equalization) to a RGB or grayscale image in order to improve the contrast
+        """
 
         # Process separately for colour and grayscale image:
         if len(image.shape) == 2:
@@ -60,6 +61,7 @@ class ImageRectifier():
         return img2
 
 if __name__ == "__main__":
+    # Example usage
     import cv2
     im = cv2.imread("test_image_rectifier_img_before.png")
     D = np.array([-0.2967039649743125, 0.06795775093662262, 0.0008927768064001824, -0.001327854648098482, 0.0])

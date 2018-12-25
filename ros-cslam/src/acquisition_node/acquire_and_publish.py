@@ -27,17 +27,27 @@ ACQ_ROS_MASTER_URI_DEVICE = os.getenv('ACQ_ROS_MASTER_URI_DEVICE', "")
 ACQ_ROS_MASTER_URI_DEVICE_PORT = os.getenv('ACQ_ROS_MASTER_URI_DEVICE_PORT', "")
 
 
-#Set up the two processes:
+# Define the two concurrent processes:
 def runDeviceSideProcess(ROS_MASTER_URI, outputDictQueue, quitEvent):
+    """
+    Receive and process data from the remote device (Duckiebot or watchtower).
+    """
     os.environ['ROS_MASTER_URI'] = ROS_MASTER_URI
     ap = acquisitionProcessor(outputDictQueue)
     ap.update(quitEvent)
 
 def runServerSideProcess(ROS_MASTER_URI, outpuDictQueue, quitEvent):
+    """
+    Publush the processed data to the ROS Master that the graph optimizer uses.
+    """
     os.environ['ROS_MASTER_URI'] = ROS_MASTER_URI
     publishOnServer(outputDictQueue, quitEvent)
 
 if __name__ == '__main__':
+    """
+    Starts the two processes and sets up their termination.
+    """
+
     print("Image and odometry acquision, processing and publishing setting up")
 
     # Event to terminate the two processes
@@ -46,6 +56,7 @@ if __name__ == '__main__':
     ros_master_uri_server = "http://"+ACQ_ROS_MASTER_URI_SERVER+":"+ACQ_ROS_MASTER_URI_SERVER_PORT
     ros_master_uri_device = "http://"+ACQ_ROS_MASTER_URI_DEVICE+":"+ACQ_ROS_MASTER_URI_DEVICE_PORT
 
+    # outputDictQueue is used to pass data between the two processes
     outputDictQueue = multiprocessing.Queue(maxsize=20)
 
     deviceSideProcess = multiprocessing.Process(target=runDeviceSideProcess,

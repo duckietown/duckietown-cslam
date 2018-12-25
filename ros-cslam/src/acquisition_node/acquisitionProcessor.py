@@ -19,6 +19,9 @@ from image_rectifier import ImageRectifier
 from aprilTagProcessor import aprilTagProcessor
 
 class acquisitionProcessor():
+    """
+    Processes the data coming from a remote device (Duckiebot or watchtower).
+    """
     def __init__(self, outputDictQueue):
 
         # Get the environment variables
@@ -35,6 +38,7 @@ class acquisitionProcessor():
         self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
         self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
 
+        # Initialize ROS nodes and subscribe to topics
         rospy.init_node('acquisition_processor', anonymous=True, disable_signals=True)
         self.subscriberRawImage = rospy.Subscriber("/"+self.ACQ_DEVICE_NAME+"/"+self.ACQ_TOPIC_RAW, CompressedImage,
                                                     self.camera_image_callback,  queue_size = 1)
@@ -45,8 +49,10 @@ class acquisitionProcessor():
             self.subscriberCameraInfo = rospy.Subscriber("/"+self.ACQ_DEVICE_NAME+"/"+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
                                                         self.odometry_callback,  queue_size = 1)
 
+        # CvBridge is neccessary for the image processing
         self.bridge = CvBridge()
 
+        # Initialize atributes
         self.lastCameraInfo = None
         self.lastCameraImage = None
         self.lastImageProcessed = False
@@ -62,6 +68,9 @@ class acquisitionProcessor():
         self.outputDictQueue = outputDictQueue
 
     def update(self, quitEvent):
+        """
+        Runs constantly and processes new data as it comes.
+        """
         while not quitEvent.is_set():
             #check if we want odometry and if it has been sent in the last X secs
             if self.ACQ_STATIONARY_ODOMETRY and self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE>0 and rospy.get_time() - self.timeLastPub_odometry >= 1.0/self.ACQ_ODOMETRY_UPDATE_RATE:
@@ -84,6 +93,7 @@ class acquisitionProcessor():
                                          block=True,
                                          timeout=None)
 
+            # Check if the last data was not yet processed and if it's time to process it (in order to sustain the deisred update rate)
             if rospy.get_time() - self.timeLastPub_poses >= 1.0/self.ACQ_POSES_UPDATE_RATE and not self.lastImageProcessed:
                 self.timeLastPub_poses = rospy.get_time()
                 outputDict = self.camera_image_process()
@@ -95,13 +105,18 @@ class acquisitionProcessor():
 
 
     def odometry_callback(self, ros_data):
+        """
+        Callback function that is executed upon reception of new odometry data.
+        """
         try:
+            # Prepare the new ROS message for the processed odometry
             odometry = TransformStamped()
             odometry.header.seq = 0
             odometry.header = ros_data.header
             odometry.header.frame_id = self.ACQ_DEVICE_NAME
             odometry.child_frame_id = self.ACQ_DEVICE_NAME
 
+            # Transform the incoming data to quaternions
             transform_current = np.array([[math.cos(ros_data.theta), -1.0 * math.sin(ros_data.theta), ros_data.x],
                                           [math.sin(ros_data.theta), math.cos(ros_data.theta), ros_data.y],
                                           [0.0, 0.0, 1.0]])
@@ -114,7 +129,6 @@ class acquisitionProcessor():
 
             self.previousOdometry = ros_data
 
-            # transform_relative = transform_previous_inv.dot(transform_current)
             transform_relative = np.matmul(transform_previous_inv, transform_current)
 
             angle = math.atan2(transform_relative[1][0], transform_relative[0][0])
@@ -137,6 +151,7 @@ class acquisitionProcessor():
             q_z = sy * cp * cr - cy * sp * sr
 
 
+            # Save the resuts to the new odometry relative pose message
             odometry.transform.translation.x = x
             odometry.transform.translation.y = y
             odometry.transform.translation.z = 0
@@ -145,10 +160,12 @@ class acquisitionProcessor():
             odometry.transform.rotation.z = q_z
             odometry.transform.rotation.w = q_w
 
+            # Add the new data to the queue so that the server side publisher can publish them on the other ROS Master
             self.outputDictQueue.put(obj=pickle.dumps({"odometry": odometry}, protocol=-1),
                                      block=True,
                                      timeout=None)
 
+            # Update the last odometry time
             self.timeLastPub_odometry = rospy.get_time()
 
         except Exception as e:
@@ -156,13 +173,18 @@ class acquisitionProcessor():
             pass
 
     def camera_image_process(self):
+        """
+        Contains the camera image processing necessary.
+        """
 
         outputDict = None
+        # If there is new data to process
         if self.lastCameraInfo is not None and self.lastCameraImage is not None:
             # Collect latest ros_data
             currRawImage = self.lastCameraImage
             currCameraInfo = self.lastCameraInfo
 
+            # Convert from ROS image message to numpy array
             cv_image = self.bridge.compressed_imgmsg_to_cv2(currRawImage, desired_encoding="mono8")
 
             outputDict = dict()
@@ -182,6 +204,8 @@ class acquisitionProcessor():
             if self.ACQ_TEST_STREAM==1:
                 try:
                     image = np.copy(outputDict['rect_image'])
+
+                    # Put the AprilTag bound boxes and numbers to the image
                     for tag in outputDict["apriltags"]:
                         for idx in range(len(tag["corners"])):
                             cv2.line(image, tuple(tag["corners"][idx-1, :].astype(int)), tuple(tag["corners"][idx, :].astype(int)), (0, 255, 0))
@@ -192,12 +216,14 @@ class acquisitionProcessor():
                                         fontScale=0.4,
                                         color=(255, 0, 0))
 
+                    # Put device and timestamp to the image
                     cv2.putText(image,'device: '+ self.ACQ_DEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+"+"+str(currRawImage.header.stamp.nsecs),
                                 org=(30,30),
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 fontScale=0.6,
                                 color=(0, 255, 0))
 
+                    # Add the original and diagnostic info to the outputDict
                     outputDict["test_stream_image"] = self.bridge.cv2_to_compressed_imgmsg(image, dst_format='png')
                     outputDict["test_stream_image"].header.stamp.secs = currRawImage.header.stamp.secs
                     outputDict["test_stream_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
@@ -211,7 +237,7 @@ class acquisitionProcessor():
                     outputDict["rectified_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
                     outputDict["rectified_image"].header.frame_id = self.ACQ_DEVICE_NAME
 
-                    #THIS DOESN"T WORK YET
+                    #THIS DOESN'T WORK YET
                     # print(outputDict["newCameraMatrix"])
                     # outputDict["rectified_camera_info"] = self.lastCameraInfo
                     # outputDict["rectified_camera_info"].K = list(np.array(outputDict["newCameraMatrix"].flatten(order="C")))
@@ -223,22 +249,29 @@ class acquisitionProcessor():
         return outputDict
 
     def camera_info_callback(self, ros_data):
+        """
+        Callback function that is executed upon reception of new camera info data.
+        """
         self.lastCameraInfo = ros_data
 
     def camera_image_callback(self, ros_data):
+        """
+        Callback function that is executed upon reception of a new camera image.
+        """
         self.lastCameraImage = ros_data
         self.lastImageProcessed = False
 
 
 class deviceSideProcessor():
+    """
+    Packages the image rectification and AprilTag detection for images.
+    """
     def __init__(self, options):
         self.ImageRectifier = None
         self.opt_beautify = options.get("beautify", False)
         self.aprilTagProcessor = aprilTagProcessor(options.get("tag_size", 0.065))
 
     def process(self, raw_image, cameraMatrix, distCoeffs):
-
-
 
         # 0. Initialize the image rectifier if it hasn't been already (that's done so that we don't recompute the remapping)
         if self.ImageRectifier is None:
