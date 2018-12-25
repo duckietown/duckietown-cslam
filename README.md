@@ -140,9 +140,18 @@ To visualize, run rviz on another terminal, add the topic type TF. Et voilà!
 
 ## cSLAM_visualization package
 
+<div figure-id="fig:visualization" figure-caption="cSLAM Visualization tool.">
+     <img src="media/visualization_2.png" style='width: 20em'/>
+</div>
+
 
 
 ## cSLAM_diagnostics package
+
+
+<div figure-id="fig:diagnostics" figure-caption="cSLAM Diagnostics tool.">
+     <img src="media/diagnostics.png" style='width: 20em'/>
+</div>
 
 The cSLAM_diagnostics package will check that the messaging status between the devices and packages are received within a time period, else an ERROR status will be shown for the message. If a message is expected to be observed and is not seen by the diagnostics tool, it could mean that there were issues with the transmission of the message out or that the AprilTags were not recognized.
 
