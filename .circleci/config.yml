@@ -36,6 +36,7 @@ jobs:
     - run:
         name: Install AprilTag library
         command: |
+          apt-get install cmake
           mkdir /apriltag
           cp -r lib-cslam/src/apriltag /apriltag
           cd /apriltag
