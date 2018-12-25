@@ -34,6 +34,16 @@ jobs:
           pip install -q --user --upgrade -r requirements.txt
 
     - run:
+        name: Install AprilTag library
+        command: |
+          cd lib-cslam/src/apriltag
+          mkdir /apriltag
+          cp -r lib-cslam/src/apriltag /apriltag
+          cd /apriltag ; mkdir build ; cd build ; cmake .. -DCMAKE_BUILD_TYPE=Release ; make -j4
+          echo 'export ACQ_APRILTAG_LIB="/apriltag/python"' >> $BASH_ENV
+          echo 'export ACQ_APRILTAG_SO="/apriltag/build/lib"' >> $BASH_ENV
+
+    - run:
         name: List deps
         command: |
           cd lib-cslam

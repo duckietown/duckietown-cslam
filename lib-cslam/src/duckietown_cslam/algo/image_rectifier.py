@@ -38,18 +38,24 @@ class ImageRectifier():
         return remappedIm, self.newCameraMatrix
 
     def beautify(self, image):
-        # assumes a grayscale image
 
-        # CLAHE (Contrast Limited Adaptive Histogram Equalization)
-        clahe = cv2.createCLAHE(clipLimit=3., tileGridSize=(8,8))
+        # Process separately for colour and grayscale image:
+        if len(image.shape) == 2:
+            # CLAHE (Contrast Limited Adaptive Histogram Equalization)
+            clahe = cv2.createCLAHE(clipLimit=3., tileGridSize=(8,8))
+            img2 = clahe.apply(image)  # apply CLAHE to the L-channel
+        elif image.shape[2] == 3:
+            clahe = cv2.createCLAHE(clipLimit=3., tileGridSize=(8,8))
 
-        # lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)  # convert from BGR to LAB color space
-        # l, a, b = cv2.split(lab)  # split on 3 different channels
+            lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)  # convert from BGR to LAB color space
+            l, a, b = cv2.split(lab)  # split on 3 different channels
 
-        img2 = clahe.apply(image)  # apply CLAHE to the L-channel
+            l2 = clahe.apply(l)  # apply CLAHE to the L-channel
 
-        # lab = cv2.merge((l2,a,b))  # merge channels
-        # img2 = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)  # convert from LAB to BGR
+            lab = cv2.merge((l2,a,b))  # merge channels
+            img2 = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)  # convert from LAB to BGR
+        else:
+            raise Exception("Unsupported image dimensions: ", image.shape)
 
         return img2
 
@@ -63,3 +69,7 @@ if __name__ == "__main__":
     rectIm, newCameraMatrix = imRect.rectify(im)
     print(newCameraMatrix)
     status = cv2.imwrite('test_image_rectifier_img_after.png',rectIm)
+
+    # write the beautified images
+    status = cv2.imwrite('test_image_rectifier_img_after_beautified_color.png',imRect.beautify(rectIm))
+    status = cv2.imwrite('test_image_rectifier_img_after_beautified_gray.png',imRect.beautify(cv2.cvtColor(rectIm, cv2.COLOR_BGR2GRAY)))
