@@ -1,3 +1,7 @@
+<div figure-id="fig:cslam_logo">
+     <img src="media/cSLAM_logo.png" style='width: 20em'/>
+</div>
+
 [![CircleCI](https://circleci.com/gh/duckietown/duckietown-cslam.svg?style=shield)](https://circleci.com/gh/duckietown/duckietown-cslam)
 
 [![Coverage Status](https://coveralls.io/repos/github/duckietown/duckietown-cslam/badge.svg?branch=master18)](https://coveralls.io/github/duckietown/duckietown-cslam?branch=master18)
@@ -6,13 +10,9 @@
 
 <!-- [![PyPI pyversions](https://img.shields.io/pypi/pyversions/duckietown_cslam.svg)](https://pypi.python.org/pypi/duckietown_cslam/) -->
 
-<div figure-id="fig:cslam_logo">
-     <img src="media/cSLAM_logo.png" style='width: 20em'/>
-</div>
-
 # Demo Instructions
 
-Step-by-step instructions for a Robotarium demo of the cSLAM pipeline can be found on the official Duckietown documentation [here]{http://docs.duckietown.org/DT18/opmanual_duckiebot/out/demo_cslam.html}.
+Step-by-step instructions for a Robotarium demo of the cSLAM pipeline can be found on the official Duckietown documentation [here](http://docs.duckietown.org/DT18/opmanual_duckiebot/out/demo_cslam.html).
 
 # cSLAM
 
