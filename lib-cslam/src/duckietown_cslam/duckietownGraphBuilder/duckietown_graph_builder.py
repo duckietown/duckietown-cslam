@@ -82,7 +82,8 @@ class DuckietownGraphBuilder():
                  initial_watchtower_dict={},
                  initial_april_dict={},
                  initial_floor_april_tags="",
-                 retro_interpolate=True):
+                 retro_interpolate=True,
+                 stocking_time=None):
         # Initialize pose graph.
         self.graph = g2oBG.g2oGraphBuilder()
         # Define node types.
@@ -112,6 +113,7 @@ class DuckietownGraphBuilder():
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
         self.lock = threading.Lock()
+        self.stocking_time = stocking_time
 
     def load_initial_floor_april_tags(self, initial_floor_april_tag_file):
         """Adds the poses of the initial floor April tags to the graph by
@@ -452,7 +454,16 @@ class DuckietownGraphBuilder():
                 output_name: Output filename of the result of the optimization.
          """
         self.lock.acquire()
+
+        ## TODO : cleaning is gonna be useless when remove_old_poses will have run many times
+        # Maybe find a way to stop doing it after a while
+        ## 
+        
         self.clean_graph()
+
+        if self.stocking_time is not None:
+            global_last_time_stamp = max(self.last_time_stamp["duckiebot"].values())
+            self.remove_old_poses(global_last_time_stamp)
 
         self.chi2 = self.graph.optimize(
             number_of_steps,
@@ -552,8 +563,8 @@ class DuckietownGraphBuilder():
 
     def clean_graph(self):
         """
-            Gets rid of useless edges in the graph
-            Considered as useless are edges that are anterior to the first odometry message
+            Gets rid of useless vertices in the graph
+            Considered as useless are vertices that are anterior to the first odometry message
         """
         for node_type in self.movable:
             for node_id in self.timestamp_local_indices[node_type]:
@@ -561,6 +572,22 @@ class DuckietownGraphBuilder():
                     first_odometry_time_stamp = self.first_odometry_time_stamp[node_type][node_id]
                     anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
                     ) if time_stamp < first_odometry_time_stamp]
+                    for time_stamp in anterior_time_stamps:
+                        self.remove_vertex(node_type, node_id, time_stamp)
+                        self.timestamp_local_indices[node_type][node_id].pop(
+                            time_stamp)
+
+    def remove_old_poses(self, reference_time):
+        """
+            Gets rid of old vertices in the graph
+            TODO : register in a file the path of duckiebots before destroying it here
+        """
+        for node_type in self.movable:
+            for node_id in self.timestamp_local_indices[node_type]:
+                if(node_id in self.first_odometry_time_stamp[node_type]):
+                    last_accepted_stamps = reference_time - self.stocking_time
+                    anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
+                    ) if time_stamp < last_accepted_stamps]
                     for time_stamp in anterior_time_stamps:
                         self.remove_vertex(node_type, node_id, time_stamp)
                         self.timestamp_local_indices[node_type][node_id].pop(
