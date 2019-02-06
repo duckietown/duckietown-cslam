@@ -40,7 +40,7 @@ class DuckietownGraphBuilder():
                   representation, for the encoding we do not use the timestamp
                   itself but rather a 'local index' that defines the order in
                   which new timestamps are associated to a node. For instance,
-                  if a Duckiebot (node_type="duckie", node_id=88) first sees an
+                  if a Duckiebot (node_type="duckiebot", node_id=88) first sees an
                   April tag and sends the corresponding message at timestamp t1,
                   the latter timestamp is assigned 'local index' 0 for that
                   node. If the Duckiebot is later detected by a watchtower, with
@@ -80,7 +80,7 @@ class DuckietownGraphBuilder():
     """
 
     def __init__(self,
-                 initial_duckie_dict={},
+                 initial_duckiebot_dict={},
                  initial_watchtower_dict={},
                  initial_april_dict={},
                  initial_floor_april_tags="",
@@ -88,16 +88,16 @@ class DuckietownGraphBuilder():
         # Initialize pose graph.
         self.graph = g2oBG.g2oGraphBuilder()
         # Define node types.
-        self.types = ["duckie", "watchtower", "apriltag"]
+        self.types = ["duckiebot", "watchtower", "apriltag"]
         # Initialize first-level dictionary of timestamp_local_indices by
         # associating each node type with the respective input dictionary of
         # IDs.
         initial_dicts = [
-            initial_duckie_dict, initial_watchtower_dict, initial_april_dict
+            initial_duckiebot_dict, initial_watchtower_dict, initial_april_dict
         ]
         self.timestamp_local_indices = dict(zip(self.types, initial_dicts))
         # Define movable node types.
-        self.movable = ["duckie"]
+        self.movable = ["duckiebot"]
         # Initialize first-level dictionary of num_local_indices_assigned.
         self.num_local_indices_assigned = dict()
         # Initialize first-level dictionary of last_time_stamp.

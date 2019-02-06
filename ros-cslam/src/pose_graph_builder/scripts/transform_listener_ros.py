@@ -37,7 +37,7 @@ class PointBroadcaster(threading.Thread):
         t.header.stamp = rospy.Time.now()
 
         # Set frame ID. TODO: change it depending on the node type.
-        if (node_type == "duckie"):
+        if (node_type == "duckiebot"):
             t.header.frame_id = "map"
             t.child_frame_id = "%s_%s" % ("duckiebot", node_id)
 
@@ -98,7 +98,7 @@ class PathBroadcaster(threading.Thread):
         line_strip.header.stamp = rospy.Time.now()
         line_strip.type = 4  # line_strip
         # Set frame ID. TODO: change it depending on the node type.
-        if (node_type == "duckie"):
+        if (node_type == "duckiebot"):
             line_strip.header.frame_id = "map"
         else:
             line_strip.header.frame_id = "map"
@@ -226,7 +226,7 @@ class TransformListener():
                 id: Original ID of the object in the ID map.
 
             Returns:
-                ID of the objected, formatted by adding "duckie_" or "apriltag_"
+                ID of the objected, formatted by adding "duckiebot_" or "apriltag_"
                 to it, based on its type.
         """
         vertex_type = ""
@@ -241,7 +241,7 @@ class TransformListener():
             vertex_type = self.id_map.get(id, "apriltag")
 
         if (vertex_type == "Vehicle"):
-            id = "duckie_%s" % id
+            id = "duckiebot_%s" % id
         else:
             id = "apriltag_%s" % id
 
@@ -285,7 +285,7 @@ class TransformListener():
         """
         # Get type of the object seen.
         type_of_object_seen = id1.split("_")[0]
-        if (type_of_object_seen == "duckie"):
+        if (type_of_object_seen == "duckiebot"):
             # In case of Duckiebot the pose needs to be adjusted to take into
             # account the pose of the April tag w.r.t. the base frame of the
             # Duckiebot.
@@ -333,7 +333,7 @@ class TransformListener():
         """
         # Get type of the object that sees the other object, for a sanity check.
         type_of_object_seeing = id0.split("_")[0]
-        if (type_of_object_seeing == "duckie"):
+        if (type_of_object_seeing == "duckiebot"):
             # The pose needs to be adjusted to take into account the relative
             # pose of the camera on the Duckiebot w.r.t. to the base frame of
             # the Duckiebot.
@@ -360,7 +360,7 @@ class TransformListener():
         """ Converts the frame IDs of the objects in the ROS messages (e.g.,
             Duckiebots, watchtowers, etc.) to the format <type>_<tag_id>, where
             <type> should be one of the types defined in DuckietownGraphBuilder
-            (e.g. "duckie", "watchtower", "apriltag") and <tag_id> is the ID of
+            (e.g. "duckiebot", "watchtower", "apriltag") and <tag_id> is the ID of
             the April tag of the object in the ID map.
 
             Args:
