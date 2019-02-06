@@ -1,0 +1,8 @@
+<launch>
+    <param name='config_folder' value='$(find pose_graph_builder)/data' />
+    <param name='optim_verbose' value='True'/>
+    <param name='save_g2o_output' value='False'/>
+    <param name='optim_vertices_period' type='int' value='12'/>
+    <node name="listener" pkg="pose_graph_builder" type="transform_listener_ros.py" output="screen"/>
+
+</launch>

@@ -1,0 +1,119 @@
+version: 2
+workflows:
+  version: 2
+  test:
+    jobs:
+    - test-3.7
+#    - test-2.7
+jobs:
+  test-3.7: &test-template
+    environment:
+      COLUMNS: 160
+      # default is /usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PATH: /root/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    docker:
+    - image: python:3.7
+    steps:
+    - checkout
+    - run:
+        name: Install Git LFS
+        command: |
+          curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+          apt-get update
+          apt-get install -y git-lfs openssh-client
+          git lfs install
+          mkdir -p ~/.ssh
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+          ssh git@github.com git-lfs-authenticate "${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" download
+          git lfs pull
+    - run:
+        name: Install deps
+        command: |
+          echo PATH=$PATH
+          cd lib-cslam
+          pip install -q --user --upgrade -r requirements.txt
+
+    - run:
+        name: Install AprilTag library
+        command: |
+          apt-get install -y cmake
+          mkdir /apriltag
+          cp -r lib-cslam/src/apriltag /
+          cd /apriltag
+          ls -al
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          make -j4
+          echo 'export ACQ_APRILTAG_LIB="/apriltag/python"' >> $BASH_ENV
+          echo 'export ACQ_APRILTAG_SO="/apriltag/build/lib"' >> $BASH_ENV
+
+    - run:
+        name: List deps
+        command: |
+          cd lib-cslam
+          mkdir -p artifacts
+          pip freeze | tee artifacts/pip-freeze.txt
+
+    - run:
+        name: setup.py develop
+        command: |
+          cd lib-cslam
+          python setup.py develop --prefix ~/.local --no-deps
+
+    - run:
+        name: Run tests
+        command: |
+          cd lib-cslam
+          make tests-coverage-single-nocontracts
+
+    - run:
+        name: Notebooks
+        command: |
+          cd lib-cslam
+          make -C notebooks || true
+
+    - run:
+        name: Coverage analysis
+        when: always
+        command: |
+          cd lib-cslam
+          make coverage-report
+
+#    - run:
+#        name: Coveralls submission
+#        when: always
+#        command: |
+#          cd lib-cslam
+#          make coverage-coveralls
+
+    - run:
+        name: Create JUnit output
+        when: always
+        command: |
+          cd lib-cslam
+          make junit
+
+    - test-results-store:
+        path: lib-cslam/out-comptests/junit
+
+    - store_artifacts:
+        path: lib-cslam/out-comptests/duckietown_cslam_tests
+        destination: duckietown_cslam_tests
+
+    - store_artifacts:
+        path: lib-cslam/artifacts
+        destination: artifacts
+
+    - store_artifacts:
+        path: lib-cslam/out_coverage
+        destination: coverage
+
+    - store_artifacts:
+        path: lib-cslam/notebooks
+        destination: notebooks
+
+  test-2.7:
+    <<: *test-template
+    docker:
+    - image: python:2.7

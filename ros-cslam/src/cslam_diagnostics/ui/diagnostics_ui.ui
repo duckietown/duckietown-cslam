@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>670</width>
+    <height>547</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>cSLAM Diagnostics</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>12</x>
+      <y>19</y>
+      <width>651</width>
+      <height>471</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>1</number>
+    </property>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Apriltags</string>
+     </attribute>
+     <widget class="QTableWidget" name="table_apriltags">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>631</width>
+        <height>421</height>
+       </rect>
+      </property>
+      <column>
+       <property name="text">
+        <string>Device</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Last Msg</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Diff</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Last 5 sec</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Status</string>
+       </property>
+      </column>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>Odometry</string>
+     </attribute>
+     <widget class="QTableWidget" name="table_odometry">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>631</width>
+        <height>421</height>
+       </rect>
+      </property>
+      <column>
+       <property name="text">
+        <string>Device</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Last Msg</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Diff</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Last 5 sec</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Status</string>
+       </property>
+      </column>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>670</width>
+     <height>25</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

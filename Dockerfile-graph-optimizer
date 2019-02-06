@@ -1,0 +1,41 @@
+FROM ros:kinetic-ros-core
+
+MAINTAINER Benson Kuan <kbenson@ethz.ch>
+
+ENV DISPLAY $DISPLAY
+ENV QT_X11_NO_MITSHM 1
+
+# Install rospy
+RUN apt-get update
+RUN apt-get install -y ros-kinetic-rospy ros-kinetic-tf2 ros-kinetic-tf ros-kinetic-tf-conversions
+RUN apt-get install -y qtbase5-dev qtdeclarative5-dev
+RUN apt-get install -y libeigen3-dev
+RUN apt-get install -y libsuitesparse-dev
+RUN apt-get install -y python-pip python-numpy python-scipy 
+
+# RUN pip install --upgrade pip
+RUN pip install PyGeometry 
+
+# DO NOT PUT ANYTHING HERE BEFORE THE G2O BUILDING! IT TAKES AGES!
+ARG graph_lib_dir=lib-cslam
+COPY ${graph_lib_dir} /graph_optimizer/lib-cslam
+
+RUN cd /graph_optimizer/lib-cslam/src/g2opy ; mkdir build ; cd build ; cmake -DPYBIND11_PYTHON_VERSION=2.7 ..  ; make -j3; cd ..; python setup.py install
+RUN cd /graph_optimizer/lib-cslam; python setup.py develop --no-deps
+RUN apt-get install -y vim
+
+
+## Pose graph optimizer
+ARG ros_nodes=ros-cslam/src/pose_graph_builder
+RUN mkdir -p /graph_optimizer/catkin_ws/src/pose_graph_builder
+
+COPY ${ros_nodes} /graph_optimizer/catkin_ws/src/pose_graph_builder
+
+# Setup the ros-visualization
+COPY ros-cslam/src/cslam_visualization /graph_optimizer/catkin_ws/src/cslam_visualization
+COPY ros-cslam/src/duckietown-visualization/duckietown_visualization /graph_optimizer/catkin_ws/src/duckietown_visualization
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /graph_optimizer/catkin_ws/; catkin_make"
+RUN chmod +x /graph_optimizer/catkin_ws/src/pose_graph_builder/*.sh
+
+
+CMD /bin/bash -c "/graph_optimizer/catkin_ws/src/pose_graph_builder/wrapper.sh"

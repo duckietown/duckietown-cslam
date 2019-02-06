@@ -1,0 +1,19 @@
+version: '3'
+services:
+  acquisition_node_duckiebotHostname:
+      image: duckietown/cslam-acquisition:x86
+      environment:
+        - ACQ_ROS_MASTER_URI_DEVICE=duckiebotHostname.local
+        - ACQ_ROS_MASTER_URI_DEVICE_IP=XXX.XXX.XXX.XXX
+        - ACQ_ROS_MASTER_URI_SERVER=ROS_MASTER_HOSTNAME.local
+        - ACQ_ROS_MASTER_URI_SERVER_IP=XXX.XXX.XXX.XXX
+        - ACQ_DEVICE_NAME=duckiebotHostname
+        - ACQ_BEAUTIFY=0
+        - ACQ_STATIONARY_ODOMETRY=0
+        - ACQ_ODOMETRY_UPDATE_RATE=15
+        - ACQ_POSES_UPDATE_RATE=15
+        - ACQ_TEST_STREAM=1
+        - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
+        - ACQ_TOPIC_RAW=camera_node/image/compressed
+      network_mode: "host"
+      restart: always
