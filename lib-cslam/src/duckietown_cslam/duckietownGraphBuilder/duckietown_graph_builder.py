@@ -1,10 +1,12 @@
-import numpy as np
-import g2o
-import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oBG
-import geometry as g
 import random
-import yaml
 import threading
+
+import yaml
+
+import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oBG
+import g2o
+import geometry as g
+import numpy as np
 
 time_step = 0.5
 

@@ -1,7 +1,8 @@
-import numpy as np
+import threading
+
 import g2o
 import geometry as g
-import threading
+import numpy as np
 
 
 class g2oGraphBuilder():
@@ -27,22 +28,28 @@ class g2oGraphBuilder():
         vc = g2o.VertexSE3()
         vc.set_id(vertex_id)
         vc.set_estimate(vertexPose)
-
-        if fixed:
-            vc.set_fixed(True)
+        vc.set_fixed(fixed)
+        
         self.optimizer.add_vertex(vc)
         self.lock.acquire()
         self.set_of_new_vertex.add(vc)
         self.lock.release()
 
-    def add_edge(self, vertex0_id, vertex1_id, measure, measure_information=None):
+    def add_edge(self, vertex0_id, vertex1_id, measure, measure_information=None, robust_kernel=None):
         '''
         Helper function to add an edge
         vertex 0 and 1 are valid IDs of vertex inside optimizer.
         measure is a Isometry3d that map the transform from vertex0 to vertex1
         '''
-        # print("add_edge")
+        
+        ## TODO 
+        # robust kernels? They are made to reduce the impact of outliers.
+        # They have to be specified separatly for each edge, with a value
+        # example : robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
+        #           edge.set_robust_kernel(robust_kernel)
+        ##
 
+        # print("add_edge")
         # print(optimizer.vertices())
         if vertex0_id in self.optimizer.vertices():
             if vertex1_id not in self.optimizer.vertices():
@@ -59,21 +66,20 @@ class g2oGraphBuilder():
             edge.set_vertex(0, self.optimizer.vertex(vertex0_id))
             edge.set_vertex(1, self.optimizer.vertex(vertex1_id))
             edge.set_measurement(measure)
-            # r = abs(g.rotation_from_axis_angle(
-            #     np.array([1, 0, 0]), np.deg2rad(2)))
-            # ligne1 = np.concatenate((r, r), axis=1)
-            # ligne2 = np.concatenate((r, r), axis=1)
-            # r_final = np.concatenate((ligne1, ligne2), axis=0)
 
-            # edge.set_information(r_final)
-            if (measure_information):
+            if measure_information is not None:
                 edge.set_information(measure_information)
-            finished = self.optimizer.add_edge(edge)
+            
+            if robust_kernel is not None:
+                edge.set_robust_kernel(robust_kernel)
+
+            self.optimizer.add_edge(edge)
+
+            # Adding edge to set of new edge to update initialization
             self.lock.acquire()
             self.set_of_new_edges.add(edge)
             self.lock.release()
-            if (not finished):
-                print("Adding edge in g2o is not finished")
+
 
         else:
             if vertex1_id in self.optimizer.vertices():
@@ -174,7 +180,8 @@ class g2oGraphBuilder():
                  number_of_steps,
                  verbose=True,
                  save_result=True,
-                 output_name="output.g2o"):
+                 output_name="output.g2o",
+                 online=False):
         # print("optimize")
 
         self.lock.acquire()
@@ -199,7 +206,7 @@ class g2oGraphBuilder():
         if (verbose):
             print('Optimization:')
             print('Initial chi2 = %f' % self.optimizer.chi2())
-        self.optimizer.optimize(number_of_steps)
+        self.optimizer.optimize(number_of_steps, online=online)
         if (save_result):
             self.optimizer.save(output_name)
         self.lock.release()

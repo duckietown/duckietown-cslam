@@ -1,19 +1,21 @@
 #!/usr/bin/env python
-import rospy
-from std_msgs.msg import String, Header, Time
-from geometry_msgs.msg import *
-from visualization_msgs.msg import *
+import os
+import random
+import threading
+
+import yaml
 
 import duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder as dGB
 import g2o
-import numpy as np
 import geometry as g
-import yaml
-import tf_conversions
+import numpy as np
+import rospy
 import tf2_ros
-import threading
-import random
-import os
+import tf_conversions
+from geometry_msgs.msg import *
+from std_msgs.msg import Header, String, Time
+from visualization_msgs.msg import *
+
 
 class PointBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
@@ -451,7 +453,7 @@ class TransformListener():
                 10,
                 save_result=self.save_output,
                 verbose=self.verbose,
-                output_name="/tmp/test2.g2o")
+                output_name="/tmp/output.g2o")
             self.optim_period_counter = 0
             b = rospy.get_time()
             # Broadcast tree of transforms with TF.
