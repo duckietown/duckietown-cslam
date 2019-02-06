@@ -394,7 +394,7 @@ class TransformListener():
         # remove useless code (optimization part)
         ##
 
-        
+
         # Update time of last callback and time counter for the optimization.
         # start_time = rospy.get_time()
         # self.optim_period_counter += start_time - self.last_callback
@@ -455,7 +455,8 @@ class TransformListener():
             # Tag detected by a Duckiebot.
             self.handle_duckiebot_message(
                 id0, id1, transform, time_stamp)
-
+        
+        ## TODO : remove this part
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
         # if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 80 and
@@ -534,8 +535,9 @@ class TransformListener():
         rospy.Subscriber("/poses_acquisition/odometry", TransformStamped,
                          self.transform_callback)
 
-
+        # Create a regular callback to invoke optimization on a regular basis
         rospy.Timer(rospy.Duration(self.optimization_period), self.optimization_callback)                 
+        
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
 
