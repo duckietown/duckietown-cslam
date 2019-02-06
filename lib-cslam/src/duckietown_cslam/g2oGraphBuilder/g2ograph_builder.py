@@ -185,6 +185,7 @@ class g2oGraphBuilder():
         # print("optimize")
 
         self.lock.acquire()
+
         self.optimizer.set_verbose(verbose)
         if (not self.already_initialized):
 
@@ -207,9 +208,12 @@ class g2oGraphBuilder():
             print('Optimization:')
             print('Initial chi2 = %f' % self.optimizer.chi2())
         self.optimizer.optimize(number_of_steps, online=online)
+        
         if (save_result):
             self.optimizer.save(output_name)
+        
         self.lock.release()
+        
         return self.optimizer.chi2()
         # batch_stat = self.optimizer.batch_statistics
         # print(batch_stat)
