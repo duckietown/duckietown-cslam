@@ -15,8 +15,7 @@
 - [ ] Better access to launch variables (configuration server)
 - [ ] Exporting experiment data --> all robot paths
 - [ ] Separate the different part of our work into different git repo! (acquisition/graph)
-- [ ] Test AprilTag 3 library
-- [ ] Increase the camera resolution *(Aleks working on it)*
+
 
 ### Optimization time and accuracy
 - [ ] Robust kernels in g2o : reduce outlier issues:
@@ -27,6 +26,8 @@
 - [ ] Edge measurement info : 6*6 covariance matrix
   - [x] Add the possibility to set them
   - [ ] Devise nice heuristics and implement them
+- [ ] Test AprilTag 3 library
+- [ ] Increase the camera resolution *(Aleks working on it)*
 
 ### Odometry
 - Using visual odometry :
