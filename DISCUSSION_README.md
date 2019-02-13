@@ -10,11 +10,13 @@
 
 ### Usability
 - [ ] Find a better way to map duckiebot-names to their apriltags numbers
-- [ ] Better access to launch variables
 - [x] Put all parameters in launch (or yaml files)
   - [ ] auto-importing of parameters? Param class?
+- [ ] Better access to launch variables (configuration server)
 - [ ] Exporting experiment data --> all robot paths
 - [ ] Separate the different part of our work into different git repo! (acquisition/graph)
+- [ ] Test AprilTag 3 library
+- [ ] Increase the camera resolution *(Aleks working on it)*
 
 ### Optimization time and accuracy
 - [ ] Robust kernels in g2o : reduce outlier issues:
