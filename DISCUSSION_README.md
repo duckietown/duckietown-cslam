@@ -13,6 +13,7 @@
 - [ ] Better access to launch variables
 - [ ] Put all parameters in launch (or yaml files) --> auto-importing of parameters?
 - [ ] Exporting experiment data --> all robot paths
+- [ ] Separate the different part of our work into different git repo! (acquisition/graph)
 
 ### Optimization time
 - [ ] Robust kernels in g2o : reduce outlier issues
