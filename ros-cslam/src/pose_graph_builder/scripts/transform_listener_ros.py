@@ -524,9 +524,10 @@ class TransformListener():
         # run simultaneously.
         initial_floor_april_tags = "%s/%s" % (rospy.get_param("config_folder"),
                                               "robotarium1.yaml")
+        stocking_time = rospy.get_param("stocking_time")
         # Build graph based on floor map.
         self.pose_graph = dGB.DuckietownGraphBuilder(
-            initial_floor_april_tags=initial_floor_april_tags)
+            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time)
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
