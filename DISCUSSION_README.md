@@ -20,6 +20,11 @@
 ### Optimization time and accuracy
 - [ ] Robust kernels in g2o : reduce outlier issues:
   - [x] Add the possibility to set them
+  - [ ] testing:
+    - [x] small values (b = 0.01 (1cm)) --> give bad results but faster convergence
+    - [x] medium value (b = 0.2 or 0.1) --> give rather good results
+    - [ ] big values   (b = 1 or 2)
+    - [ ] real time test (all above is on same bag file for now)
   - [ ] find out what parameters should be applied
 - [ ] Better retro-interpolation policy ? 
 - [ ] Removing old vertices and edges and fixing watchtowers : see "long term experiment" section
@@ -53,3 +58,4 @@ Ideas:
 
 - Do we need to call "compute_active_errors" and "compute_initial_guess" at each optimization iteration?
 - What exact purpose does the "online" argument of "optimize" serve? It seems to be used when optimization is done recursivly, which is our case. We might want to try it. We tried it and the g2o c++ lib crashes!
+- What really are robust Kernel. The value we put in it corresponds to the "b" value in chapter 5 on robust kernels?

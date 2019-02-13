@@ -279,7 +279,7 @@ class DuckietownGraphBuilder():
                 # For initial floor tags, add an edge between the reference
                 # vertex and the newly-added vertex for the pose of the tag.
                 self.graph.add_edge(
-                    vertex0_id=0, vertex1_id=vertex_id, measure=vertex_pose)
+                    vertex0_id=0, vertex1_id=vertex_id, measure=vertex_pose, robust_kernel_value=0.1)
 
     def convert_names_to_int(self, id, time_stamp):
         """Given an ID in the format <node_type>_<node_id> and a timestamp
@@ -434,7 +434,7 @@ class DuckietownGraphBuilder():
             # following it and using the relative transform obtained by
             # interpolation.
             self.graph.add_edge(vertex0_id_int, vertex1_id_int,
-                                interpolated_measure)
+                                interpolated_measure, robust_kernel_value=0.1)
         if (cumulative_alpha != 1.0):
             pass
 
@@ -513,7 +513,7 @@ class DuckietownGraphBuilder():
             vertex1_id_int = self.convert_names_to_int(vertex1_id, time_stamp)
             # Add edge between the two vertices (and automatically also add the
             # vertices if not there already).in the g2o graph.
-            self.graph.add_edge(vertex0_id_int, vertex1_id_int, measure)
+            self.graph.add_edge(vertex0_id_int, vertex1_id_int, measure, robust_kernel_value=0.1)
         else:
             [node_type, node_id] = vertex0_id.split("_")
             # Associate timestamps to the vertex.
