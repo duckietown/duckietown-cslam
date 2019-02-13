@@ -228,7 +228,7 @@ class DuckietownGraphBuilder():
     def add_vertex(self,
                    vertex_id,
                    theta,
-                   p,
+                   position,
                    is_initial_floor_tag=False,
                    fixed=False,
                    time_stamp=0.0):
@@ -242,7 +242,7 @@ class DuckietownGraphBuilder():
                           in the graph, in the format <node_type>_<node_id>.
                theta: Angle of the 2D rotation around the z axis defines the
                       pose of the node.
-               p: 2D translation vector (x, y) that define the pose of the node.
+               position: 2D translation vector (x, y) that define the pose of the node.
                is_initial_floor_tag: True if the node is an initial floor tag,
                                      False otherwise.
                fixed: True if the node should be added as a fixed vertex (i.e.,
@@ -260,7 +260,7 @@ class DuckietownGraphBuilder():
                 (vertex_id, time_stamp))
         else:
             # Translation vector, z coordinate does not vary.
-            p = [p[0], p[1], 0.0]
+            position = [position[0], position[1], 0.0]
             # Rotation around the z axis of and angle theta.
             R = g.rotation_from_axis_angle(
                 np.array([0, 0, 1]), np.deg2rad(theta))
@@ -272,7 +272,7 @@ class DuckietownGraphBuilder():
                     np.array([1, 0, 0]), np.deg2rad(180))
                 R = np.matmul(R, R2)
             # Add vertex with pose and ID in the right format to the g2o graph.
-            vertex_pose = g2o.Isometry3d(R, p)
+            vertex_pose = g2o.Isometry3d(R, position)
             vertex_id = self.convert_names_to_int(vertex_id, time_stamp)
             self.graph.add_vertex(vertex_id, vertex_pose, fixed=fixed)
             if (is_initial_floor_tag):
@@ -534,7 +534,7 @@ class DuckietownGraphBuilder():
                     self.add_vertex(
                         vertex_id=vertex0_id,
                         theta=0,
-                        p=[0, 0],
+                        position=[0, 0],
                         is_initial_floor_tag=False,
                         fixed=False,
                         time_stamp=time_stamp)
@@ -617,17 +617,18 @@ class DuckietownGraphBuilder():
             #      <time_stamp0> : local_index_of_time_stamp1_in_node_node_id,
             #      ...} =: time_stamp_dict
             
-            ## TODO : dictionnary changed size during iteration
-            for node_id, time_stamp_dict in node_id_dict.iteritems():
+            node_id_dict_copy = node_id_dict.copy()
+            for node_id, time_stamp_dict in node_id_dict_copy.iteritems():
                 # Get timestamp furthest in time for node with ID node_id.
                 last_time_stamp = self.last_time_stamp[node_type][node_id]
                 vertex_id = "%s_%s" % (node_type, node_id)
                 if (self.convert_names_to_int(vertex_id, last_time_stamp) not in
                         self.graph.optimizer.vertices()):
                     if (node_type in self.movable):
+                        pass 
                         # For odometry nodes that
-                        last_time_stamp = sorted(time_stamp_dict.keys())[-2]
-                        ## TODO : list index out of range
+                        # last_time_stamp = sorted(time_stamp_dict.keys())[-2]
+                        ## TODO : find a way of solving this issue
                 else:
                     result_dict[node_type][node_id] = self.graph.vertex_pose(
                         self.convert_names_to_int(vertex_id, last_time_stamp))

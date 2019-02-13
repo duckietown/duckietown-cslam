@@ -527,9 +527,9 @@
   traffic_sign_type: t-light-ahead
 
 - tag_id: 88
-  tag_type: Vehicle
+  tag_type: TrafficSign
   street_name:
-  vehicle_name: donaldthegreat
+  vehicle_name: 
   traffic_sign_type: 
 
 - tag_id: 89

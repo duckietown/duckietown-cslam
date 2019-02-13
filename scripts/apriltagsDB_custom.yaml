@@ -1,11 +1,12 @@
 - tag_id: 00
   tag_type: Vehicle
   street_name:
-  vehicle_name: donaldthegreat
+  vehicle_name: if
   traffic_sign_type: 
 
 - tag_id: 407
   tag_type: Vehicle
   street_name:
-  vehicle_name: psyduck
+  vehicle_name: DonaldTheGreat
   traffic_sign_type: 
+
