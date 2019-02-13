@@ -21,9 +21,11 @@
 
 ### Odometry
 - Using visual odometry :
-  - [ ] Reading their code
+  - [x] Reading their code --> some unclear things:
+    - [ ] asking Guillem to read us through it
   - [ ] Making sure it works
-  - [ ] Being careful that the time stamps are the ones we want
+  - [x] Being careful that the time stamps are the ones we want --> they are not:
+    - [ ] fixing this
   - [ ] Testing it!
 
 
