@@ -490,7 +490,7 @@ class TransformListener():
         # # print(diff_time)
         # self.last_callback = rospy.get_time()
 
-    def optimization_callback(self):
+    def optimization_callback(self, timer_event):
         if (self.num_messages_received >= self.minimum_edge_number_for_optimization):
             # a = rospy.get_time()
             self.pose_graph.optimize(
@@ -537,6 +537,7 @@ class TransformListener():
                          self.transform_callback)
 
         # Create a regular callback to invoke optimization on a regular basis
+        print(self.optimization_frequency)
         rospy.Timer(rospy.Duration(self.optimization_period), self.optimization_callback)                 
         
         # spin() simply keeps python from exiting until this node is stopped

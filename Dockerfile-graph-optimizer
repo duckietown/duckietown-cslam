@@ -17,10 +17,14 @@ RUN apt-get install -y python-pip python-numpy python-scipy
 RUN pip install PyGeometry 
 
 # DO NOT PUT ANYTHING HERE BEFORE THE G2O BUILDING! IT TAKES AGES!
-ARG graph_lib_dir=lib-cslam
-COPY ${graph_lib_dir} /graph_optimizer/lib-cslam
+ARG g2o_lib_dir=lib-cslam/src/g2opy
+COPY ${g2o_lib_dir} /graph_optimizer/lib-cslam/src/g2opy
 
 RUN cd /graph_optimizer/lib-cslam/src/g2opy ; mkdir build ; cd build ; cmake -DPYBIND11_PYTHON_VERSION=2.7 ..  ; make -j3; cd ..; python setup.py install
+
+ARG graph_lib_dir=lib-cslam/
+COPY ${graph_lib_dir} /graph_optimizer/lib-cslam/
+
 RUN cd /graph_optimizer/lib-cslam; python setup.py develop --no-deps
 RUN apt-get install -y vim
 

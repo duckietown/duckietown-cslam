@@ -9,4 +9,3 @@ logger.setLevel(logging.DEBUG)
 
 logger.info('duckietown_cslam %s' % __version__)
 
-from .algo import *
