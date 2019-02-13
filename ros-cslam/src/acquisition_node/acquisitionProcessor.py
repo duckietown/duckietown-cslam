@@ -37,6 +37,7 @@ class acquisitionProcessor():
         self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
         self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
         self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
+        self.ACQ_IMAGE_SCALE = float(os.getenv('ACQ_IMAGE_SCALE', 1.0))
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('acquisition_processor', anonymous=True, disable_signals=True)
@@ -187,12 +188,27 @@ class acquisitionProcessor():
             # Convert from ROS image message to numpy array
             cv_image = self.bridge.compressed_imgmsg_to_cv2(currRawImage, desired_encoding="mono8")
 
+            # Scale the K matrix if the image resolution is not the same as in the calibration
+            currRawImage_height = cv_image.shape[0]
+            currRawImage_width = cv_image.shape[1]
+
+            scale_matrix = np.ones(9)
+            if currCameraInfo.height != currRawImage_height or currCameraInfo.width != currRawImage_width:
+                scale_width = float(currRawImage_width) / currCameraInfo.width
+                scale_height = float(currRawImage_height) / currCameraInfo.height
+
+                scale_matrix[0] *= scale_width
+                scale_matrix[2] *= scale_width
+                scale_matrix[4] *= scale_height
+                scale_matrix[5] *= scale_height
+
+
             outputDict = dict()
 
             # Process the image and extract the apriltags
             dsp_options={"beautify": self.ACQ_BEAUTIFY, "tag_size": self.ACQ_TAG_SIZE}
             dsp = deviceSideProcessor(dsp_options)
-            outputDict = dsp.process(cv_image,  np.array(currCameraInfo.K).reshape((3,3)), currCameraInfo.D)
+            outputDict = dsp.process(cv_image,  (np.array(currCameraInfo.K)*scale_matrix).reshape((3,3)), currCameraInfo.D)
 
             # Add the time stamp and source of the input image to the output
             for idx in range(len(outputDict["apriltags"])):

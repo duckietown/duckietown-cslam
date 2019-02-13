@@ -1,0 +1,619 @@
+add_targets()
+ -         targets: ['_dynreports_create_index', 'duckietown_cslam_tests-_dynreports_getres']
+computed todo
+ -       not_ready: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests']
+ -      ready_todo: ['duckietown_cslam_tests-context']
+ -    targets_done: []
+ - targets_todo_plus_deps: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+targets_todo_plus_deps: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+add_targets():adding to todo
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests']
+ -        todo_add: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests']
+add_targets():adding to ready
+ -           ready: []
+ -       ready_add: ['duckietown_cslam_tests-context']
+after add_targets()
+ -            done: []
+ -      processing: []
+ -      ready_todo: ['duckietown_cslam_tests-context']
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests']
+0: -  all_targets: 6
+0: -      blocked: 0
+0: -      deleted: 0
+0: -         done: 0
+0: -       failed: 0
+0: -   processing: 0
+0: -        ready: 1
+0: -         todo: 5
+0: 
+0:  In more details:
+0: -  all_targets: 6 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+0: -      blocked: -
+0: -      deleted: -
+0: -         done: -
+0: -       failed: -
+0: -   processing: -
+0: -        ready: 1 ['duckietown_cslam_tests-context']
+0: -         todo: 5 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-context
+start_job
+ -          job_id: duckietown_cslam_tests-context
+check_job_finished
+ -          job_id: duckietown_cslam_tests-context
+job_succeeded
+ -          job_id: duckietown_cslam_tests-context
+considering parents
+ -    parents_todo: ['duckietown_cslam_tests-comptests']
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-context
+ -     opportunity: duckietown_cslam_tests-comptests
+parent is ready
+ -     opportunity: duckietown_cslam_tests-comptests
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-context
+ -        new_jobs: []
+ - user_object_deps: []
+1: -  all_targets: 6
+1: -      blocked: 0
+1: -      deleted: 0
+1: -         done: 1
+1: -       failed: 0
+1: -   processing: 0
+1: -        ready: 1
+1: -         todo: 4
+1: 
+1:  In more details:
+1: -  all_targets: 6 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+1: -      blocked: -
+1: -      deleted: -
+1: -         done: 1 ['duckietown_cslam_tests-context']
+1: -       failed: -
+1: -   processing: -
+1: -        ready: 1 ['duckietown_cslam_tests-comptests']
+1: -         todo: 4 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-comptests
+start_job
+ -          job_id: duckietown_cslam_tests-comptests
+check_job_finished
+ -          job_id: duckietown_cslam_tests-comptests
+job_succeeded
+ -          job_id: duckietown_cslam_tests-comptests
+considering parents
+ -    parents_todo: ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres']
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-comptests
+ -     opportunity: duckietown_cslam_tests-_dynreports_getres
+parent is ready
+ -     opportunity: duckietown_cslam_tests-_dynreports_getres
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-comptests
+ -     opportunity: duckietown_cslam_tests-_dynreports_getbra
+parent is ready
+ -     opportunity: duckietown_cslam_tests-_dynreports_getbra
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-comptests
+ -        new_jobs: ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ - user_object_deps: ['duckietown_cslam_tests-_dynreports_merge']
+updating dep
+ -               d: duckietown_cslam_tests-_dynreports_merge
+ -          job_id: duckietown_cslam_tests-comptests
+ -          parent: duckietown_cslam_tests-_dynreports_getres
+updating dep
+ -               d: duckietown_cslam_tests-_dynreports_merge
+ -          job_id: duckietown_cslam_tests-comptests
+ -          parent: duckietown_cslam_tests-_dynreports_getbra
+rescheduling parent
+ -          job_id: duckietown_cslam_tests-comptests
+ -          parent: duckietown_cslam_tests-_dynreports_getres
+add_targets()
+ -         targets: ['duckietown_cslam_tests-_dynreports_getres']
+computed todo
+ -       not_ready: ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ -      ready_todo: ['duckietown_cslam_tests-context-0']
+ -    targets_done: ['duckietown_cslam_tests-comptests']
+ - targets_todo_plus_deps: ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+targets_todo_plus_deps: ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+add_targets():adding to todo
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ -        todo_add: ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+add_targets():adding to ready
+ -           ready: ['duckietown_cslam_tests-_dynreports_getbra']
+ -       ready_add: ['duckietown_cslam_tests-context-0']
+after add_targets()
+ -            done: ['duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+ -      processing: []
+ -      ready_todo: ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-context-0']
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+rescheduling parent
+ -          job_id: duckietown_cslam_tests-comptests
+ -          parent: duckietown_cslam_tests-_dynreports_getbra
+add_targets()
+ -         targets: ['duckietown_cslam_tests-_dynreports_getbra']
+computed todo
+ -       not_ready: ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ -      ready_todo: ['duckietown_cslam_tests-context-0']
+ -    targets_done: ['duckietown_cslam_tests-comptests']
+ - targets_todo_plus_deps: ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+targets_todo_plus_deps: ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+add_targets():adding to todo
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ -        todo_add: ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+add_targets():adding to ready
+ -           ready: ['duckietown_cslam_tests-context-0']
+ -       ready_add: ['duckietown_cslam_tests-context-0']
+after add_targets()
+ -            done: ['duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+ -      processing: []
+ -      ready_todo: ['duckietown_cslam_tests-context-0']
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+add_targets()
+ -         targets: ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image']
+computed todo
+ -       not_ready: ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ -      ready_todo: ['duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-context-0']
+ -    targets_done: []
+ - targets_todo_plus_deps: ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+targets_todo_plus_deps: ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+add_targets():adding to todo
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ -        todo_add: ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-duckietown_cslam_tests']
+add_targets():adding to ready
+ -           ready: ['duckietown_cslam_tests-context-0']
+ -       ready_add: ['duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-context-0']
+after add_targets()
+ -            done: ['duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+ -      processing: []
+ -      ready_todo: ['duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-context-0']
+ -            todo: ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+2: -  all_targets: 14
+2: -      blocked: 0
+2: -      deleted: 0
+2: -         done: 2
+2: -       failed: 0
+2: -   processing: 0
+2: -        ready: 4
+2: -         todo: 8
+2: 
+2:  In more details:
+2: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+2: -      blocked: -
+2: -      deleted: -
+2: -         done: 2 ['duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context']
+2: -       failed: -
+2: -   processing: -
+2: -        ready: 4 ['duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-context-0']
+2: -         todo: 8 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-duckietown_cslam_tests']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-context-0
+start_job
+ -          job_id: duckietown_cslam_tests-context-0
+check_job_finished
+ -          job_id: duckietown_cslam_tests-context-0
+job_succeeded
+ -          job_id: duckietown_cslam_tests-context-0
+considering parents
+ -    parents_todo: ['duckietown_cslam_tests-duckietown_cslam_tests']
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-context-0
+ -     opportunity: duckietown_cslam_tests-duckietown_cslam_tests
+parent is ready
+ -     opportunity: duckietown_cslam_tests-duckietown_cslam_tests
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-context-0
+ -        new_jobs: []
+ - user_object_deps: []
+3: -  all_targets: 14
+3: -      blocked: 0
+3: -      deleted: 0
+3: -         done: 3
+3: -       failed: 0
+3: -   processing: 0
+3: -        ready: 4
+3: -         todo: 7
+3: 
+3:  In more details:
+3: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+3: -      blocked: -
+3: -      deleted: -
+3: -         done: 3 ['duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0']
+3: -       failed: -
+3: -   processing: -
+3: -        ready: 4 ['duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-duckietown_cslam_tests']
+3: -         todo: 7 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-duckietown_cslam_tests
+start_job
+ -          job_id: duckietown_cslam_tests-duckietown_cslam_tests
+check_job_finished
+ -          job_id: duckietown_cslam_tests-duckietown_cslam_tests
+job_succeeded
+ -          job_id: duckietown_cslam_tests-duckietown_cslam_tests
+considering parents
+ -    parents_todo: ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2']
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-duckietown_cslam_tests
+ -     opportunity: duckietown_cslam_tests-_dynreports_getbra-2
+parent is ready
+ -     opportunity: duckietown_cslam_tests-_dynreports_getbra-2
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-duckietown_cslam_tests
+ -     opportunity: duckietown_cslam_tests-_dynreports_getres-2
+parent is ready
+ -     opportunity: duckietown_cslam_tests-_dynreports_getres-2
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-duckietown_cslam_tests
+ -        new_jobs: []
+ - user_object_deps: []
+4: -  all_targets: 14
+4: -      blocked: 0
+4: -      deleted: 0
+4: -         done: 4
+4: -       failed: 0
+4: -   processing: 0
+4: -        ready: 5
+4: -         todo: 5
+4: 
+4:  In more details:
+4: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+4: -      blocked: -
+4: -      deleted: -
+4: -         done: 4 ['duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+4: -       failed: -
+4: -   processing: -
+4: -        ready: 5 ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image']
+4: -         todo: 5 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-compare_rectified_image
+start_job
+ -          job_id: duckietown_cslam_tests-compare_rectified_image
+check_job_finished
+ -          job_id: duckietown_cslam_tests-compare_rectified_image
+job_succeeded
+ -          job_id: duckietown_cslam_tests-compare_rectified_image
+considering parents
+ -    parents_todo: []
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-compare_rectified_image
+ -        new_jobs: []
+ - user_object_deps: []
+5: -  all_targets: 14
+5: -      blocked: 0
+5: -      deleted: 0
+5: -         done: 5
+5: -       failed: 0
+5: -   processing: 0
+5: -        ready: 4
+5: -         todo: 5
+5: 
+5:  In more details:
+5: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+5: -      blocked: -
+5: -      deleted: -
+5: -         done: 5 ['duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+5: -       failed: -
+5: -   processing: -
+5: -        ready: 4 ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification']
+5: -         todo: 5 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getres-2
+start_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getres-2
+check_job_finished
+ -          job_id: duckietown_cslam_tests-_dynreports_getres-2
+job_succeeded
+ -          job_id: duckietown_cslam_tests-_dynreports_getres-2
+considering parents
+ -    parents_todo: []
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-_dynreports_getres-2
+ -        new_jobs: []
+ - user_object_deps: []
+6: -  all_targets: 14
+6: -      blocked: 0
+6: -      deleted: 0
+6: -         done: 6
+6: -       failed: 0
+6: -   processing: 0
+6: -        ready: 3
+6: -         todo: 5
+6: 
+6:  In more details:
+6: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+6: -      blocked: -
+6: -      deleted: -
+6: -         done: 6 ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+6: -       failed: -
+6: -   processing: -
+6: -        ready: 3 ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification']
+6: -         todo: 5 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-aprilTag_extraction_test
+start_job
+ -          job_id: duckietown_cslam_tests-aprilTag_extraction_test
+check_job_finished
+ -          job_id: duckietown_cslam_tests-aprilTag_extraction_test
+job_failed
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-aprilTag_extraction_test
+7: -  all_targets: 14
+7: -      blocked: 0
+7: -      deleted: 0
+7: -         done: 6
+7: -       failed: 1
+7: -   processing: 0
+7: -        ready: 2
+7: -         todo: 5
+7: 
+7:  In more details:
+7: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+7: -      blocked: -
+7: -      deleted: -
+7: -         done: 6 ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+7: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+7: -   processing: -
+7: -        ready: 2 ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-check_image_beautification']
+7: -         todo: 5 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-check_image_beautification
+start_job
+ -          job_id: duckietown_cslam_tests-check_image_beautification
+check_job_finished
+ -          job_id: duckietown_cslam_tests-check_image_beautification
+job_succeeded
+ -          job_id: duckietown_cslam_tests-check_image_beautification
+considering parents
+ -    parents_todo: []
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-check_image_beautification
+ -        new_jobs: []
+ - user_object_deps: []
+8: -  all_targets: 14
+8: -      blocked: 0
+8: -      deleted: 0
+8: -         done: 7
+8: -       failed: 1
+8: -   processing: 0
+8: -        ready: 1
+8: -         todo: 5
+8: 
+8:  In more details:
+8: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+8: -      blocked: -
+8: -      deleted: -
+8: -         done: 7 ['duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+8: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+8: -   processing: -
+8: -        ready: 1 ['duckietown_cslam_tests-_dynreports_getbra-2']
+8: -         todo: 5 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_merge']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra-2
+start_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra-2
+check_job_finished
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra-2
+job_succeeded
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra-2
+considering parents
+ -    parents_todo: ['duckietown_cslam_tests-_dynreports_merge']
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra-2
+ -     opportunity: duckietown_cslam_tests-_dynreports_merge
+parent is ready
+ -     opportunity: duckietown_cslam_tests-_dynreports_merge
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra-2
+ -        new_jobs: []
+ - user_object_deps: []
+9: -  all_targets: 14
+9: -      blocked: 0
+9: -      deleted: 0
+9: -         done: 8
+9: -       failed: 1
+9: -   processing: 0
+9: -        ready: 1
+9: -         todo: 4
+9: 
+9:  In more details:
+9: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+9: -      blocked: -
+9: -      deleted: -
+9: -         done: 8 ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+9: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+9: -   processing: -
+9: -        ready: 1 ['duckietown_cslam_tests-_dynreports_merge']
+9: -         todo: 4 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-_dynreports_merge
+start_job
+ -          job_id: duckietown_cslam_tests-_dynreports_merge
+check_job_finished
+ -          job_id: duckietown_cslam_tests-_dynreports_merge
+job_succeeded
+ -          job_id: duckietown_cslam_tests-_dynreports_merge
+considering parents
+ -    parents_todo: ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres']
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-_dynreports_merge
+ -     opportunity: duckietown_cslam_tests-_dynreports_getres
+parent is ready
+ -     opportunity: duckietown_cslam_tests-_dynreports_getres
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-_dynreports_merge
+ -     opportunity: duckietown_cslam_tests-_dynreports_getbra
+parent is ready
+ -     opportunity: duckietown_cslam_tests-_dynreports_getbra
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-_dynreports_merge
+ -        new_jobs: []
+ - user_object_deps: []
+10: -  all_targets: 14
+10: -      blocked: 0
+10: -      deleted: 0
+10: -         done: 9
+10: -       failed: 1
+10: -   processing: 0
+10: -        ready: 2
+10: -         todo: 2
+10: 
+10:  In more details:
+10: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+10: -      blocked: -
+10: -      deleted: -
+10: -         done: 9 ['duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+10: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+10: -   processing: -
+10: -        ready: 2 ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getres']
+10: -         todo: 2 ['_dynreports_create_index', '_dynreports_merge']
+chosen next_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra
+start_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra
+check_job_finished
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra
+job_succeeded
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra
+considering parents
+ -    parents_todo: ['_dynreports_merge']
+considering opportuniny
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra
+ -     opportunity: _dynreports_merge
+parent is ready
+ -     opportunity: _dynreports_merge
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-_dynreports_getbra
+ -        new_jobs: []
+ - user_object_deps: []
+11: -  all_targets: 14
+11: -      blocked: 0
+11: -      deleted: 0
+11: -         done: 10
+11: -       failed: 1
+11: -   processing: 0
+11: -        ready: 2
+11: -         todo: 1
+11: 
+11:  In more details:
+11: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+11: -      blocked: -
+11: -      deleted: -
+11: -         done: 10 ['duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+11: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+11: -   processing: -
+11: -        ready: 2 ['_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getres']
+11: -         todo: 1 ['_dynreports_create_index']
+chosen next_job
+ -          job_id: _dynreports_merge
+start_job
+ -          job_id: _dynreports_merge
+check_job_finished
+ -          job_id: _dynreports_merge
+job_succeeded
+ -          job_id: _dynreports_merge
+considering parents
+ -    parents_todo: ['_dynreports_create_index']
+considering opportuniny
+ -          job_id: _dynreports_merge
+ -     opportunity: _dynreports_create_index
+parent is ready
+ -     opportunity: _dynreports_create_index
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: _dynreports_merge
+ -        new_jobs: []
+ - user_object_deps: []
+12: -  all_targets: 14
+12: -      blocked: 0
+12: -      deleted: 0
+12: -         done: 11
+12: -       failed: 1
+12: -   processing: 0
+12: -        ready: 2
+12: -         todo: 0
+12: 
+12:  In more details:
+12: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+12: -      blocked: -
+12: -      deleted: -
+12: -         done: 11 ['_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+12: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+12: -   processing: -
+12: -        ready: 2 ['_dynreports_create_index', 'duckietown_cslam_tests-_dynreports_getres']
+12: -         todo: -
+chosen next_job
+ -          job_id: _dynreports_create_index
+start_job
+ -          job_id: _dynreports_create_index
+check_job_finished
+ -          job_id: _dynreports_create_index
+job_succeeded
+ -          job_id: _dynreports_create_index
+considering parents
+ -    parents_todo: []
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: _dynreports_create_index
+ -        new_jobs: []
+ - user_object_deps: []
+13: -  all_targets: 14
+13: -      blocked: 0
+13: -      deleted: 0
+13: -         done: 12
+13: -       failed: 1
+13: -   processing: 0
+13: -        ready: 1
+13: -         todo: 0
+13: 
+13:  In more details:
+13: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+13: -      blocked: -
+13: -      deleted: -
+13: -         done: 12 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+13: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+13: -   processing: -
+13: -        ready: 1 ['duckietown_cslam_tests-_dynreports_getres']
+13: -         todo: -
+chosen next_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getres
+start_job
+ -          job_id: duckietown_cslam_tests-_dynreports_getres
+check_job_finished
+ -          job_id: duckietown_cslam_tests-_dynreports_getres
+job_succeeded
+ -          job_id: duckietown_cslam_tests-_dynreports_getres
+considering parents
+ -    parents_todo: []
+check_job_finished_handle_result
+ -    deleted_jobs: []
+ -          job_id: duckietown_cslam_tests-_dynreports_getres
+ -        new_jobs: []
+ - user_object_deps: []
+ending: -  all_targets: 14
+ending: -      blocked: 0
+ending: -      deleted: 0
+ending: -         done: 13
+ending: -       failed: 1
+ending: -   processing: 0
+ending: -        ready: 0
+ending: -         todo: 0
+ending: 
+ending:  In more details:
+ending: -  all_targets: 14 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-aprilTag_extraction_test', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ending: -      blocked: -
+ending: -      deleted: -
+ending: -         done: 13 ['_dynreports_create_index', '_dynreports_merge', 'duckietown_cslam_tests-_dynreports_getbra', 'duckietown_cslam_tests-_dynreports_getbra-2', 'duckietown_cslam_tests-_dynreports_getres', 'duckietown_cslam_tests-_dynreports_getres-2', 'duckietown_cslam_tests-_dynreports_merge', 'duckietown_cslam_tests-check_image_beautification', 'duckietown_cslam_tests-compare_rectified_image', 'duckietown_cslam_tests-comptests', 'duckietown_cslam_tests-context', 'duckietown_cslam_tests-context-0', 'duckietown_cslam_tests-duckietown_cslam_tests']
+ending: -       failed: 1 ['duckietown_cslam_tests-aprilTag_extraction_test']
+ending: -   processing: -
+ending: -        ready: -
+ending: -         todo: -
