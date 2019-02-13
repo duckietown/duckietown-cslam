@@ -20,7 +20,7 @@
 
 ### Optimization time and accuracy
 - [ ] Robust kernels in g2o : reduce outlier issues:
-  - [ ] Add the possibility to set them
+  - [x] Add the possibility to set them
   - [ ] find out what parameters should be applied
 - [ ] Better retro-interpolation policy ? 
 - [ ] Removing old vertices and edges and fixing watchtowers : see "long term experiment" section

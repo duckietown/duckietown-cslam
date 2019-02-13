@@ -35,7 +35,7 @@ class g2oGraphBuilder():
         self.set_of_new_vertex.add(vc)
         self.lock.release()
 
-    def add_edge(self, vertex0_id, vertex1_id, measure, measure_information=None, robust_kernel=None):
+    def add_edge(self, vertex0_id, vertex1_id, measure, measure_information=None, robust_kernel_value=None):
         '''
         Helper function to add an edge
         vertex 0 and 1 are valid IDs of vertex inside optimizer.
@@ -70,7 +70,8 @@ class g2oGraphBuilder():
             if measure_information is not None:
                 edge.set_information(measure_information)
             
-            if robust_kernel is not None:
+            if robust_kernel_value is not None:
+                robust_kernel = g2o.RobustKernelHuber(robust_kernel_value)
                 edge.set_robust_kernel(robust_kernel)
 
             self.optimizer.add_edge(edge)
@@ -116,7 +117,7 @@ class g2oGraphBuilder():
                 self.set_of_new_vertex.add(vc0)
                 self.lock.release()
 
-                self.add_edge(vertex0_id, vertex1_id, measure)
+                self.add_edge(vertex0_id, vertex1_id, measure, robust_kernel_value=robust_kernel_value)
 
     def vertices_and_edges(self):
         return (self.optimizer.vertices(), self.optimizer.edges())
