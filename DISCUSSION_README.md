@@ -11,7 +11,8 @@
 ### Usability
 - [ ] Find a better way to map duckiebot-names to their apriltags numbers
 - [ ] Better access to launch variables
-- [ ] Put all parameters in launch (or yaml files) --> auto-importing of parameters?
+- [x] Put all parameters in launch (or yaml files)
+  - [ ] auto-importing of parameters? Param class?
 - [ ] Exporting experiment data --> all robot paths
 - [ ] Separate the different part of our work into different git repo! (acquisition/graph)
 
