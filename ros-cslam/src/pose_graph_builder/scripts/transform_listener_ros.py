@@ -188,6 +188,7 @@ class TransformListener():
         self.save_output = rospy.get_param("save_g2o_output")
         self.optimization_frequency = rospy.get_param("optimization_frequency")
         self.optimization_period = 1.0/self.optimization_frequency
+        self.online_optimization = rospy.get_param("online_optimization")
 
     def initialize_id_map(self):
         """ Loads April tags into the ID map, assigning each tag in the database
@@ -289,7 +290,8 @@ class TransformListener():
             t = [0.0, 0.0, 0.1]
             z_angle = 90
             z_angle = np.deg2rad(z_angle)
-            x_angle = np.deg2rad(180)
+            # x_angle = np.deg2rad(180)
+            x_angle = 0
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
             R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
             R = np.matmul(R_x, R_z)
@@ -443,7 +445,8 @@ class TransformListener():
                 self.max_iteration,
                 save_result=self.save_output,
                 verbose=self.verbose,
-                output_name="/tmp/output.g2o")
+                output_name="/tmp/output.g2o",
+                online = self.online_optimization)
             # b = rospy.get_time()
             
             # Broadcast tree of transforms with TF.

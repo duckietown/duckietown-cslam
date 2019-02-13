@@ -442,7 +442,8 @@ class DuckietownGraphBuilder():
                  number_of_steps,
                  verbose=True,
                  save_result=True,
-                 output_name="output.g2o"):
+                 output_name="output.g2o",
+                 online=False):
         """Performs optimization.
 
             Args:
@@ -469,7 +470,8 @@ class DuckietownGraphBuilder():
             number_of_steps,
             verbose=verbose,
             save_result=save_result,
-            output_name=output_name)
+            output_name=output_name,
+            online=online)
         self.lock.release()
 
     def add_edge(self,

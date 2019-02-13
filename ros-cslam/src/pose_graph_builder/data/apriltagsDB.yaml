@@ -530,7 +530,7 @@
   tag_type: TrafficSign
   street_name:
   vehicle_name: 
-  traffic_sign_type: 
+  traffic_sign_type: t-light-ahead
 
 - tag_id: 89
   tag_type: TrafficSign
