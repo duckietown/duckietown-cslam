@@ -175,20 +175,21 @@ class TransformListener():
     """
 
     def __init__(self):
+        self.max_iteration                        = rospy.get_param("maximum_g2o_iterations")
+        self.minimum_edge_number_for_optimization = rospy.get_param("minimum_edge_number_for_optimization")
+        self.rejection_sampling_int               = rospy.get_param("rejection_sampling_int")
+        self.max_number_same_edge                 = rospy.get_param("max_number_same_edge")
+        self.verbose                              = rospy.get_param("optim_verbose")
+        self.save_output                          = rospy.get_param("save_g2o_output")
+        self.optimization_frequency               = rospy.get_param("optimization_frequency")
+        self.online_optimization                  = rospy.get_param("online_optimization")
+
+        self.num_messages_received = 0
+        self.edge_counters = dict()
+        self.optimization_period = 1.0/self.optimization_frequency
         self.pose_graph = None
         self.old_odometry_stamps = {}
         self.id_map = {}
-        self.max_iteration = 10
-        self.minimum_edge_number_for_optimization = 100
-        self.num_messages_received = 0
-        self.edge_counters = dict()
-        self.rejection_sampling_int = 30
-        self.max_number_same_edge = 30
-        self.verbose = rospy.get_param("optim_verbose")
-        self.save_output = rospy.get_param("save_g2o_output")
-        self.optimization_frequency = rospy.get_param("optimization_frequency")
-        self.optimization_period = 1.0/self.optimization_frequency
-        self.online_optimization = rospy.get_param("online_optimization")
 
     def initialize_id_map(self):
         """ Loads April tags into the ID map, assigning each tag in the database

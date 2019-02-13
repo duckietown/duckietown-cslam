@@ -1,12 +1,7 @@
 <launch>
     <param name='config_folder' value='$(find pose_graph_builder)/data' />
-    <param name='optim_verbose' value='True'/>
-    <param name='save_g2o_output' value='False'/>
-    <param name='optimization_frequency' value='2.0'/>
-    <param name='stocking_time' value='7200'/>
-    <param name='online_optimization' value='False'/>
+    <rosparam file="$(find pose_graph_builder)/params/default_params.yaml" command="load"/>
 
-    <!-- <param name='optim_vertices_period' type='int' value='12'/> -->
     <node name="listener" pkg="pose_graph_builder" type="transform_listener_ros.py" output="screen"/>
 
 </launch>

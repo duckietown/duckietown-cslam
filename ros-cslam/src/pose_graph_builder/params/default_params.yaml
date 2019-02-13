@@ -1,0 +1,16 @@
+ 
+# G2O PARAMS
+optim_verbose : True
+online_optimization : False
+maximum_g2o_iterations : 10
+save_g2o_output : False
+
+
+# DUCKIETOWN_GRAPH PARAMS
+stocking_time : 7200
+optimization_frequency : 2.0
+optim_vertices_period : 12
+minimum_edge_number_for_optimization : 100
+rejection_sampling_int : 30
+max_number_same_edge : 30
+
