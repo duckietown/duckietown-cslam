@@ -15,10 +15,15 @@
 - [ ] Exporting experiment data --> all robot paths
 - [ ] Separate the different part of our work into different git repo! (acquisition/graph)
 
-### Optimization time
-- [ ] Robust kernels in g2o : reduce outlier issues
+### Optimization time and accuracy
+- [ ] Robust kernels in g2o : reduce outlier issues:
+  - [ ] Add the possibility to set them
+  - [ ] find out what parameters should be applied
 - [ ] Better retro-interpolation policy ? 
 - [ ] Removing old vertices and edges and fixing watchtowers : see "long term experiment" section
+- [ ] Edge measurement info : 6*6 covariance matrix
+  - [x] Add the possibility to set them
+  - [ ] Devise nice heuristics and implement them
 
 ### Odometry
 - Using visual odometry :
