@@ -616,6 +616,8 @@ class DuckietownGraphBuilder():
             #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
             #      <time_stamp0> : local_index_of_time_stamp1_in_node_node_id,
             #      ...} =: time_stamp_dict
+            
+            ## TODO : dictionnary changed size during iteration
             for node_id, time_stamp_dict in node_id_dict.iteritems():
                 # Get timestamp furthest in time for node with ID node_id.
                 last_time_stamp = self.last_time_stamp[node_type][node_id]
@@ -625,6 +627,7 @@ class DuckietownGraphBuilder():
                     if (node_type in self.movable):
                         # For odometry nodes that
                         last_time_stamp = sorted(time_stamp_dict.keys())[-2]
+                        ## TODO : list index out of range
                 else:
                     result_dict[node_type][node_id] = self.graph.vertex_pose(
                         self.convert_names_to_int(vertex_id, last_time_stamp))
