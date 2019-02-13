@@ -8,8 +8,6 @@ import g2o
 import geometry as g
 import numpy as np
 
-time_step = 0.5
-
 
 class DuckietownGraphBuilder():
     """Creates an internal g2o pose graph, and optimizes over it. At the same

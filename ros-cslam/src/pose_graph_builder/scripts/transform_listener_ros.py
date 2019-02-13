@@ -175,21 +175,28 @@ class TransformListener():
     """
 
     def __init__(self):
+        ## TODO
+        # Remove useless objects, update docstring
+        ##
         self.pose_graph = None
         self.old_odometry_stamps = {}
         self.id_map = {}
-        self.last_callback = rospy.get_time()
-        self.optim_period = 0.15
-        self.optim_period_counter = -5.0
+        # self.last_callback = rospy.get_time()
+        self.max_iteration = 10
+        self.minimum_edge_number_for_optimization = 100
+        # self.optim_period = 0.15
+        # self.optim_period_counter = -5.0
         self.num_messages_received = 0
         self.edge_counters = dict()
-        self.sampling_int = 30
+        self.rejection_sampling_int = 30
         self.max_number_same_edge = 30
-        self.time_means = [0.0, 0.0, 0.0, 0.0]
-        self.mode_count = [0, 0, 0, 0]
+        # self.time_means = [0.0, 0.0, 0.0, 0.0]
+        # self.mode_count = [0, 0, 0, 0]
         self.verbose = rospy.get_param("optim_verbose")
-        self.optim_vertices_period = int(rospy.get_param("optim_vertices_period"))
+        # self.optim_vertices_period = int(rospy.get_param("optim_vertices_period"))
         self.save_output = rospy.get_param("save_g2o_output")
+        self.optimization_frequency = rospy.get_param("optimization_frequency")
+        self.optimization_period = 1.0/self.optimization_frequency
         # self.lock = threading.Lock()
 
     def initialize_id_map(self):
@@ -312,7 +319,7 @@ class TransformListener():
                 self.pose_graph.add_edge(id0, id1, transform, time_stamp)
                 self.edge_counters[id0][id1] += 1
             else:
-                a = random.randint(0, self.sampling_int)
+                a = random.randint(0, self.rejection_sampling_int)
                 if(a == 0):
                     self.edge_counters[id0][id1] += 1
 
@@ -380,13 +387,19 @@ class TransformListener():
 
         return id
 
-    def callback(self, data):
+    def transform_callback(self, data):
         """ ROS callback.
         """
+        ## TODO
+        # remove useless code (optimization part)
+        ##
+
+
         # Update time of last callback and time counter for the optimization.
-        start_time = rospy.get_time()
-        self.optim_period_counter += start_time - self.last_callback
-        self.last_callback = start_time
+        # start_time = rospy.get_time()
+        # self.optim_period_counter += start_time - self.last_callback
+        # self.last_callback = start_time
+        
         self.num_messages_received += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
         id0 = data.header.frame_id
@@ -403,7 +416,6 @@ class TransformListener():
             is_from_watchtower = True
             if (id1.startswith("watchtower")):
                 # print(data)
-                # self.lock.release()
                 return 0
 
         # Create translation vector.
@@ -443,22 +455,55 @@ class TransformListener():
             # Tag detected by a Duckiebot.
             self.handle_duckiebot_message(
                 id0, id1, transform, time_stamp)
-
+        
+        ## TODO : remove this part
         # If enough time has passed since the last optimization, perform a new
         # one and reset the optimization counter.
-        if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 80 and
-                self.num_messages_received % self.optim_vertices_period == 0):
-            a = rospy.get_time()
+        # if (self.optim_period_counter > self.optim_period and self.num_messages_received >= 80 and
+        #         self.num_messages_received % self.optim_vertices_period == 0):
+        #     a = rospy.get_time()
+        #     self.pose_graph.optimize(
+        #         10,
+        #         save_result=self.save_output,
+        #         verbose=self.verbose,
+        #         output_name="/tmp/output.g2o")
+        #     self.optim_period_counter = 0
+        #     b = rospy.get_time()
+        #     # Broadcast tree of transforms with TF.
+        #     pose_dict = self.pose_graph.get_all_poses()
+        #     c = rospy.get_time()
+        #     point_broadcaster = PointBroadcaster(pose_dict)
+        #     point_broadcaster.start()
+
+        #     path_dict = self.pose_graph.get_movable_paths()
+        #     # print(path_dict)
+        #     path_broadcaster = PathBroadcaster(path_dict)
+        #     path_broadcaster.start()
+        #     # for node_type, node_list in pose_dict.iteritems():
+        #     #     for node_id, node_pose in node_list.iteritems():
+        #     #         self.tfbroadcast(node_type, node_id, node_pose)
+        #     d = rospy.get_time()
+        #     print("optimize : %f \t get_poses : %f \t broadcast : %f" %
+        #           (b-a, c-b, d-c))
+        # end_time = rospy.get_time()
+        # diff_time = end_time - start_time
+        # # print(diff_time)
+        # self.last_callback = rospy.get_time()
+
+    def optimization_callback(self):
+        if (self.num_messages_received >= self.minimum_edge_number_for_optimization):
+            # a = rospy.get_time()
             self.pose_graph.optimize(
-                10,
+                self.max_iteration,
                 save_result=self.save_output,
                 verbose=self.verbose,
                 output_name="/tmp/output.g2o")
-            self.optim_period_counter = 0
-            b = rospy.get_time()
+            # b = rospy.get_time()
+            
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
-            c = rospy.get_time()
+            # c = rospy.get_time()
+            
             point_broadcaster = PointBroadcaster(pose_dict)
             point_broadcaster.start()
 
@@ -466,16 +511,6 @@ class TransformListener():
             # print(path_dict)
             path_broadcaster = PathBroadcaster(path_dict)
             path_broadcaster.start()
-            # for node_type, node_list in pose_dict.iteritems():
-            #     for node_id, node_pose in node_list.iteritems():
-            #         self.tfbroadcast(node_type, node_id, node_pose)
-            d = rospy.get_time()
-            print("optimize : %f \t get_poses : %f \t broadcast : %f" %
-                  (b-a, c-b, d-c))
-        end_time = rospy.get_time()
-        diff_time = end_time - start_time
-        # print(diff_time)
-        self.last_callback = rospy.get_time()
 
     def listen(self):
         """Initializes the graph based on the floor map and initializes the ID
@@ -496,9 +531,13 @@ class TransformListener():
         self.initialize_id_map()
         # Subscribe to topics.
         rospy.Subscriber("/poses_acquisition/poses", TransformStamped,
-                         self.callback)
+                         self.transform_callback)
         rospy.Subscriber("/poses_acquisition/odometry", TransformStamped,
-                         self.callback)
+                         self.transform_callback)
+
+        # Create a regular callback to invoke optimization on a regular basis
+        rospy.Timer(rospy.Duration(self.optimization_period), self.optimization_callback)                 
+        
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
 
