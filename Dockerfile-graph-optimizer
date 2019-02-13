@@ -1,6 +1,6 @@
 FROM ros:kinetic-ros-core
 
-MAINTAINER Benson Kuan <kbenson@ethz.ch>
+MAINTAINER Amaury Camus <camusam@ethz.ch>
 
 ENV DISPLAY $DISPLAY
 ENV QT_X11_NO_MITSHM 1

@@ -1,6 +1,6 @@
 FROM ros:kinetic-ros-core
 
-MAINTAINER Benson Kuan <kbenson@ethz.ch>
+MAINTAINER Amaury Camus <camusam@ethz.ch>
 
 # Install rospy
 RUN apt-get update
