@@ -559,7 +559,7 @@ class DuckietownGraphBuilder():
 
         if self.stocking_time is not None:
             global_last_time_stamp = max(self.last_time_stamp["duckiebot"].values())
-            self.remove_old_poses(global_last_time_stamp)
+            self.save_and_remove_old_poses(global_last_time_stamp)
 
         self.chi2 = self.graph.optimize(
             number_of_steps,
@@ -578,7 +578,7 @@ class DuckietownGraphBuilder():
         self.graph.remove_vertex(
             self.convert_names_to_int(vertex_id, time_stamp))
 
-    def remove_old_poses(self, reference_time):
+    def save_and_remove_old_poses(self, reference_time):
         """
             Gets rid of old vertices in the graph
             TODO : register in a file the path of duckiebots before destroying it here
@@ -589,6 +589,19 @@ class DuckietownGraphBuilder():
                     last_accepted_stamps = reference_time - self.stocking_time
                     anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
                     ) if time_stamp < last_accepted_stamps]
+                    max_anterior = max(anterior_time_stamps)
+                    anterior_time_stamps.remove(max_anterior)
+
+                    trajectory_list = self.extract_trajectory(node_type, node_id, max_anterior)
+                    if(trajectory_list is not None):
+                        self.save_trajectory(node_type, node_id, trajectory_list)
+                    elif trajectory_list == []:
+                        print("No previous trajectory")
+                        pass
+                    else:
+                        pass
+                    
+                    # Now that it is saved, remove it from the graph
                     for time_stamp in anterior_time_stamps:
                         self.remove_vertex(node_type, node_id, time_stamp)
                         self.timestamp_local_indices[node_type][node_id].pop(
@@ -598,8 +611,7 @@ class DuckietownGraphBuilder():
         """ This functions extracts the trajectory (which is a list(time stamps + pose)) 
             in a readable format, from oldest time_stamp to the given target_time_stamp
 
-            returns : a list of tuples (time_stamp, pose) in the dict of dict format :
-                      {node_type: {node_id: [(time_stamp, poses), ...], ...}, ...}
+            returns : a list of tuples (time_stamp, pose) 
                       poses are of g2o format Isometry3d(R, p)
         """
         if (node_type in self.movable and node_type in self.timestamp_local_indices)):
@@ -629,7 +641,14 @@ class DuckietownGraphBuilder():
                 print("[WARNING] trying to extract trajectory of %s %s. Type %s not found" % (node_type, node_id, node_type))
             print("\t\t Will do nothing and return None")
             return None
-            
+
+    def save_trajectory(self, node_type, node_id, poses_stamped):
+        """ Saves the trajectory to a file corresponding to node_type, node_id
+            return True is success, False otherwise
+        """
+        # TODO : Code this function
+        print("Not saving anything yet! Waiting for design instructions!")
+
     def clean_graph(self):
         """
             Gets rid of useless vertices in the graph
