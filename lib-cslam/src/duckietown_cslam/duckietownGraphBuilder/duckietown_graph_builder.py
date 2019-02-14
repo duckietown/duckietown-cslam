@@ -4,6 +4,8 @@ import threading
 import yaml
 
 import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oBG
+import duckietown_cslam.g2oGraphBuilder.ControlableLock as ControlableLock
+
 import g2o
 import geometry as g
 import numpy as np
@@ -116,7 +118,7 @@ class DuckietownGraphBuilder():
        # Load the initial floor April tags if given an input file name
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
-        self.lock = threading.Lock()
+        self.lock = ControlableLock()
         self.stocking_time = stocking_time
 
     def load_initial_floor_april_tags(self, initial_floor_april_tag_file):
