@@ -1,3 +1,8 @@
+## Questions for first meeting:
+- Design : How and where do we save the trajectory data? Is there a predefined standard for AIDO? 
+
+
+
 ## Topics to handle
 
 ### Accuracy criterions
