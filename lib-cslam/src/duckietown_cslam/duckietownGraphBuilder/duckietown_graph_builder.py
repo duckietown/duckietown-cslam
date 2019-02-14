@@ -369,6 +369,12 @@ class DuckietownGraphBuilder():
                     % node_type)
                 exit(-1)
 
+    def set_fixed(self, node_type, node_id, time_stamp):
+        """ Setting to fixed a specific node
+        """
+        id = self.get_id(node_type,node_id)
+        self.graph.set_fixed(self.convert_names_to_int(id, time_stamp))
+
     def convert_names_to_int(self, id, time_stamp):
         """Given an ID in the format <node_type>_<node_id> and a timestamp
            associated to that node, outputs an integer that can be used as a
@@ -432,6 +438,7 @@ class DuckietownGraphBuilder():
         vertex_id = "%s_%s" % (node_type, node_id)
         # Timestamps for which the interpolation should be performed. Note: also
         # old_time_stamp and new_time_stamp are included.
+        # TODO: changed size during iteration
         to_interpolate = {
             time_stamp:
             self.timestamp_local_indices[node_type][node_id][time_stamp]
@@ -592,7 +599,7 @@ class DuckietownGraphBuilder():
                     if(anterior_time_stamps != []):
                         max_anterior = max(anterior_time_stamps)
                         anterior_time_stamps.remove(max_anterior)
-
+                        self.set_fixed(node_type, node_id, max_anterior)
                         trajectory_list = self.extract_trajectory(node_type, node_id, max_anterior)
                         if(trajectory_list is not None):
                             self.save_trajectory(node_type, node_id, trajectory_list)

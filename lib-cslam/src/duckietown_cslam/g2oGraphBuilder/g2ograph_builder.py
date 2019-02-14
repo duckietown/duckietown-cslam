@@ -156,6 +156,14 @@ class g2oGraphBuilder():
                 self.last_lost = vertexId
         return (self.optimizer.vertex(vertexId).estimate())
 
+    def set_fixed(self, vertexId):
+        with self.lock:
+            if (vertexId in self.optimizer.vertices()):
+                self.optimizer.vertex(vertexId).set_fixed(True)
+            else:
+                print("Vertex %i is not in the g2o graph" % vertexId)
+               
+
     def get_transform(self, vertex1, vertex2):
         # print("get_transform")
         with self.lock:
