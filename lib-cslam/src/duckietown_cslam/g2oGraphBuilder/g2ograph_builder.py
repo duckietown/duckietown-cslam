@@ -194,16 +194,17 @@ class g2oGraphBuilder():
             self.set_of_new_edges = set()
             self.set_of_new_vertex = set()
             self.already_initialized = True
+            self.optimizer.compute_initial_guess()
         else:
             if(not self.has_removed):
                 self.optimizer.update_initialization(self.set_of_new_vertex,
-                                                     self.set_of_new_edges)
+                                                 self.set_of_new_edges)
             else:
                 self.optimizer.initialize_optimization()
                 self.has_removed = False
             self.set_of_new_edges = set()
             self.set_of_new_vertex = set()
-            self.optimizer.compute_initial_guess()
+            # self.optimizer.compute_initial_guess()
         self.optimizer.compute_active_errors()
         if (verbose):
             print('Optimization:')

@@ -290,9 +290,9 @@ class TransformListener():
             # Duckiebot.
             t = [0.0, 0.0, 0.1]
             z_angle = 90
-            z_angle = np.deg2rad(z_angle)
-            # x_angle = np.deg2rad(180)
             x_angle = 0
+            z_angle = np.deg2rad(z_angle)
+            x_angle = np.deg2rad(x_angle)
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
             R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
             R = np.matmul(R_x, R_z)
