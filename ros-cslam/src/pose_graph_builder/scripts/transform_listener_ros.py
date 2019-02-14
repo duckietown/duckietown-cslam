@@ -81,7 +81,7 @@ class PathBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
         threading.Thread.__init__(self)
         self.path_dict = dictionnary
-        self.publisher = rospy.Publisher('/movable_path', Marker)
+        self.publisher = rospy.Publisher('/movable_path', Marker, queue_size = 10)
         self.colors = [[0,0,1],[0,1,0], [1,0,0], [0,1,1],[1,0,1], [1,1,0], [1,1,1]]
 
     def path_broadcast(self, node_type, node_id, node_path, color_index):

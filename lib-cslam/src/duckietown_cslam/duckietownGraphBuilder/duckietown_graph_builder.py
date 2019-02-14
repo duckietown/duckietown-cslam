@@ -115,9 +115,10 @@ class DuckietownGraphBuilder():
         # Set retro-interpolate mode as inputted.
         self.retro_interpolate = retro_interpolate
        # Load the initial floor April tags if given an input file name
+        self.lock = g2oGB.ControlableLock()
+
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
-        self.lock = g2oGB.ControlableLock()
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
 
@@ -135,7 +136,8 @@ class DuckietownGraphBuilder():
                 complete_dict = yaml.safe_load(stream)
                 # Add a reference vertex to the g2o graph.
                 vertex_pose = g2o.Isometry3d(np.eye(3), [0, 0, 0])
-                self.graph.add_vertex(0, vertex_pose, fixed=True)
+                with self.lock:
+                    self.graph.add_vertex(0, vertex_pose, fixed=True)
                 # Add vertices for all the floor tags.
                 for key, value in complete_dict.iteritems():
                     if key == "objects":
@@ -151,12 +153,13 @@ class DuckietownGraphBuilder():
                                     theta = object_value['pose'][
                                         '~SE2Transform']['theta_deg']
                                 vertex_id = "apriltag_%d" % tag_id
-                                self.add_vertex(
-                                    vertex_id,
-                                    theta,
-                                    position,
-                                    is_initial_floor_tag=True,
-                                    fixed=True)
+                                with self.lock:
+                                    self.add_vertex(
+                                        vertex_id,
+                                        theta,
+                                        position,
+                                        is_initial_floor_tag=True,
+                                        fixed=True)
                 print(self.timestamp_local_indices)
             except yaml.YAMLError as exc:
                 print(exc)
@@ -317,10 +320,11 @@ class DuckietownGraphBuilder():
                     exit(-1)
                 [node_type, node_id] = vertex_id.split("_")
                 # Associate timestamps to the vertices.
-                added = self.add_timestamp_to_node(node_type, node_id,
-                                                   time_stamp)
-                if not added:
-                    pass
+                with self.lock:
+                    added = self.add_timestamp_to_node(node_type, node_id,
+                                                    time_stamp)
+                    if not added:
+                        pass
             # Obtain ID of the vertices in the graph in the integer format.
             vertex0_id_int = self.convert_names_to_int(vertex0_id, time_stamp)
             vertex1_id_int = self.convert_names_to_int(vertex1_id, time_stamp)
@@ -330,8 +334,9 @@ class DuckietownGraphBuilder():
         else:
             [node_type, node_id] = vertex0_id.split("_")
             # Associate timestamps to the vertex.
-            added = self.add_timestamp_to_node(
-                node_type, node_id, time_stamp)
+            with self.lock:
+                added = self.add_timestamp_to_node(
+                    node_type, node_id, time_stamp)
 
             if (node_type in self.movable):
                 # Odometry edge: same vertices, movable object.
@@ -342,21 +347,23 @@ class DuckietownGraphBuilder():
                     # Initialize the first and last timestamp at which an odometry message for
                     # the node was received to be respectively old_time_stamp and the current
                     # timestamp (time_stamp).
-                    self.first_odometry_time_stamp[node_type][node_id] = time_stamp
-                    self.last_odometry_time_stamp[node_type][node_id] = time_stamp
+                    with self.lock:
+                        self.first_odometry_time_stamp[node_type][node_id] = time_stamp
+                        self.last_odometry_time_stamp[node_type][node_id] = time_stamp
                     # Add vertex corresponding to the new timestamp to the
                     # graph.
-                    self.add_vertex(
-                        vertex_id=vertex0_id,
-                        theta=0,
-                        position=[0, 0],
-                        is_initial_floor_tag=False,
-                        fixed=False,
-                        time_stamp=time_stamp)
+                        self.add_vertex(
+                            vertex_id=vertex0_id,
+                            theta=0,
+                            position=[0, 0],
+                            is_initial_floor_tag=False,
+                            fixed=False,
+                            time_stamp=time_stamp)
 
                 else:
                     # Update the known last odometry message time_stamp for the node
-                    self.last_odometry_time_stamp[node_type][node_id] = time_stamp
+                    with self.lock:
+                        self.last_odometry_time_stamp[node_type][node_id] = time_stamp
 
                     # Some other messages might have been received for that node
                     # (object), e.g. a Duckiebot might be seen by a watchtower
@@ -440,12 +447,13 @@ class DuckietownGraphBuilder():
         vertex_id = "%s_%s" % (node_type, node_id)
         # Timestamps for which the interpolation should be performed. Note: also
         # old_time_stamp and new_time_stamp are included.
-        # TODO: changed size during iteration
+        # with self.lock:
+        time_stamp_indices_copy = self.timestamp_local_indices[node_type][
+                node_id].copy()
         to_interpolate = {
             time_stamp:
             self.timestamp_local_indices[node_type][node_id][time_stamp]
-            for time_stamp in self.timestamp_local_indices[node_type][
-                node_id]
+            for time_stamp in time_stamp_indices_copy
             if (time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)
         }
         # Sort the time stamps.
@@ -455,10 +463,10 @@ class DuckietownGraphBuilder():
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
         if (total_delta_t == 0.0):
             print("in interpolate, delta t is 0.0, with %s %s and list is:" %
-                  (node_type, node_id))
+                (node_type, node_id))
             print(to_interpolate)
             print("new_time_stamp is %f and old time stamp is %f" %
-                  (old_time_stamp, new_time_stamp))
+                (old_time_stamp, new_time_stamp))
             print(self.timestamp_local_indices[node_type][node_id])
         # Perform a linear interpolation in the Lie algebra associated to SE3
         # group defined by the transform.
@@ -478,7 +486,7 @@ class DuckietownGraphBuilder():
             newR, newt = g.rotation_translation_from_SE3(rel)
             interpolated_measure = g2o.Isometry3d(newR, newt)
             vertex0_id_int = self.convert_names_to_int(vertex_id,
-                                                       sorted_time_stamps[i])
+                                                    sorted_time_stamps[i])
             vertex1_id_int = self.convert_names_to_int(
                 vertex_id, sorted_time_stamps[i + 1])
             # Add an edge to the graph, connecting each timestamp to the one
@@ -558,8 +566,6 @@ class DuckietownGraphBuilder():
                              to file.
                 output_name: Output filename of the result of the optimization.
          """
-        self.lock.acquire()
-
         ## TODO : cleaning is gonna be useless when remove_old_poses will have run many times
         # Maybe find a way to stop doing it after a while
         ## 
@@ -571,21 +577,21 @@ class DuckietownGraphBuilder():
             if(global_last_time_stamp - self.last_cleaning > self.stocking_time/2.0):
                 self.save_and_remove_old_poses(global_last_time_stamp)
                 self.last_cleaning = global_last_time_stamp
-
-        self.chi2 = self.graph.optimize(
-            number_of_steps,
-            verbose=verbose,
-            save_result=save_result,
-            output_name=output_name,
-            online=online)
-        self.lock.release()
+        
+        with self.lock:
+            self.chi2 = self.graph.optimize(
+                number_of_steps,
+                verbose=verbose,
+                save_result=save_result,
+                output_name=output_name,
+                online=online)
 
     ###################################
     #       CLEANING FUNCTIONS        #
     ###################################
 
     def remove_vertex(self, node_type, node_id, time_stamp):
-        vertex_id = "%s_%s" % (node_type, node_id)
+        vertex_id = self.get_id(node_type, node_id)
         self.graph.remove_vertex(
             self.convert_names_to_int(vertex_id, time_stamp))
 
@@ -598,27 +604,28 @@ class DuckietownGraphBuilder():
             for node_id in self.timestamp_local_indices[node_type]:
                 if(node_id in self.first_odometry_time_stamp[node_type]):
                     last_accepted_stamps = reference_time - self.stocking_time
-                    anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
-                    ) if time_stamp < last_accepted_stamps]
-                    if(anterior_time_stamps != []):
-                        max_anterior = max(anterior_time_stamps)
-                        anterior_time_stamps.remove(max_anterior)
-                        self.set_fixed(node_type, node_id, max_anterior)
-                        trajectory_list = self.extract_trajectory(node_type, node_id, max_anterior)
-                        if(trajectory_list is not None):
-                            self.save_trajectory(node_type, node_id, trajectory_list)
-                        elif trajectory_list == []:
-                            print("No previous trajectory")
-                            pass
+                    with self.lock:
+                        anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
+                        ) if time_stamp < last_accepted_stamps]
+                        if(anterior_time_stamps != []):
+                            max_anterior = max(anterior_time_stamps)
+                            anterior_time_stamps.remove(max_anterior)
+                            self.set_fixed(node_type, node_id, max_anterior)
+                            trajectory_list = self.extract_trajectory(node_type, node_id, max_anterior)
+                            if(trajectory_list is not None):
+                                self.save_trajectory(node_type, node_id, trajectory_list)
+                            elif trajectory_list == []:
+                                print("No previous trajectory")
+                                pass
+                            else:
+                                pass
                         else:
                             pass
-                    else:
-                        pass
-                    # Now that it is saved, remove it from the graph
-                    for time_stamp in anterior_time_stamps:
-                        self.remove_vertex(node_type, node_id, time_stamp)
-                        self.timestamp_local_indices[node_type][node_id].pop(
-                            time_stamp)
+                        # Now that it is saved, remove it from the graph
+                        for time_stamp in anterior_time_stamps:
+                            self.remove_vertex(node_type, node_id, time_stamp)
+                            self.timestamp_local_indices[node_type][node_id].pop(
+                                time_stamp)
 
     def extract_trajectory(self, node_type, node_id, target_time_stamp):
         """ This functions extracts the trajectory (which is a list(time stamps + pose)) 
@@ -635,7 +642,7 @@ class DuckietownGraphBuilder():
                 if (target_time_stamp in time_stamps):
                     target_index = time_stamps.index(target_time_stamp)
                     time_stamps = time_stamps[:target_index]
-                
+
                     # Create list and retrieve all poses
                     pose_stamped_list = []
                     id = self.get_id(node_type, node_id)
@@ -667,16 +674,17 @@ class DuckietownGraphBuilder():
             Gets rid of useless vertices in the graph
             Considered as useless are vertices that are anterior to the first odometry message
         """
-        for node_type in self.movable:
-            for node_id in self.timestamp_local_indices[node_type]:
-                if(node_id in self.first_odometry_time_stamp[node_type]):
-                    first_odometry_time_stamp = self.first_odometry_time_stamp[node_type][node_id]
-                    anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
-                    ) if time_stamp < first_odometry_time_stamp]
-                    for time_stamp in anterior_time_stamps:
-                        self.remove_vertex(node_type, node_id, time_stamp)
-                        self.timestamp_local_indices[node_type][node_id].pop(
-                            time_stamp)
+        with self.lock:
+            for node_type in self.movable:
+                for node_id in self.timestamp_local_indices[node_type]:
+                    if(node_id in self.first_odometry_time_stamp[node_type]):
+                        first_odometry_time_stamp = self.first_odometry_time_stamp[node_type][node_id]
+                        anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
+                        ) if time_stamp < first_odometry_time_stamp]
+                        for time_stamp in anterior_time_stamps:
+                            self.remove_vertex(node_type, node_id, time_stamp)
+                            self.timestamp_local_indices[node_type][node_id].pop(
+                                time_stamp)
 
     ###################################
     #        ACCESS FUNCTIONS         #
@@ -693,34 +701,35 @@ class DuckietownGraphBuilder():
                available in the g2o graph for the node with type <node_type> and
                ID <node_id>.
         """
-        result_dict = {}
-        # For all node types <node_type>:
-        # timestamp_local_indices[<node_type>] = {<node_id0> : {node_id0_dict},
-        #                                         <node_id1> : {node_id1_dict},
-        #                                         ...} =: node_id_dict
-        for node_type, node_id_dict in self.timestamp_local_indices.iteritems():
-            result_dict[node_type] = {}
-            # For all node types <node_type>, all node IDs <node_id>:
-            # timestamp_local_indices[<node_type>][<node_id>] =
-            #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
-            #      <time_stamp0> : local_index_of_time_stamp1_in_node_node_id,
-            #      ...} =: time_stamp_dict
-            
-            node_id_dict_copy = node_id_dict.copy()
-            for node_id, time_stamp_dict in node_id_dict_copy.iteritems():
-                # Get timestamp furthest in time for node with ID node_id.
-                last_time_stamp = self.last_time_stamp[node_type][node_id]
-                vertex_id = "%s_%s" % (node_type, node_id)
-                if (self.convert_names_to_int(vertex_id, last_time_stamp) not in
-                        self.graph.optimizer.vertices()):
-                    if (node_type in self.movable):
-                        pass 
-                        # For odometry nodes that
-                        # last_time_stamp = sorted(time_stamp_dict.keys())[-2]
-                        ## TODO : find a way of solving this issue
-                else:
-                    result_dict[node_type][node_id] = self.graph.vertex_pose(
-                        self.convert_names_to_int(vertex_id, last_time_stamp))
+        with self.lock:
+            result_dict = {}
+            # For all node types <node_type>:
+            # timestamp_local_indices[<node_type>] = {<node_id0> : {node_id0_dict},
+            #                                         <node_id1> : {node_id1_dict},
+            #                                         ...} =: node_id_dict
+            for node_type, node_id_dict in self.timestamp_local_indices.iteritems():
+                result_dict[node_type] = {}
+                # For all node types <node_type>, all node IDs <node_id>:
+                # timestamp_local_indices[<node_type>][<node_id>] =
+                #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
+                #      <time_stamp0> : local_index_of_time_stamp1_in_node_node_id,
+                #      ...} =: time_stamp_dict
+                
+                node_id_dict_copy = node_id_dict.copy()
+                for node_id, time_stamp_dict in node_id_dict_copy.iteritems():
+                    # Get timestamp furthest in time for node with ID node_id.
+                    last_time_stamp = self.last_time_stamp[node_type][node_id]
+                    vertex_id = "%s_%s" % (node_type, node_id)
+                    if (self.convert_names_to_int(vertex_id, last_time_stamp) not in
+                            self.graph.optimizer.vertices()):
+                        if (node_type in self.movable):
+                            pass 
+                            # For odometry nodes that
+                            # last_time_stamp = sorted(time_stamp_dict.keys())[-2]
+                            ## TODO : find a way of solving this issue
+                    else:
+                        result_dict[node_type][node_id] = self.graph.vertex_pose(
+                            self.convert_names_to_int(vertex_id, last_time_stamp))
 
         return result_dict
 
@@ -735,30 +744,30 @@ class DuckietownGraphBuilder():
                in the g2o graph for the node with type <node_type> and
                ID <node_id>.
         """
-        result_dict = {}
-        # For all node types <node_type>:
-        # timestamp_local_indices[<node_type>] = {<node_id0> : {node_id0_dict},
-        #                                         <node_id1> : {node_id1_dict},
-        #                                         ...} =: node_id_dict
-        for node_type, node_id_dict in self.timestamp_local_indices.iteritems():
-            if node_type in self.movable:
-                result_dict[node_type] = {}
-                # For all node types <node_type>, all node IDs <node_id>:
-                # timestamp_local_indices[<node_type>][<node_id>] =
-                #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
-                #      <time_stamp1> : local_index_of_time_stamp1_in_node_node_id,
-                #      ...} =: time_stamp_dict
-                for node_id, time_stamp_dict in node_id_dict.iteritems():
-                    result_dict[node_type][node_id] = dict()
-                    vertex_id = "%s_%s" % (node_type, node_id)
-                    g2o_vertices = self.graph.optimizer.vertices()
-                    time_stamp_copy = time_stamp_dict.copy()
-                    for time_stamp, _ in time_stamp_copy.iteritems():
-                        if (self.convert_names_to_int(vertex_id, time_stamp) not in
-                                g2o_vertices):
-                            pass
-                        else:
-                            result_dict[node_type][node_id][time_stamp] = self.graph.vertex_pose(
-                                self.convert_names_to_int(vertex_id, time_stamp))
-
+        with self.lock:
+            result_dict = {}
+            # For all node types <node_type>:
+            # timestamp_local_indices[<node_type>] = {<node_id0> : {node_id0_dict},
+            #                                         <node_id1> : {node_id1_dict},
+            #                                         ...} =: node_id_dict
+            for node_type, node_id_dict in self.timestamp_local_indices.iteritems():
+                if node_type in self.movable:
+                    result_dict[node_type] = {}
+                    # For all node types <node_type>, all node IDs <node_id>:
+                    # timestamp_local_indices[<node_type>][<node_id>] =
+                    #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
+                    #      <time_stamp1> : local_index_of_time_stamp1_in_node_node_id,
+                    #      ...} =: time_stamp_dict
+                    for node_id, time_stamp_dict in node_id_dict.iteritems():
+                        result_dict[node_type][node_id] = dict()
+                        vertex_id = "%s_%s" % (node_type, node_id)
+                        g2o_vertices = self.graph.optimizer.vertices()
+                        time_stamp_copy = time_stamp_dict.copy()
+                        for time_stamp, _ in time_stamp_copy.iteritems():
+                            if (self.convert_names_to_int(vertex_id, time_stamp) not in
+                                    g2o_vertices):
+                                pass
+                            else:
+                                result_dict[node_type][node_id][time_stamp] = self.graph.vertex_pose(
+                                    self.convert_names_to_int(vertex_id, time_stamp))
         return result_dict
