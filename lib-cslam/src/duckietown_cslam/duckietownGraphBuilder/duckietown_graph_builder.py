@@ -3,8 +3,7 @@ import threading
 
 import yaml
 
-import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oBG
-import duckietown_cslam.g2oGraphBuilder.ControlableLock as ControlableLock
+import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oGB
 
 import g2o
 import geometry as g
@@ -91,7 +90,7 @@ class DuckietownGraphBuilder():
                  retro_interpolate=True,
                  stocking_time=None):
         # Initialize pose graph.
-        self.graph = g2oBG.g2oGraphBuilder()
+        self.graph = g2oGB.g2oGraphBuilder()
         # Define node types.
         self.types = ["duckiebot", "watchtower", "apriltag"]
         # Initialize first-level dictionary of timestamp_local_indices by
@@ -118,8 +117,9 @@ class DuckietownGraphBuilder():
        # Load the initial floor April tags if given an input file name
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
-        self.lock = ControlableLock()
+        self.lock = g2oGB.ControlableLock()
         self.stocking_time = stocking_time
+        self.last_cleaning = 0.0
 
     def load_initial_floor_april_tags(self, initial_floor_april_tag_file):
         """Adds the poses of the initial floor April tags to the graph by
@@ -568,7 +568,9 @@ class DuckietownGraphBuilder():
 
         if self.stocking_time is not None:
             global_last_time_stamp = max(self.last_time_stamp["duckiebot"].values())
-            self.save_and_remove_old_poses(global_last_time_stamp)
+            if(global_last_time_stamp - self.last_cleaning > self.stocking_time/2.0):
+                self.save_and_remove_old_poses(global_last_time_stamp)
+                self.last_cleaning = global_last_time_stamp
 
         self.chi2 = self.graph.optimize(
             number_of_steps,
