@@ -42,7 +42,11 @@
   - [ ] Devise nice heuristics and implement them
 - [ ] Test AprilTag 3 library
 - [ ] Increase the camera resolution *(Aleks working on it)*
-- [ ] Make sense of the underused locks in duckietown_graph_builder
+- [x] Make sense of the underused locks in duckietown_graph_builder
+  - [x] reuse same lock as custom lock in g2ographbuilder
+  - [x] protect graph modifications
+  - [x] test on rosbag to lookout for deadlocks
+  - [ ] real time test to spot out deadlocks 
 - [ ] Find heuristic to setting watchtowers (and eventually roadsigns) fixed
 ### Odometry
 - Using visual odometry :
