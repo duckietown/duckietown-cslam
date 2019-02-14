@@ -31,6 +31,12 @@
   - [ ] find out what parameters should be applied
 - [ ] Better retro-interpolation policy ? 
 - [ ] Removing old vertices and edges and fixing watchtowers : see "long term experiment" section
+  - [x] Removing old vertices
+  - [x] Stocking time defined in params
+  - [x] Removing old vertices by chunck of half the stocking size
+  - [ ] "Free" indices to be used again --> make a cyclic counter
+  - [ ] Add emergency trigger to remove vertices if cyclic counter is overflown
+  - [ ] Actually save trajectories to files (function is there, just need to code it)--> design TBD
 - [ ] Edge measurement info : 6*6 covariance matrix
   - [x] Add the possibility to set them
   - [ ] Devise nice heuristics and implement them
