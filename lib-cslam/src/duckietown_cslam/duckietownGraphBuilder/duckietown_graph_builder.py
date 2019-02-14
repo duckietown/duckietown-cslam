@@ -77,6 +77,10 @@ class DuckietownGraphBuilder():
            chi2 : The measure of the uncertainty of the graph, given by the optimizer in g2o
     """
 
+    ###################################
+    #       BUILDING FUNCTIONS        #
+    ###################################
+
     def __init__(self,
                  initial_duckiebot_dict={},
                  initial_watchtower_dict={},
@@ -280,200 +284,7 @@ class DuckietownGraphBuilder():
                 # vertex and the newly-added vertex for the pose of the tag.
                 self.graph.add_edge(
                     vertex0_id=0, vertex1_id=vertex_id, measure=vertex_pose, robust_kernel_value=0.1)
-
-    def convert_names_to_int(self, id, time_stamp):
-        """Given an ID in the format <node_type>_<node_id> and a timestamp
-           associated to that node, outputs an integer that can be used as a
-           index for the node in g2o (the latter only handles integer indices
-           for the nodes).
-
-           Args:
-              id: ID in the format <node_type>_<node_id>
-              time_stamp: Timestamp.
-
-           Returns:
-              Input ID converted to an integer that can be used as an index by
-              g2o.
-        """
-        [node_type, node_id] = id.split("_")
-        b = int(node_id) % 1000
-        a = self.types.index(node_type) + 1
-
-        if (node_type in self.movable):
-            c = self.timestamp_local_indices[node_type][node_id][time_stamp]
-            if (c >= 100000):
-                print("overflow of the time_stamp list")
-        else:
-            c = 0
-
-        result = a * 10**8 + b * 10**5 + c
-        return result
-
-    def retrointerpolate(self, time_stamp, node_type, node_id, vertex_id):
-        """Due to delays in the communication network, it might happen that a
-           message with timestamp time_stamp is received after a message with
-           timestamp time_stamp2, with time_stamp < time_stamp2. If this is the
-           case, this function inserts a vertex with timestamp time_stamp by
-           interpolating between the two timestamps - among those that have
-           already a vertex in the graph - immediately before and
-           immediately after time_stamp. This process is referred to as
-           retro-interpolation. Note: if time_stamp happens to follow
-           or precede in time all the timestamps with a vertex in the graph,
-           retro-interpolation cannot be performed.
-
-           Args:
-               time_stamp: Timestamp
-               node_type: Type of the node.
-               node_id: ID of the node.
-               vertex_id: ID in the format <node_type>_<node_id>.
-        """
-        # Find timestamps immediately before and immediately after the given
-        # timestamp.
-        time_stamp_before = 0.0
-        time_stamp_after = float('inf')
-        for time_stamp_it in self.timestamp_local_indices[node_type][
-                node_id]:
-            if time_stamp_it < time_stamp:
-                if time_stamp_before < time_stamp_it:
-                    time_stamp_before = time_stamp_it
-
-            if time_stamp < time_stamp_it:
-                if time_stamp_it < time_stamp_after:
-                    time_stamp_after = time_stamp_it
-
-        # If the timestamp is neither the first nor the last (i.e., both
-        # timestamp before and timestamp after exist) we can go ahead.
-        if (time_stamp_before != 0.0 and time_stamp_after != float('inf')):
-            before = self.convert_names_to_int(vertex_id, time_stamp_before)
-            after = self.convert_names_to_int(vertex_id, time_stamp_after)
-            transform = self.graph.get_transform(before, after)
-            # If the timestamps before/after have corresponding vertices in the
-            # graph perform retro-interpolation.
-            if (transform != 0):
-                print("Will perform retro-interpolation")
-
-                self.interpolate(time_stamp_before, time_stamp_after, node_type,
-                                 node_id, transform)
-            else:
-                print("will not perform retro_interpolation with %d and %d " %
-                      (before, after))
-
-    def interpolate(self, old_time_stamp, new_time_stamp, node_type, node_id,
-                    measure):
-        """Given a timestamp new_time_stamp at which an odometry message was
-           received and the timestamp old_time_stamp of the last odometry
-           message previously received, it might be the case that other
-           messages, of non-odometry type, have been received in the time
-           interval between these two timestamps. For instance, a Duckiebot
-           might be seen by a watchtower at two timestamps time_stamp1 and
-           time_stamp2 s.t. old_time_stamp < time_stamp1 < time_stamp2 <
-           new_time_stamp. This function creates edges in the graph between each
-           pair of vertices at consecutive timestamps (e.g.
-           old_time_stamp-->time_stamp1, time_stamp1-->time_stamp2,
-           time_stamp2-->new_time_stamp). The relative transform between each
-           pair of vertices is assigned by performing a linear interpolation in
-           the Lie algebra, based on the transform between old_time_stamp and
-           new_time_stamp (contained in the odometry message) and on the
-           relative time difference (e.g. time_stamp2 - time_stamp1).
-
-           Args:
-               old_time_stamp: Timestamp of the last odometry message that was
-                               received before the current odometry message, for
-                               the node of type node_type and ID node_id.
-               new_time_stamp: Timestamp of the current odometry message.
-               node_type: Type of the node.
-               node_id: ID of the node.
-               measure: Transform contained in the current odometry message,
-                        between timestamp old_time_stamp and time_stamp
-                        new_time_stamp.
-        """
-        vertex_id = "%s_%s" % (node_type, node_id)
-        # Timestamps for which the interpolation should be performed. Note: also
-        # old_time_stamp and new_time_stamp are included.
-        to_interpolate = {
-            time_stamp:
-            self.timestamp_local_indices[node_type][node_id][time_stamp]
-            for time_stamp in self.timestamp_local_indices[node_type][
-                node_id]
-            if (time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)
-        }
-        # Sort the time stamps.
-        sorted_time_stamps = sorted(to_interpolate.keys())
-        print("perfoming interpolation on %d nodes" % len(sorted_time_stamps))
-        # Find the total time (time between the last and the first timestamp).
-        total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
-        if (total_delta_t == 0.0):
-            print("in interpolate, delta t is 0.0, with %s %s and list is:" %
-                  (node_type, node_id))
-            print(to_interpolate)
-            print("new_time_stamp is %f and old time stamp is %f" %
-                  (old_time_stamp, new_time_stamp))
-            print(self.timestamp_local_indices[node_type][node_id])
-        # Perform a linear interpolation in the Lie algebra associated to SE3
-        # group defined by the transform.
-        R = measure.R
-        t = measure.t
-        q = g.SE3_from_rotation_translation(R, t)
-        vel = g.SE3.algebra_from_group(q)
-        cumulative_alpha = 0.0
-        for i in range(0, len(sorted_time_stamps) - 1):
-            # Find the time interval between each timestamp and the subsequent
-            # one and linearly interpolate accordingly in the algebra.
-            partial_delta_t = float(
-                sorted_time_stamps[i + 1] - sorted_time_stamps[i])
-            alpha = partial_delta_t / total_delta_t
-            cumulative_alpha += alpha
-            rel = g.SE3.group_from_algebra(vel * alpha)
-            newR, newt = g.rotation_translation_from_SE3(rel)
-            interpolated_measure = g2o.Isometry3d(newR, newt)
-            vertex0_id_int = self.convert_names_to_int(vertex_id,
-                                                       sorted_time_stamps[i])
-            vertex1_id_int = self.convert_names_to_int(
-                vertex_id, sorted_time_stamps[i + 1])
-            # Add an edge to the graph, connecting each timestamp to the one
-            # following it and using the relative transform obtained by
-            # interpolation.
-            self.graph.add_edge(vertex0_id_int, vertex1_id_int,
-                                interpolated_measure, robust_kernel_value=0.1)
-        if (cumulative_alpha != 1.0):
-            pass
-
-    def optimize(self,
-                 number_of_steps,
-                 verbose=True,
-                 save_result=True,
-                 output_name="output.g2o",
-                 online=False):
-        """Performs optimization.
-
-            Args:
-                number_of_steps: Number of steps of the optimization performed
-                                 by g2o.
-                verbose: Set to true for detailed prints.
-                save_result: Set to true to save the result of the optimization
-                             to file.
-                output_name: Output filename of the result of the optimization.
-         """
-        self.lock.acquire()
-
-        ## TODO : cleaning is gonna be useless when remove_old_poses will have run many times
-        # Maybe find a way to stop doing it after a while
-        ## 
-        
-        self.clean_graph()
-
-        if self.stocking_time is not None:
-            global_last_time_stamp = max(self.last_time_stamp["duckiebot"].values())
-            self.remove_old_poses(global_last_time_stamp)
-
-        self.chi2 = self.graph.optimize(
-            number_of_steps,
-            verbose=verbose,
-            save_result=save_result,
-            output_name=output_name,
-            online=online)
-        self.lock.release()
-
+    
     def add_edge(self,
                  vertex0_id,
                  vertex1_id,
@@ -558,10 +369,227 @@ class DuckietownGraphBuilder():
                     % node_type)
                 exit(-1)
 
+    def convert_names_to_int(self, id, time_stamp):
+        """Given an ID in the format <node_type>_<node_id> and a timestamp
+           associated to that node, outputs an integer that can be used as a
+           index for the node in g2o (the latter only handles integer indices
+           for the nodes).
+
+           Args:
+              id: ID in the format <node_type>_<node_id>
+              time_stamp: Timestamp.
+
+           Returns:
+              Input ID converted to an integer that can be used as an index by
+              g2o.
+        """
+        [node_type, node_id] = id.split("_")
+        b = int(node_id) % 1000
+        a = self.types.index(node_type) + 1
+
+        if (node_type in self.movable):
+            c = self.timestamp_local_indices[node_type][node_id][time_stamp]
+            if (c >= 100000):
+                print("overflow of the time_stamp list")
+        else:
+            c = 0
+
+        result = a * 10**8 + b * 10**5 + c
+        return result
+
+    def interpolate(self, old_time_stamp, new_time_stamp, node_type, node_id,
+                    measure):
+        """Given a timestamp new_time_stamp at which an odometry message was
+           received and the timestamp old_time_stamp of the last odometry
+           message previously received, it might be the case that other
+           messages, of non-odometry type, have been received in the time
+           interval between these two timestamps. For instance, a Duckiebot
+           might be seen by a watchtower at two timestamps time_stamp1 and
+           time_stamp2 s.t. old_time_stamp < time_stamp1 < time_stamp2 <
+           new_time_stamp. This function creates edges in the graph between each
+           pair of vertices at consecutive timestamps (e.g.
+           old_time_stamp-->time_stamp1, time_stamp1-->time_stamp2,
+           time_stamp2-->new_time_stamp). The relative transform between each
+           pair of vertices is assigned by performing a linear interpolation in
+           the Lie algebra, based on the transform between old_time_stamp and
+           new_time_stamp (contained in the odometry message) and on the
+           relative time difference (e.g. time_stamp2 - time_stamp1).
+
+           Args:
+               old_time_stamp: Timestamp of the last odometry message that was
+                               received before the current odometry message, for
+                               the node of type node_type and ID node_id.
+               new_time_stamp: Timestamp of the current odometry message.
+               node_type: Type of the node.
+               node_id: ID of the node.
+               measure: Transform contained in the current odometry message,
+                        between timestamp old_time_stamp and time_stamp
+                        new_time_stamp.
+        """
+        vertex_id = "%s_%s" % (node_type, node_id)
+        # Timestamps for which the interpolation should be performed. Note: also
+        # old_time_stamp and new_time_stamp are included.
+        to_interpolate = {
+            time_stamp:
+            self.timestamp_local_indices[node_type][node_id][time_stamp]
+            for time_stamp in self.timestamp_local_indices[node_type][
+                node_id]
+            if (time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)
+        }
+        # Sort the time stamps.
+        sorted_time_stamps = sorted(to_interpolate.keys())
+        print("perfoming interpolation on %d nodes" % len(sorted_time_stamps))
+        # Find the total time (time between the last and the first timestamp).
+        total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
+        if (total_delta_t == 0.0):
+            print("in interpolate, delta t is 0.0, with %s %s and list is:" %
+                  (node_type, node_id))
+            print(to_interpolate)
+            print("new_time_stamp is %f and old time stamp is %f" %
+                  (old_time_stamp, new_time_stamp))
+            print(self.timestamp_local_indices[node_type][node_id])
+        # Perform a linear interpolation in the Lie algebra associated to SE3
+        # group defined by the transform.
+        R = measure.R
+        t = measure.t
+        q = g.SE3_from_rotation_translation(R, t)
+        vel = g.SE3.algebra_from_group(q)
+        cumulative_alpha = 0.0
+        for i in range(0, len(sorted_time_stamps) - 1):
+            # Find the time interval between each timestamp and the subsequent
+            # one and linearly interpolate accordingly in the algebra.
+            partial_delta_t = float(
+                sorted_time_stamps[i + 1] - sorted_time_stamps[i])
+            alpha = partial_delta_t / total_delta_t
+            cumulative_alpha += alpha
+            rel = g.SE3.group_from_algebra(vel * alpha)
+            newR, newt = g.rotation_translation_from_SE3(rel)
+            interpolated_measure = g2o.Isometry3d(newR, newt)
+            vertex0_id_int = self.convert_names_to_int(vertex_id,
+                                                       sorted_time_stamps[i])
+            vertex1_id_int = self.convert_names_to_int(
+                vertex_id, sorted_time_stamps[i + 1])
+            # Add an edge to the graph, connecting each timestamp to the one
+            # following it and using the relative transform obtained by
+            # interpolation.
+            self.graph.add_edge(vertex0_id_int, vertex1_id_int,
+                                interpolated_measure, robust_kernel_value=0.1)
+        if (cumulative_alpha != 1.0):
+            pass
+
+    def retrointerpolate(self, time_stamp, node_type, node_id, vertex_id):
+        """Due to delays in the communication network, it might happen that a
+           message with timestamp time_stamp is received after a message with
+           timestamp time_stamp2, with time_stamp < time_stamp2. If this is the
+           case, this function inserts a vertex with timestamp time_stamp by
+           interpolating between the two timestamps - among those that have
+           already a vertex in the graph - immediately before and
+           immediately after time_stamp. This process is referred to as
+           retro-interpolation. Note: if time_stamp happens to follow
+           or precede in time all the timestamps with a vertex in the graph,
+           retro-interpolation cannot be performed.
+
+           Args:
+               time_stamp: Timestamp
+               node_type: Type of the node.
+               node_id: ID of the node.
+               vertex_id: ID in the format <node_type>_<node_id>.
+        """
+        # Find timestamps immediately before and immediately after the given
+        # timestamp.
+        time_stamp_before = 0.0
+        time_stamp_after = float('inf')
+        for time_stamp_it in self.timestamp_local_indices[node_type][
+                node_id]:
+            if time_stamp_it < time_stamp:
+                if time_stamp_before < time_stamp_it:
+                    time_stamp_before = time_stamp_it
+
+            if time_stamp < time_stamp_it:
+                if time_stamp_it < time_stamp_after:
+                    time_stamp_after = time_stamp_it
+
+        # If the timestamp is neither the first nor the last (i.e., both
+        # timestamp before and timestamp after exist) we can go ahead.
+        if (time_stamp_before != 0.0 and time_stamp_after != float('inf')):
+            before = self.convert_names_to_int(vertex_id, time_stamp_before)
+            after = self.convert_names_to_int(vertex_id, time_stamp_after)
+            transform = self.graph.get_transform(before, after)
+            # If the timestamps before/after have corresponding vertices in the
+            # graph perform retro-interpolation.
+            if (transform != 0):
+                print("Will perform retro-interpolation")
+
+                self.interpolate(time_stamp_before, time_stamp_after, node_type,
+                                 node_id, transform)
+            else:
+                print("will not perform retro_interpolation with %d and %d " %
+                      (before, after))
+
+    ###################################
+    #        OPTIM FUNCTIONS          #
+    ###################################
+
+    def optimize(self,
+                 number_of_steps,
+                 verbose=True,
+                 save_result=True,
+                 output_name="output.g2o",
+                 online=False):
+        """Performs optimization.
+
+            Args:
+                number_of_steps: Number of steps of the optimization performed
+                                 by g2o.
+                verbose: Set to true for detailed prints.
+                save_result: Set to true to save the result of the optimization
+                             to file.
+                output_name: Output filename of the result of the optimization.
+         """
+        self.lock.acquire()
+
+        ## TODO : cleaning is gonna be useless when remove_old_poses will have run many times
+        # Maybe find a way to stop doing it after a while
+        ## 
+        
+        self.clean_graph()
+
+        if self.stocking_time is not None:
+            global_last_time_stamp = max(self.last_time_stamp["duckiebot"].values())
+            self.remove_old_poses(global_last_time_stamp)
+
+        self.chi2 = self.graph.optimize(
+            number_of_steps,
+            verbose=verbose,
+            save_result=save_result,
+            output_name=output_name,
+            online=online)
+        self.lock.release()
+
+    ###################################
+    #       CLEANING FUNCTIONS        #
+    ###################################
+
     def remove_vertex(self, node_type, node_id, time_stamp):
         vertex_id = "%s_%s" % (node_type, node_id)
         self.graph.remove_vertex(
             self.convert_names_to_int(vertex_id, time_stamp))
+
+    def remove_old_poses(self, reference_time):
+        """
+            Gets rid of old vertices in the graph
+            TODO : register in a file the path of duckiebots before destroying it here
+        """
+        for node_type in self.movable:
+            for node_id in self.timestamp_local_indices[node_type]:
+                if(node_id in self.first_odometry_time_stamp[node_type]):
+                    last_accepted_stamps = reference_time - self.stocking_time
+                    anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
+                    ) if time_stamp < last_accepted_stamps]
+                    for time_stamp in anterior_time_stamps:
+                        self.remove_vertex(node_type, node_id, time_stamp)
+                        self.timestamp_local_indices[node_type][node_id].pop(
+                            time_stamp)
 
     def clean_graph(self):
         """
@@ -579,21 +607,9 @@ class DuckietownGraphBuilder():
                         self.timestamp_local_indices[node_type][node_id].pop(
                             time_stamp)
 
-    def remove_old_poses(self, reference_time):
-        """
-            Gets rid of old vertices in the graph
-            TODO : register in a file the path of duckiebots before destroying it here
-        """
-        for node_type in self.movable:
-            for node_id in self.timestamp_local_indices[node_type]:
-                if(node_id in self.first_odometry_time_stamp[node_type]):
-                    last_accepted_stamps = reference_time - self.stocking_time
-                    anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
-                    ) if time_stamp < last_accepted_stamps]
-                    for time_stamp in anterior_time_stamps:
-                        self.remove_vertex(node_type, node_id, time_stamp)
-                        self.timestamp_local_indices[node_type][node_id].pop(
-                            time_stamp)
+    ###################################
+    #        ACCESS FUNCTIONS         #
+    ###################################
 
     def get_all_poses(self):
         """Obtains all poses in the graph.
