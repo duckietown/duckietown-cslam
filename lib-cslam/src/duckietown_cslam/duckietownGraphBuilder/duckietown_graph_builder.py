@@ -589,18 +589,20 @@ class DuckietownGraphBuilder():
                     last_accepted_stamps = reference_time - self.stocking_time
                     anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
                     ) if time_stamp < last_accepted_stamps]
-                    max_anterior = max(anterior_time_stamps)
-                    anterior_time_stamps.remove(max_anterior)
+                    if(anterior_time_stamps != []):
+                        max_anterior = max(anterior_time_stamps)
+                        anterior_time_stamps.remove(max_anterior)
 
-                    trajectory_list = self.extract_trajectory(node_type, node_id, max_anterior)
-                    if(trajectory_list is not None):
-                        self.save_trajectory(node_type, node_id, trajectory_list)
-                    elif trajectory_list == []:
-                        print("No previous trajectory")
-                        pass
+                        trajectory_list = self.extract_trajectory(node_type, node_id, max_anterior)
+                        if(trajectory_list is not None):
+                            self.save_trajectory(node_type, node_id, trajectory_list)
+                        elif trajectory_list == []:
+                            print("No previous trajectory")
+                            pass
+                        else:
+                            pass
                     else:
                         pass
-                    
                     # Now that it is saved, remove it from the graph
                     for time_stamp in anterior_time_stamps:
                         self.remove_vertex(node_type, node_id, time_stamp)
@@ -614,8 +616,8 @@ class DuckietownGraphBuilder():
             returns : a list of tuples (time_stamp, pose) 
                       poses are of g2o format Isometry3d(R, p)
         """
-        if (node_type in self.movable and node_type in self.timestamp_local_indices)):
-            if(node_id in self.timestamp_local_indices[node_type])
+        if (node_type in self.movable and node_type in self.timestamp_local_indices):
+            if(node_id in self.timestamp_local_indices[node_type]):
                 # Copy, and extract sorted list of time stamps up until target
                 time_stamps_indices_copy = self.timestamp_local_indices[node_type][node_id].copy()
                 time_stamps = sorted(time_stamps_indices_copy.keys())
