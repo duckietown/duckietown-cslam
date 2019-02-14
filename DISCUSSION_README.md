@@ -43,7 +43,7 @@
 - [ ] Test AprilTag 3 library
 - [ ] Increase the camera resolution *(Aleks working on it)*
 - [ ] Make sense of the underused locks in duckietown_graph_builder
-
+- [ ] Find heuristic to setting watchtowers (and eventually roadsigns) fixed
 ### Odometry
 - Using visual odometry :
   - [x] Reading their code --> some unclear things:
