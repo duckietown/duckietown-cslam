@@ -36,6 +36,7 @@
   - [ ] Devise nice heuristics and implement them
 - [ ] Test AprilTag 3 library
 - [ ] Increase the camera resolution *(Aleks working on it)*
+- [ ] Make sense of the underused locks in duckietown_graph_builder
 
 ### Odometry
 - Using visual odometry :

@@ -218,6 +218,7 @@ class TransformListener():
                         print(exc)
             else:
                 print("apriltagDB file not found at %s" %apriltagfile)
+    
     def find_vertex_name(self, id):
         """ Returns the format ID of an object in the ID map based on its type.
 

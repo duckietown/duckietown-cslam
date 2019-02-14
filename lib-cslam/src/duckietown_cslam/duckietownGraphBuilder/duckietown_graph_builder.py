@@ -397,6 +397,9 @@ class DuckietownGraphBuilder():
         result = a * 10**8 + b * 10**5 + c
         return result
 
+    def get_id(self, node_type, node_id):
+        return "%s_%s" % (node_type, node_id)
+
     def interpolate(self, old_time_stamp, new_time_stamp, node_type, node_id,
                     measure):
         """Given a timestamp new_time_stamp at which an odometry message was
@@ -591,6 +594,42 @@ class DuckietownGraphBuilder():
                         self.timestamp_local_indices[node_type][node_id].pop(
                             time_stamp)
 
+    def extract_trajectory(self, node_type, node_id, target_time_stamp):
+        """ This functions extracts the trajectory (which is a list(time stamps + pose)) 
+            in a readable format, from oldest time_stamp to the given target_time_stamp
+
+            returns : a list of tuples (time_stamp, pose) in the dict of dict format :
+                      {node_type: {node_id: [(time_stamp, poses), ...], ...}, ...}
+                      poses are of g2o format Isometry3d(R, p)
+        """
+        if (node_type in self.movable and node_type in self.timestamp_local_indices)):
+            if(node_id in self.timestamp_local_indices[node_type])
+                # Copy, and extract sorted list of time stamps up until target
+                time_stamps_indices_copy = self.timestamp_local_indices[node_type][node_id].copy()
+                time_stamps = sorted(time_stamps_indices_copy.keys())
+                if (target_time_stamp in time_stamps):
+                    target_index = time_stamps.index(target_time_stamp)
+                    time_stamps = time_stamps[:target_index]
+                
+                    # Create list and retrieve all poses
+                    pose_stamped_list = []
+                    id = self.get_id(node_type, node_id)
+                    for time_stamp in time_stamps:
+                        pose = self.graph.vertex_pose(self.convert_names_to_int(id, time_stamp))
+                        pose_stamped = (time_stamp, pose)
+                        pose_stamped_list.append(pose_stamped)
+                    return pose_stamped_list
+                else:
+                    print("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s %s" % (target_time_stamp, node_type, node_id))
+                    return None
+        else:
+            if (node_type not in self.movable):
+                print("[WARNING] trying to extract trajectory of non-movable object %s %s" % (node_type, node_id))
+            else:
+                print("[WARNING] trying to extract trajectory of %s %s. Type %s not found" % (node_type, node_id, node_type))
+            print("\t\t Will do nothing and return None")
+            return None
+            
     def clean_graph(self):
         """
             Gets rid of useless vertices in the graph
