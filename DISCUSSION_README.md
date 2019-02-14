@@ -22,9 +22,9 @@
   - [x] Add the possibility to set them
   - [ ] testing:
     - [x] small values (b = 0.01 (1cm)) --> give bad results but faster convergence
-    - [x] medium value (b = 0.2 or 0.1) --> give rather good results
-    - [ ] big values   (b = 1 or 2)
-    - [ ] real time test (all above is on same bag file for now)
+    - [x] medium value (b = 0.2 or 0.1) --> give rather good results --> keeping this for real time test
+    - [x] big values   (b = 1 or 2) --> No noticable difference with when using no kernel
+    - [ ] real time test with medium values (all above is on same bag file for now)
   - [ ] find out what parameters should be applied
 - [ ] Better retro-interpolation policy ? 
 - [ ] Removing old vertices and edges and fixing watchtowers : see "long term experiment" section
