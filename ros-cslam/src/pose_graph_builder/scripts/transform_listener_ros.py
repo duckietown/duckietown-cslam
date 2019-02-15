@@ -23,12 +23,10 @@ class PointBroadcaster(threading.Thread):
         self.pose_dict = dictionnary
         self.br = tf2_ros.TransformBroadcaster()
 
-    def tfbroadcast(self, node_type, node_id, node_pose):
+    def tfbroadcast(self, node_id, node_pose):
         """ Brodcasts a node in the tree of transforms with TF.
 
             Args:
-                node_type: Type of the node. Can be any of the types defined in
-                           the class DuckietownGraphBuilder.
                 node_id: ID of the node.
                 node_pose: Pose of the node.
         """
@@ -37,13 +35,13 @@ class PointBroadcaster(threading.Thread):
         t.header.stamp = rospy.Time.now()
 
         # Set frame ID. TODO: change it depending on the node type.
-        if (node_type == "duckiebot"):
+        if (node_id.startswith("duckiebot")):
             t.header.frame_id = "map"
-            t.child_frame_id = "%s_%s" % ("duckiebot", node_id)
+            t.child_frame_id = node_id
 
         else:
             t.header.frame_id = "map"
-            t.child_frame_id = "%s_%s" % (node_type, node_id)
+            t.child_frame_id = node_id
 
         # Set child frame ID.
         # Set transform:
@@ -72,9 +70,8 @@ class PointBroadcaster(threading.Thread):
         # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
 
     def run(self):
-        for node_type, node_list in self.pose_dict.iteritems():
-            for node_id, node_pose in node_list.iteritems():
-                self.tfbroadcast(node_type, node_id, node_pose)
+        for node_id, node_pose in self.pose_dict.iteritems():
+            self.tfbroadcast(node_id, node_pose)
 
 
 class PathBroadcaster(threading.Thread):
@@ -86,12 +83,10 @@ class PathBroadcaster(threading.Thread):
         self.colors = [[0, 0, 1], [0, 1, 0], [1, 0, 0],
                        [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]
 
-    def path_broadcast(self, node_type, node_id, node_path, color_index):
+    def path_broadcast(self, node_id, node_path, color_index):
         """ Brodcasts the path for the node
 
             Args:
-                node_type: Type of the node. Can be any of the types defined in
-                           the class DuckietownGraphBuilder.
                 node_id: ID of the node.
                 node_path: Path of the node. Dictionnary of {timestamp : g2oTransform}
         """
@@ -100,13 +95,12 @@ class PathBroadcaster(threading.Thread):
         line_strip.header.stamp = rospy.Time.now()
         line_strip.type = 4  # line_strip
         # Set frame ID. TODO: change it depending on the node type.
-        if (node_type == "duckiebot"):
+        if (node_id.startswith("duckiebot")):
             line_strip.header.frame_id = "map"
         else:
             line_strip.header.frame_id = "map"
         # Set frame ID.
-        line_strip.ns = node_type
-        line_strip.id = int(node_id)
+        line_strip.id = int(node_id.split("_")[1])
         line_strip.color.r = self.colors[color_index][0]
         line_strip.color.g = self.colors[color_index][1]
         line_strip.color.b = self.colors[color_index][2]
@@ -115,7 +109,7 @@ class PathBroadcaster(threading.Thread):
         # Set transform:
         # - Create translation vector.
         for time_stamp in sorted(node_path.keys()):
-            node_pose = self.path_dict[node_type][node_id][time_stamp]
+            node_pose = self.path_dict[node_id][time_stamp]
             point = geometry_msgs.msg.Point()
             point.x = node_pose.t[0]
             point.y = node_pose.t[1]
@@ -140,12 +134,11 @@ class PathBroadcaster(threading.Thread):
 
     def run(self):
         color_index = 0
-        for node_type, node_list in self.path_dict.iteritems():
-            for node_id, node_path in node_list.iteritems():
-                self.path_broadcast(node_type, node_id, node_path, color_index)
-                color_index += 1
-                if(color_index == len(self.colors)):
-                    color_index = 0
+        for node_id, node_path in self.path_dict.iteritems():
+            self.path_broadcast(node_id, node_path, color_index)
+            color_index += 1
+            if(color_index == len(self.colors)):
+                color_index = 0
 
 
 class TransformListener():

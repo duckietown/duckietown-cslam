@@ -22,11 +22,12 @@ COPY ${g2o_lib_dir} /graph_optimizer/lib-cslam/src/g2opy
 
 RUN cd /graph_optimizer/lib-cslam/src/g2opy ; mkdir build ; cd build ; cmake -DPYBIND11_PYTHON_VERSION=2.7 ..  ; make -j3; cd ..; python setup.py install
 
+RUN apt-get install -y vim
+
 ARG graph_lib_dir=lib-cslam/
 COPY ${graph_lib_dir} /graph_optimizer/lib-cslam/
 
 RUN cd /graph_optimizer/lib-cslam; python setup.py develop --no-deps
-RUN apt-get install -y vim
 
 
 ## Pose graph optimizer

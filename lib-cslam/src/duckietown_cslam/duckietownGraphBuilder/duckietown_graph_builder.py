@@ -11,7 +11,7 @@ import numpy as np
 
 
 class CyclicCounter(object):
-    def __init__(self, total_size, chunck_size, node_type, node_id):
+    def __init__(self, total_size, chunck_size, node_id):
         self.total_size = total_size
         self.chunck_size = chunck_size
         self.front_pointer = 0
@@ -19,7 +19,6 @@ class CyclicCounter(object):
         self.mode = 0
         self.mode_types = ["back_to_front", "front_to_back"]
         self.removed_indices = []
-        self.node_type = node_type
         self.node_id = node_id
 
     def next_index(self):
@@ -73,7 +72,7 @@ class CyclicCounter(object):
             self.clean_counter()
 
     def clean_counter(self):
-        # print("Cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))
+        # print("Cleaning cyclic counter for %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))
         marked_freed = []
         self.removed_indices.sort()
         for i in self.removed_indices:
@@ -87,62 +86,20 @@ class CyclicCounter(object):
                 break
         for i in marked_freed:
             self.removed_indices.remove(i)
-        # print("After cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))
-
-
-class CyclicCounterList(object):
-    def __init__(self, total_size, chunck_size):
-        self.total_size = total_size
-        self.chunck_size = chunck_size
-        self.counters = dict()
-
-    def _init_dicts(self, node_type, node_id):
-        if(node_type not in self.counters):
-            self.counters[node_type] = dict()
-
-        if(node_id not in self.counters[node_type]):
-            self.counters[node_type][node_id] = CyclicCounter(
-                self.total_size, self.chunck_size, node_type, node_id)
-
-    def next_index(self, node_type, node_id):
-        # initialize all dictionnaries
-        self._init_dicts(node_type, node_id)
-
-        # get the index
-        return self.counters[node_type][node_id].next_index()
-
-    def remove_index(self, node_type, node_id, index_to_remove):
-        # security checks
-        if(node_type not in self.counters):
-            print(
-                "[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
-            return -1
-        if(node_id not in self.counters[node_type]):
-            print(
-                "[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
-            return -1
-
-        return self.counters[node_type][node_id].remove_index(index_to_remove)
-
-    def clean_complete_counter(self):
-        for node_type, node_id_dict in self.counters.iteritems():
-            for node_id, _ in node_id_dict.iteritems():
-                self._clean_counter(node_type, node_id)
-
-    def _clean_counter(self, node_type, node_id):
-        self.counters[node_type][node_id].clean_counter()
+        # print("After cleaning cyclic counter for %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))
 
 
 class Node(object):
-    def __init__(self, id, types, movable=False):
-        self.id = id
-        self.node_type, self.node_id = id.split("_")
+    def __init__(self, node_id, types, duckietown_graph, movable=False):
+        self.node_id = node_id
+        self.node_type, self.node_number = node_id.split("_")
         self.types = types
-        self.time_stamp_to_indices = dict()
+        self.duckietown_graph = duckietown_graph
+        self.time_stamps_to_indices = dict()
         self.last_time_stamp = None
         self.node_lock = g2oGB.ControlableLock()
         self.movable = movable
-        if(self.type not in self.types):
+        if(self.node_type not in self.types):
             print("Registering node of type %s unkown in types = " % self.node_type + str(self.types))
 
     def get_g2o_index(self, time_stamp):
@@ -157,19 +114,36 @@ class Node(object):
               Input ID converted to an integer that can be used as an index by
               g2o.
         """
-        b = int(self.node_id) % 1000
+        b = int(self.node_number) % 1000
         a = self.types.index(self.node_type) + 1
         result = a * 10**8 + b * 10**5 
         return result
 
+    def is_movable(self):
+        return self.is_movable
+
+    def add_timestamp(self, time_stamp):
+        if self.time_stamps_to_indices == {}:
+            self.time_stamps_to_indices = {time_stamp: 0}
+            self.last_time_stamp = time_stamp
+            return True
+        else:
+            return False
+
+    def get_last_known_position(self):
+        vertex_id = self.get_g2o_index(self.last_time_stamp)
+        vertex_pose = self.duckietown_graph.get_vertex_pose(vertex_id)
+        return vertex_pose
 
 class MovableNode(Node):
-    def __init__(self, id, types):
-        super().__init__(id, types, movable=True)
+    def __init__(self, node_id, types, duckietown_graph, stocking_time=None):
+        super(MovableNode, self).__init__(node_id, types, duckietown_graph, movable=True)
         self.first_odometry_time_stamp = None
         self.last_odometry_time_stamp = None
-        self.cyclic_counter = CyclicCounter(100000, 1000, node_type, node_id)
-
+        self.cyclic_counter = CyclicCounter(100000, 1000, self.node_id)
+        self.stocking_time = stocking_time
+        print("Created a movable node named %s" % self.node_id)
+    
     def get_g2o_index(self, time_stamp):
         """Given a timestamp associated to that node, outputs an integer that can be used as a
            index for the node in g2o (the latter only handles integer indices
@@ -182,7 +156,209 @@ class MovableNode(Node):
               Input ID converted to an integer that can be used as an index by
               g2o.
         """
-        return super().get_g2o_index(time_stamp) + self.time_stamp_to_indices[time_stamp]
+        return super(MovableNode, self).get_g2o_index(time_stamp) + self.time_stamps_to_indices[time_stamp]
+
+    def add_timestamp(self, time_stamp):
+        if (time_stamp not in self.time_stamps_to_indices):
+            # Assign the next available local index to the timestamp and
+            # increment the number of local indices assigned.
+            self.time_stamps_to_indices[time_stamp] = self.cyclic_counter.next_index()
+
+            # If the new timestamp is posterior to all previously-received
+            # timestamps simply set it to be the timestamp furthest in time
+            # among those associated to the node. If, on the contrary, due to
+            # delays in the transmission/reception of the messages this is not
+            # the case, perform retro-interpolation if enabled.
+            if (time_stamp > self.last_time_stamp):
+                self.last_time_stamp = time_stamp
+            else:
+                # TODO : handle retrointerpolation
+                # if self.retro_interpolate:
+                #     # Check that message is in the odometry chained part of the graph
+                #     if(time_stamp > self.first_odometry_time_stamp and time_stamp < self.last_odometry_time_stamp):
+                #         # check that optimization was made at least once, so that no absurd edge is created
+                #         if(self.chi2 != 0.0):
+                #             self.retrointerpolate(time_stamp, node_id)
+                pass
+
+            return True
+        return False
+
+
+    def interpolate(self, old_time_stamp, new_time_stamp,
+                    measure):
+        """Given a timestamp new_time_stamp at which an odometry message was
+           received and the timestamp old_time_stamp of the last odometry
+           message previously received, it might be the case that other
+           messages, of non-odometry type, have been received in the time
+           interval between these two timestamps. For instance, a Duckiebot
+           might be seen by a watchtower at two timestamps time_stamp1 and
+           time_stamp2 s.t. old_time_stamp < time_stamp1 < time_stamp2 <
+           new_time_stamp. This function creates edges in the graph between each
+           pair of vertices at consecutive timestamps (e.g.
+           old_time_stamp-->time_stamp1, time_stamp1-->time_stamp2,
+           time_stamp2-->new_time_stamp). The relative transform between each
+           pair of vertices is assigned by performing a linear interpolation in
+           the Lie algebra, based on the transform between old_time_stamp and
+           new_time_stamp (contained in the odometry message) and on the
+           relative time difference (e.g. time_stamp2 - time_stamp1).
+
+           Args:
+               old_time_stamp: Timestamp of the last odometry message that was
+                               received before the current odometry message, for
+                               the node of type node_type and ID node_id.
+               new_time_stamp: Timestamp of the current odometry message.
+               node_type: Type of the node.
+               node_id: ID of the node.
+               measure: Transform contained in the current odometry message,
+                        between timestamp old_time_stamp and time_stamp
+                        new_time_stamp.
+        """
+        # Timestamps for which the interpolation should be performed. Note: also
+        # old_time_stamp and new_time_stamp are included.
+        # with self.lock:
+        to_interpolate = {
+            time_stamp
+            for time_stamp in self.time_stamp_indices
+            if (time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)
+        }
+        # Sort the time stamps.
+        sorted_time_stamps = sorted(to_interpolate)
+        print("perfoming interpolation on %d nodes" % len(sorted_time_stamps))
+        # Find the total time (time between the last and the first timestamp).
+        total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
+        if (total_delta_t == 0.0):
+            print("in interpolate, delta t is 0.0, with %s %s and list is:" %
+                  (node_type, node_id))
+            print(to_interpolate)
+            print("new_time_stamp is %f and old time stamp is %f" %
+                  (old_time_stamp, new_time_stamp))
+            print(self.time_stamps_to_indices)
+        # Perform a linear interpolation in the Lie algebra associated to SE3
+        # group defined by the transform.
+        R = measure.R
+        t = measure.t
+        q = g.SE3_from_rotation_translation(R, t)
+        vel = g.SE3.algebra_from_group(q)
+        cumulative_alpha = 0.0
+        interpolation_list = []
+        for i in range(0, len(sorted_time_stamps) - 1):
+            # Find the time interval between each timestamp and the subsequent
+            # one and linearly interpolate accordingly in the algebra.
+            partial_delta_t = float(
+                sorted_time_stamps[i + 1] - sorted_time_stamps[i])
+            alpha = partial_delta_t / total_delta_t
+            cumulative_alpha += alpha
+            rel = g.SE3.group_from_algebra(vel * alpha)
+            newR, newt = g.rotation_translation_from_SE3(rel)
+            interpolated_measure = g2o.Isometry3d(newR, newt)
+
+            vertex0_index = self.get_g2o_index(sorted_time_stamps[i])
+            vertex1_index = self.get_g2o_index(sorted_time_stamps[i + 1])
+
+            # Add an edge to the graph, connecting each timestamp to the one
+            # following it and using the relative transform obtained by
+            # interpolation.
+            interpolation_list.append((vertex0_id_int, vertex1_id_int,
+                                interpolated_measure, 0.1))
+        if (cumulative_alpha != 1.0):
+            pass
+        return interpolation_list
+
+    def retro_interpolate(self, time_stamp):
+        time_stamp_before = 0.0
+        time_stamp_after = float('inf')
+        for time_stamp_it in self.time_stamps_to_indices:
+            if time_stamp_it < time_stamp:
+                if time_stamp_before < time_stamp_it:
+                    time_stamp_before = time_stamp_it
+
+            if time_stamp < time_stamp_it:
+                if time_stamp_it < time_stamp_after:
+                    time_stamp_after = time_stamp_it
+
+        # If the timestamp is neither the first nor the last (i.e., both
+        # timestamp before and timestamp after exist) we can go ahead.
+        if (time_stamp_before != 0.0 and time_stamp_after != float('inf')):
+            return (time_stamp_before, time_stamp_after)
+        return None
+
+    def save_and_remove_old_poses(self, reference_time):
+        last_accepted_stamps = reference_time - self.stocking_time
+        with self.node_lock:
+            anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys() if time_stamp < last_accepted_stamps]
+            if(anterior_time_stamps != []):
+                max_anterior = max(anterior_time_stamps)
+                anterior_time_stamps.remove(max_anterior)
+                # self.set_fixed(node_type, node_id, max_anterior)
+                trajectory_list = self.extract_trajectory(max_anterior)
+                if(trajectory_list is not None):
+                    self.save_trajectory(trajectory_list)
+                elif trajectory_list == []:
+                    print("No previous trajectory")
+                    pass
+                else:
+                    pass
+            else:
+                pass
+            # Now that it is saved, remove it from the graph
+            for time_stamp in anterior_time_stamps:
+                self.cyclic_counter.remove_index(self.time_stamps_to_indices[time_stamp])
+                self.time_stamps_to_indices.pop(time_stamp) 
+            
+        return max_anterior, anterior_time_stamps
+
+
+    def extract_trajectory(self, target_time_stamp):
+        """ This functions extracts the trajectory (which is a list(time stamps + pose)) 
+            in a readable format, from oldest time_stamp to the given target_time_stamp
+
+            returns : a list of tuples (time_stamp, pose) 
+                      poses are of g2o format Isometry3d(R, p)
+        """
+        time_stamps = sorted(self.time_stamps_to_indices.keys())
+        if (target_time_stamp in time_stamps):
+            target_index = time_stamps.index(target_time_stamp)
+            time_stamps = time_stamps[:target_index]
+
+            # Create list and retrieve all poses
+            pose_stamped_list = []
+            for time_stamp in time_stamps:
+                pose = self.duckietown_graph.get_vertex_pose(self.get_g2o_index(time_stamp))
+                pose_stamped = (time_stamp, pose)
+                pose_stamped_list.append(pose_stamped)
+            return pose_stamped_list
+        else:
+            print("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s" % (
+                target_time_stamp, self.node_id))
+            return None
+        
+
+    def save_trajectory(self, poses_stamped):
+        """ Saves the trajectory to a file corresponding to node_type, node_id
+            return True is success, False otherwise
+        """
+        # TODO : Code this function
+        print("Not saving anything yet! Waiting for design instructions!")
+
+    def get_trajectory(self):
+        result_dict = dict()
+        g2o_vertices = self.duckietown_graph.graph.optimizer.vertices()
+        for time_stamp, _ in self.timestamps_to_indices.iteritems():
+            vertex_id = self.get_g2o_index(time_stamp)
+            if (vertex_id not in g2o_vertices):
+                pass
+            else:
+                result_dict[time_stamp] = self.duckietowngraph.get_vertex_pose(vertex_id)
+
+    def clean(self):
+        if(self.first_odometry_time_stamp != None):
+            anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys() if time_stamp < self.first_odometry_time_stamp]
+            for time_stamp in anterior_time_stamps:
+                self.cyclic_counter.remove_index(self.time_stamps_to_indices[time_stamp])
+                self.time_stamps_to_indices.pop(time_stamp)
+            return anterior_time_stamps
+
 
 class DuckietownGraphBuilder(object):
     """Creates an internal g2o pose graph, and optimizes over it. At the same
@@ -197,32 +373,6 @@ class DuckietownGraphBuilder(object):
            graph: Pose graph (g2oGraphBuilder object).
            types: Possible types of nodes in the graph, i.e., of objects in
                   Duckietown.
-           timestamp_local_indices:
-                  Dictionary of dictionaries of dictionaries that keeps track of
-                  the timestamps for each node, for each type of node. In
-                  particular, a certain vertex in the graph represents an object
-                  at a certain instant of time (timestamp) and is identified in
-                  the internal g2o representation with a strictly integer index.
-                  Since each node (i.e., object) can be seen or see another
-                  node several times, multiple vertices are added to the graph
-                  for the same node, with each vertex identifying the node at a
-                  specific timestamp. To define the integer index that g2o needs
-                  to associate to each vertex, we define an encoding (cf.
-                  convert_names_to_int) based on the type of the node, the ID of
-                  the node and the timestamp. Furthermore, to compress the
-                  representation, for the encoding we do not use the timestamp
-                  itself but rather a 'local index' that defines the order in
-                  which new timestamps are associated to a node. For instance,
-                  if a Duckiebot (node_type="duckiebot", node_id=88) first sees an
-                  April tag and sends the corresponding message at timestamp t1,
-                  the latter timestamp is assigned 'local index' 0 for that
-                  node. If the Duckiebot is later detected by a watchtower, with
-                  message sent at timestamp t2 > t1, timestamp t2 is assigned
-                  'local index' 1 for the node.
-                  The 'local index' given to the timestamp <time_stamp> (float)
-                  w.r.t. the node with <node_id> and type <node_type> is
-                  stored in
-                  timestamp_local_indices[<node_type>][<node_id>][<time_stamp>].
            movable: List of the types of nodes that, for the purposes of
                     optimization, should be considered as objects that can move
                     in Duckietown (pose can be optimized).
@@ -265,23 +415,10 @@ class DuckietownGraphBuilder(object):
         self.graph = g2oGB.g2oGraphBuilder()
         # Define node types.
         self.types = ["duckiebot", "watchtower", "apriltag"]
-        # Initialize first-level dictionary of timestamp_local_indices by
-        # associating each node type with the respective input dictionary of
-        # IDs.
-        initial_dicts = [
-            initial_duckiebot_dict, initial_watchtower_dict, initial_april_dict
-        ]
-        self.timestamp_local_indices = dict(zip(self.types, initial_dicts))
+
+
         # Define movable node types.
         self.movable = ["duckiebot"]
-        # Initialize ours cyclic counters.
-        self.cyclic_counters = CyclicCounterList(100000, 1000)
-        # Initialize first-level dictionary of last_time_stamp.
-        self.last_time_stamp = dict()
-        # Initialize first-level dictionary of first odometry time stamps.
-        self.first_odometry_time_stamp = dict()
-        # Initialize first-level dictionary of last odometry time stamps.
-        self.last_odometry_time_stamp = dict()
         # Initialize chi2
         self.chi2 = 0.0
         # Set retro-interpolate mode as inputted.
@@ -289,10 +426,14 @@ class DuckietownGraphBuilder(object):
        # Load the initial floor April tags if given an input file name
         self.lock = g2oGB.ControlableLock()
 
-        if (initial_floor_april_tags != ""):
-            self.load_initial_floor_april_tags(initial_floor_april_tags)
+        self.node_dict = dict()
+
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
+
+        if (initial_floor_april_tags != ""):
+            self.load_initial_floor_april_tags(initial_floor_april_tags)
+        print("init done")
 
     def load_initial_floor_april_tags(self, initial_floor_april_tag_file):
         """Adds the poses of the initial floor April tags to the graph by
@@ -332,21 +473,27 @@ class DuckietownGraphBuilder(object):
                                         position,
                                         is_initial_floor_tag=True,
                                         fixed=True)
-                print(self.timestamp_local_indices)
             except yaml.YAMLError as exc:
                 print(exc)
 
-    def add_timestamp_to_node(self, node_type, node_id, time_stamp):
-        """Associates a timestamp to a node, by giving it a 'local index' in the
-           dictionary timestamp_local_indices and by updating the latest
-           timestamp associated to that node if necessary. If in
-           retro-interpolate mode, performs retro-interpolation on the newly
-           added timestamp if needed.
+    def get_node(self, node_id):
+        if(node_id in self.node_dict):
+            return self.node_dict[node_id]
+        else:
+            node_type = node_id.split("_")[0]
+            if (node_type in self.movable):
+                node = MovableNode(node_id,self.types, self, self.stocking_time)
+            else:
+                node = Node(node_id, self.types, self)
+            self.node_dict[node_id] = node
+            return node
+
+
+    def add_timestamp_to_node(self, node_id, time_stamp):
+        """TODO : all docs!!
 
            Args:
-               node_type: Type of the node to which the timestamp should be
-                          associated.
-               node_ID: ID of the node to which the timestamp should be
+               node_id: ID of the node to which the timestamp should be
                         associated.
                time_stamp: Timestamp.
 
@@ -356,99 +503,42 @@ class DuckietownGraphBuilder(object):
                index' or if the the node is not movable and already has
                an associated timestamp).
         """
-        if node_type in self.movable:
-            vertex_id = self.get_id(node_type, node_id)
-            # If no nodes of the input node type were ever associated to a timestamp
-            # initialize the first level of the dictionaries.
-            if node_type not in self.last_time_stamp:
-                self.last_time_stamp[node_type] = dict()
-                self.last_odometry_time_stamp[node_type] = dict()
-                self.first_odometry_time_stamp[node_type] = dict()
-            if node_type not in self.timestamp_local_indices:
-                self.timestamp_local_indices[node_type] = dict()
-            # If the input node was never associated to a timestamp initialize the
-            # second level of the dictionaries.
-            if node_id not in self.last_time_stamp[node_type]:
-                self.last_time_stamp[node_type][node_id] = 0.0
-            if node_id not in self.timestamp_local_indices[node_type]:
-                self.timestamp_local_indices[node_type][node_id] = dict()
+        node = self.get_node(node_id)
 
-            if (time_stamp not in self.timestamp_local_indices[node_type][node_id]):
-                # Assign the next available local index to the timestamp and
-                # increment the number of local indices assigned.
-                self.timestamp_local_indices[node_type][node_id][
-                    time_stamp] = self.cyclic_counters.next_index(node_type, node_id)
-
-                # If the new timestamp is posterior to all previously-received
-                # timestamps simply set it to be the timestamp furthest in time
-                # among those associated to the node. If, on the contrary, due to
-                # delays in the transmission/reception of the messages this is not
-                # the case, perform retro-interpolation if enabled.
-                if (time_stamp > self.last_time_stamp[node_type][node_id]):
-                    self.last_time_stamp[node_type][node_id] = time_stamp
-                else:
-                    if (self.retro_interpolate and node_type in self.movable):
-                        # Check that message is in the odometry chained part of the graph
-                        if(node_id in self.last_odometry_time_stamp[node_type] and node_id in self.first_odometry_time_stamp[node_type]):
-                            if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
-                               time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
-                                # check that optimization was made at least once, so that no absurd edge is created
-                                if(self.chi2 != 0.0):
-                                    self.retrointerpolate(time_stamp, node_type, node_id,
-                                                          vertex_id)
-
-                return True
-            return False
-        else:
-            # If no nodes of the input node type were ever associated to a timestamp
-            # initialize the first level of the dictionaries.
-            if node_type not in self.timestamp_local_indices:
-                self.timestamp_local_indices[node_type] = dict()
-            if node_type not in self.last_time_stamp:
-                self.last_time_stamp[node_type] = dict()
-            # If the input node was never associated to a timestamp initialize the
-            # second level of the dictionaries.
-            if node_id not in self.timestamp_local_indices[node_type]:
-                self.timestamp_local_indices[node_type][node_id] = {
-                    time_stamp: 0}
-                self.last_time_stamp[node_type][node_id] = time_stamp
-                return True
-            else:
-                return False
+        return node.add_timestamp(time_stamp)
 
     def add_vertex(self,
-                   vertex_id,
+                   node_id,
                    theta,
                    position,
                    is_initial_floor_tag=False,
                    fixed=False,
                    time_stamp=0.0):
-        """Adds a vertex with an ID given in the format outputted from the
+        """Adds a node with an ID given in the format outputted from the
           transform_listener and with a given pose to the g2o graph.
 
            TODO : add a more general add_vertex function that takes a 3D pose and not only a 2D one.
 
            Args:
-               vertex_id: ID of the node whose pose should be added as a vertex
+               node_id: ID of the node whose pose should be added as a node
                           in the graph, in the format <node_type>_<node_id>.
                theta: Angle of the 2D rotation around the z axis defines the
                       pose of the node.
                position: 2D translation vector (x, y) that define the pose of the node.
                is_initial_floor_tag: True if the node is an initial floor tag,
                                      False otherwise.
-               fixed: True if the node should be added as a fixed vertex (i.e.,
+               fixed: True if the node should be added as a fixed node (i.e.,
                       not optimizable) in the graph, False otherwise.
                time_stamp: Timestamp.
         """
-        [node_type, node_id] = vertex_id.split("_")
         # Adds (assigns) a timestamp to a node, by giving it a 'local index'
         # w.r.t. the node.
-        added = self.add_timestamp_to_node(
-            node_type, node_id, time_stamp)
+        added = self.add_timestamp_to_node(node_id , time_stamp)
+        node = self.get_node(node_id)
         if (not added):
             print(
                 "add_vertex did not add : node %s at time %f as already there" %
-                (vertex_id, time_stamp))
+                (node_id, time_stamp))
         else:
             # Translation vector, z coordinate does not vary.
             position = [position[0], position[1], 0.0]
@@ -464,17 +554,18 @@ class DuckietownGraphBuilder(object):
                 R = np.matmul(R, R2)
             # Add vertex with pose and ID in the right format to the g2o graph.
             vertex_pose = g2o.Isometry3d(R, position)
-            vertex_id = self.convert_names_to_int(vertex_id, time_stamp)
-            self.graph.add_vertex(vertex_id, vertex_pose, fixed=fixed)
+            vertex_index = node.get_g2o_index(time_stamp)
+            self.graph.add_vertex(vertex_index, vertex_pose, fixed=fixed)
+            
             if (is_initial_floor_tag):
                 # For initial floor tags, add an edge between the reference
                 # vertex and the newly-added vertex for the pose of the tag.
                 self.graph.add_edge(
-                    vertex0_id=0, vertex1_id=vertex_id, measure=vertex_pose, robust_kernel_value=0.1)
+                    vertex0_id=0, vertex1_id=vertex_index, measure=vertex_pose, robust_kernel_value=0.1)
 
     def add_edge(self,
-                 vertex0_id,
-                 vertex1_id,
+                 node_id_0,
+                 node_id_1,
                  measure,
                  time_stamp,
                  old_time_stamp=0):
@@ -495,33 +586,27 @@ class DuckietownGraphBuilder(object):
                                for odometry messages is either vertex0_id or
                                vertex1_id, since the two match).
         """
-        if (vertex0_id != vertex1_id):
-            for vertex_id in [vertex0_id, vertex1_id]:
-                if (len(vertex_id.split("_")) == 1):
-                    print("Error, vertexname is %s. Exiting" % vertex_id)
-                    exit(-1)
-                [node_type, node_id] = vertex_id.split("_")
-                # Associate timestamps to the vertices.
-                with self.lock:
-                    added = self.add_timestamp_to_node(node_type, node_id,
-                                                       time_stamp)
-                    if not added:
-                        pass
+        if (node_id_0 != node_id_1):
+            node_0 = self.get_node(node_id_0)
+            node_1 = self.get_node(node_id_1)
+            with self.lock:
+                node_0.add_timestamp(time_stamp)
+                node_1.add_timestamp(time_stamp)
+
             # Obtain ID of the vertices in the graph in the integer format.
-            vertex0_id_int = self.convert_names_to_int(vertex0_id, time_stamp)
-            vertex1_id_int = self.convert_names_to_int(vertex1_id, time_stamp)
+            vertex0_index = node_0.get_g2o_index(time_stamp)
+            vertex1_index = node_1.get_g2o_index(time_stamp)
             # Add edge between the two vertices (and automatically also add the
             # vertices if not there already).in the g2o graph.
-            self.graph.add_edge(vertex0_id_int, vertex1_id_int,
+            self.graph.add_edge(vertex0_index, vertex1_index,
                                 measure, robust_kernel_value=0.1)
         else:
-            [node_type, node_id] = vertex0_id.split("_")
+            node = self.get_node(node_id_0)
             # Associate timestamps to the vertex.
             with self.lock:
-                added = self.add_timestamp_to_node(
-                    node_type, node_id, time_stamp)
+                added = node.add_timestamp(time_stamp)
 
-            if (node_type in self.movable):
+            if node.is_movable():
                 # Odometry edge: same vertices, movable object.
                 if (old_time_stamp == 0):
                     # No previous odometry messages -> Update old timestamp for
@@ -531,12 +616,12 @@ class DuckietownGraphBuilder(object):
                     # the node was received to be respectively old_time_stamp and the current
                     # timestamp (time_stamp).
                     with self.lock:
-                        self.first_odometry_time_stamp[node_type][node_id] = time_stamp
-                        self.last_odometry_time_stamp[node_type][node_id] = time_stamp
+                        node.first_odometry_time_stamp = time_stamp
+                        node.last_odometry_time_stamp = time_stamp
                     # Add vertex corresponding to the new timestamp to the
                     # graph.
                         self.add_vertex(
-                            vertex_id=vertex0_id,
+                            node_id=node_id_0,
                             theta=0,
                             position=[0, 0],
                             is_initial_floor_tag=False,
@@ -546,12 +631,12 @@ class DuckietownGraphBuilder(object):
                 else:
                     # Update the known last odometry message time_stamp for the node
                     with self.lock:
-                        self.last_odometry_time_stamp[node_type][node_id] = time_stamp
+                        node.last_odometry_time_stamp = time_stamp
 
                     # Some other messages might have been received for that node
                     # (object), e.g. a Duckiebot might be seen by a watchtower
                     # before receiving an odometry message => Interpolate.
-                    self.interpolate(old_time_stamp, time_stamp, node_type,
+                    self.interpolate(old_time_stamp, time_stamp,
                                      node_id, measure)
                     return True
 
@@ -561,44 +646,16 @@ class DuckietownGraphBuilder(object):
                     % node_type)
                 exit(-1)
 
-    def set_fixed(self, node_type, node_id, time_stamp):
+    def set_fixed(self, node_id, time_stamp):
         """ Setting to fixed a specific node
         """
-        id = self.get_id(node_type, node_id)
-        self.graph.set_fixed(self.convert_names_to_int(id, time_stamp))
-
-    def convert_names_to_int(self, id, time_stamp):
-        """Given an ID in the format <node_type>_<node_id> and a timestamp
-           associated to that node, outputs an integer that can be used as a
-           index for the node in g2o (the latter only handles integer indices
-           for the nodes).
-
-           Args:
-              id: ID in the format <node_type>_<node_id>
-              time_stamp: Timestamp.
-
-           Returns:
-              Input ID converted to an integer that can be used as an index by
-              g2o.
-        """
-        [node_type, node_id] = id.split("_")
-        b = int(node_id) % 1000
-        a = self.types.index(node_type) + 1
-
-        if (node_type in self.movable):
-            c = self.timestamp_local_indices[node_type][node_id][time_stamp]
-            if (c >= 100000):
-                print("overflow of the time_stamp list")
-        else:
-            c = 0
-
-        result = a * 10**8 + b * 10**5 + c
-        return result
+        node = self.get_node(node_id)
+        self.graph.set_fixed(node.get_g2o_index(time_stamp))
 
     def get_id(self, node_type, node_id):
         return "%s_%s" % (node_type, node_id)
 
-    def interpolate(self, old_time_stamp, new_time_stamp, node_type, node_id,
+    def interpolate(self, old_time_stamp, new_time_stamp, node_id,
                     measure):
         """Given a timestamp new_time_stamp at which an odometry message was
            received and the timestamp old_time_stamp of the last odometry
@@ -621,66 +678,18 @@ class DuckietownGraphBuilder(object):
                                received before the current odometry message, for
                                the node of type node_type and ID node_id.
                new_time_stamp: Timestamp of the current odometry message.
-               node_type: Type of the node.
                node_id: ID of the node.
                measure: Transform contained in the current odometry message,
                         between timestamp old_time_stamp and time_stamp
                         new_time_stamp.
         """
-        vertex_id = self.get_id(node_type, node_id)
-        # Timestamps for which the interpolation should be performed. Note: also
-        # old_time_stamp and new_time_stamp are included.
-        # with self.lock:
-        time_stamp_indices_copy = self.timestamp_local_indices[node_type][
-            node_id].copy()
-        to_interpolate = {
-            time_stamp:
-            self.timestamp_local_indices[node_type][node_id][time_stamp]
-            for time_stamp in time_stamp_indices_copy
-            if (time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)
-        }
-        # Sort the time stamps.
-        sorted_time_stamps = sorted(to_interpolate.keys())
-        print("perfoming interpolation on %d nodes" % len(sorted_time_stamps))
-        # Find the total time (time between the last and the first timestamp).
-        total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
-        if (total_delta_t == 0.0):
-            print("in interpolate, delta t is 0.0, with %s %s and list is:" %
-                  (node_type, node_id))
-            print(to_interpolate)
-            print("new_time_stamp is %f and old time stamp is %f" %
-                  (old_time_stamp, new_time_stamp))
-            print(self.timestamp_local_indices[node_type][node_id])
-        # Perform a linear interpolation in the Lie algebra associated to SE3
-        # group defined by the transform.
-        R = measure.R
-        t = measure.t
-        q = g.SE3_from_rotation_translation(R, t)
-        vel = g.SE3.algebra_from_group(q)
-        cumulative_alpha = 0.0
-        for i in range(0, len(sorted_time_stamps) - 1):
-            # Find the time interval between each timestamp and the subsequent
-            # one and linearly interpolate accordingly in the algebra.
-            partial_delta_t = float(
-                sorted_time_stamps[i + 1] - sorted_time_stamps[i])
-            alpha = partial_delta_t / total_delta_t
-            cumulative_alpha += alpha
-            rel = g.SE3.group_from_algebra(vel * alpha)
-            newR, newt = g.rotation_translation_from_SE3(rel)
-            interpolated_measure = g2o.Isometry3d(newR, newt)
-            vertex0_id_int = self.convert_names_to_int(vertex_id,
-                                                       sorted_time_stamps[i])
-            vertex1_id_int = self.convert_names_to_int(
-                vertex_id, sorted_time_stamps[i + 1])
-            # Add an edge to the graph, connecting each timestamp to the one
-            # following it and using the relative transform obtained by
-            # interpolation.
-            self.graph.add_edge(vertex0_id_int, vertex1_id_int,
-                                interpolated_measure, robust_kernel_value=0.1)
-        if (cumulative_alpha != 1.0):
-            pass
+        node = self.get_node(node_id)
+        interpolation_list = node.interpolate(old_time_stamp, new_time_stamp, measure)
+        
+        for args in interpolation_list:
+            self.graph.add_edge(*args)
 
-    def retrointerpolate(self, time_stamp, node_type, node_id, vertex_id):
+    def retrointerpolate(self, time_stamp, node_id):
         """Due to delays in the communication network, it might happen that a
            message with timestamp time_stamp is received after a message with
            timestamp time_stamp2, with time_stamp < time_stamp2. If this is the
@@ -700,30 +709,20 @@ class DuckietownGraphBuilder(object):
         """
         # Find timestamps immediately before and immediately after the given
         # timestamp.
-        time_stamp_before = 0.0
-        time_stamp_after = float('inf')
-        for time_stamp_it in self.timestamp_local_indices[node_type][
-                node_id]:
-            if time_stamp_it < time_stamp:
-                if time_stamp_before < time_stamp_it:
-                    time_stamp_before = time_stamp_it
-
-            if time_stamp < time_stamp_it:
-                if time_stamp_it < time_stamp_after:
-                    time_stamp_after = time_stamp_it
-
-        # If the timestamp is neither the first nor the last (i.e., both
-        # timestamp before and timestamp after exist) we can go ahead.
-        if (time_stamp_before != 0.0 and time_stamp_after != float('inf')):
-            before = self.convert_names_to_int(vertex_id, time_stamp_before)
-            after = self.convert_names_to_int(vertex_id, time_stamp_after)
+        node = self.get_node(node_id)
+        result = node.retro_interpolate(time_stamp)
+        if(result != None):
+            [time_stamp_before, time_stamp_after] = result
+            before = node.get_g2o_index(time_stamp_before)
+            after = node.get_g2o_index(time_stamp_after)
             transform = self.graph.get_transform(before, after)
             # If the timestamps before/after have corresponding vertices in the
             # graph perform retro-interpolation.
             if (transform != 0):
+                # TODO : make a sanity check?
                 print("Will perform retro-interpolation")
 
-                self.interpolate(time_stamp_before, time_stamp_after, node_type,
+                self.interpolate(time_stamp_before, time_stamp_after,
                                  node_id, transform)
             else:
                 print("will not perform retro_interpolation with %d and %d " %
@@ -733,6 +732,13 @@ class DuckietownGraphBuilder(object):
     #        OPTIM FUNCTIONS          #
     ###################################
 
+    def get_global_last_time(self):
+        global_last_time = 0
+        for node_id, node in self.node_dict.iteritems():
+            if node.last_time_stamp > global_last_time:
+                global_last_time = node.last_time_stamp
+        return global_last_time
+    
     def optimize(self,
                  number_of_steps,
                  verbose=True,
@@ -756,8 +762,7 @@ class DuckietownGraphBuilder(object):
         self.clean_graph()
 
         if self.stocking_time is not None:
-            global_last_time_stamp = max(
-                self.last_time_stamp["duckiebot"].values())
+            global_last_time_stamp = self.get_global_last_time()
             if(global_last_time_stamp - self.last_cleaning > self.stocking_time/2.0):
                 self.save_and_remove_old_poses(global_last_time_stamp)
                 self.last_cleaning = global_last_time_stamp
@@ -774,93 +779,22 @@ class DuckietownGraphBuilder(object):
     #       CLEANING FUNCTIONS        #
     ###################################
 
-    def remove_vertex(self, node_type, node_id, time_stamp):
-        vertex_id = self.get_id(node_type, node_id)
-        self.graph.remove_vertex(
-            self.convert_names_to_int(vertex_id, time_stamp))
+    def remove_vertex(self, node_id, time_stamp):
+        node = self.get_node(node_id)
+        self.graph.remove_vertex(node.get_g2o_index(time_stamp))
 
     def save_and_remove_old_poses(self, reference_time):
         """
             Gets rid of old vertices in the graph
             TODO : register in a file the path of duckiebots before destroying it here
         """
-        for node_type in self.movable:
-            for node_id in self.timestamp_local_indices[node_type]:
-                if(node_id in self.first_odometry_time_stamp[node_type]):
-                    last_accepted_stamps = reference_time - self.stocking_time
-                    with self.lock:
-                        anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
-                        ) if time_stamp < last_accepted_stamps]
-                        if(anterior_time_stamps != []):
-                            max_anterior = max(anterior_time_stamps)
-                            anterior_time_stamps.remove(max_anterior)
-                            self.set_fixed(node_type, node_id, max_anterior)
-                            trajectory_list = self.extract_trajectory(
-                                node_type, node_id, max_anterior)
-                            if(trajectory_list is not None):
-                                self.save_trajectory(
-                                    node_type, node_id, trajectory_list)
-                            elif trajectory_list == []:
-                                print("No previous trajectory")
-                                pass
-                            else:
-                                pass
-                        else:
-                            pass
-                        # Now that it is saved, remove it from the graph
-                        for time_stamp in anterior_time_stamps:
-                            self.remove_vertex(node_type, node_id, time_stamp)
-                            self.cyclic_counters.remove_index(
-                                node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
-                            self.timestamp_local_indices[node_type][node_id].pop(
-                                time_stamp)
+        for _, node in self.node_dict.iteritems():
+            with self.lock:
+                max_anterior, anterior_time_stamps = node.save_and_remove_old_poses(reference_time)
+                self.set_fixed(node_id, max_anterior)
 
-    def extract_trajectory(self, node_type, node_id, target_time_stamp):
-        """ This functions extracts the trajectory (which is a list(time stamps + pose)) 
-            in a readable format, from oldest time_stamp to the given target_time_stamp
-
-            returns : a list of tuples (time_stamp, pose) 
-                      poses are of g2o format Isometry3d(R, p)
-        """
-        if (node_type in self.movable and node_type in self.timestamp_local_indices):
-            if(node_id in self.timestamp_local_indices[node_type]):
-                # Copy, and extract sorted list of time stamps up until target
-                time_stamps_indices_copy = self.timestamp_local_indices[node_type][node_id].copy(
-                )
-                time_stamps = sorted(time_stamps_indices_copy.keys())
-                if (target_time_stamp in time_stamps):
-                    target_index = time_stamps.index(target_time_stamp)
-                    time_stamps = time_stamps[:target_index]
-
-                    # Create list and retrieve all poses
-                    pose_stamped_list = []
-                    id = self.get_id(node_type, node_id)
-                    for time_stamp in time_stamps:
-                        pose = self.graph.vertex_pose(
-                            self.convert_names_to_int(id, time_stamp))
-                        pose_stamped = (time_stamp, pose)
-                        pose_stamped_list.append(pose_stamped)
-                    return pose_stamped_list
-                else:
-                    print("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s %s" % (
-                        target_time_stamp, node_type, node_id))
-                    return None
-        else:
-            if (node_type not in self.movable):
-                print("[WARNING] trying to extract trajectory of non-movable object %s %s" %
-                      (node_type, node_id))
-            else:
-                print("[WARNING] trying to extract trajectory of %s %s. Type %s not found" % (
-                    node_type, node_id, node_type))
-            print("\t\t Will do nothing and return None")
-            return None
-
-    def save_trajectory(self, node_type, node_id, poses_stamped):
-        """ Saves the trajectory to a file corresponding to node_type, node_id
-            return True is success, False otherwise
-        """
-        # TODO : Code this function
-        print("Not saving anything yet! Waiting for design instructions!")
+                for time_stamp in anterior_time_stamps:
+                    self.remove_vertex(node_id, time_stamp)
 
     def clean_graph(self):
         """
@@ -868,22 +802,19 @@ class DuckietownGraphBuilder(object):
             Considered as useless are vertices that are anterior to the first odometry message
         """
         with self.lock:
-            for node_type in self.movable:
-                for node_id in self.timestamp_local_indices[node_type]:
-                    if(node_id in self.first_odometry_time_stamp[node_type]):
-                        first_odometry_time_stamp = self.first_odometry_time_stamp[node_type][node_id]
-                        anterior_time_stamps = [time_stamp for time_stamp in self.timestamp_local_indices[node_type][node_id].keys(
-                        ) if time_stamp < first_odometry_time_stamp]
-                        for time_stamp in anterior_time_stamps:
-                            self.remove_vertex(node_type, node_id, time_stamp)
-                            self.cyclic_counters.remove_index(
-                                node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
-                            self.timestamp_local_indices[node_type][node_id].pop(
-                                time_stamp)
+            for node_id, node in self.node_dict.iteritems():
+                if node.is_movable():
+                    node.__class__ = MovableNode
+                    anterior_time_stamps = node.clean()
+                    for time_stamp in anterior_time_stamps:
+                        self.remove_vertex(node_id, time_stamp)
 
     ###################################
     #        ACCESS FUNCTIONS         #
     ###################################
+
+    def get_vertex_pose(self, vertex_id):
+        return self.graph.vertex_pose(vertex_id)
 
     def get_all_poses(self):
         """Obtains all poses in the graph.
@@ -897,34 +828,10 @@ class DuckietownGraphBuilder(object):
                ID <node_id>.
         """
         with self.lock:
-            result_dict = {}
-            # For all node types <node_type>:
-            # timestamp_local_indices[<node_type>] = {<node_id0> : {node_id0_dict},
-            #                                         <node_id1> : {node_id1_dict},
-            #                                         ...} =: node_id_dict
-            for node_type, node_id_dict in self.timestamp_local_indices.iteritems():
-                result_dict[node_type] = {}
-                # For all node types <node_type>, all node IDs <node_id>:
-                # timestamp_local_indices[<node_type>][<node_id>] =
-                #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
-                #      <time_stamp0> : local_index_of_time_stamp1_in_node_node_id,
-                #      ...} =: time_stamp_dict
-
-                node_id_dict_copy = node_id_dict.copy()
-                for node_id, time_stamp_dict in node_id_dict_copy.iteritems():
-                    # Get timestamp furthest in time for node with ID node_id.
-                    last_time_stamp = self.last_time_stamp[node_type][node_id]
-                    vertex_id = self.get_id(node_type, node_id)
-                    if (self.convert_names_to_int(vertex_id, last_time_stamp) not in
-                            self.graph.optimizer.vertices()):
-                        if (node_type in self.movable):
-                            pass
-                            # For odometry nodes that
-                            # last_time_stamp = sorted(time_stamp_dict.keys())[-2]
-                            # TODO : find a way of solving this issue
-                    else:
-                        result_dict[node_type][node_id] = self.graph.vertex_pose(
-                            self.convert_names_to_int(vertex_id, last_time_stamp))
+            result_dict = dict()
+            
+            for node_id, node in self.node_dict.iteritems():
+                result_dict[node_id] = node.get_last_known_position()
 
         return result_dict
 
@@ -939,30 +846,10 @@ class DuckietownGraphBuilder(object):
                in the g2o graph for the node with type <node_type> and
                ID <node_id>.
         """
+        result_dict = dict()
         with self.lock:
-            result_dict = {}
-            # For all node types <node_type>:
-            # timestamp_local_indices[<node_type>] = {<node_id0> : {node_id0_dict},
-            #                                         <node_id1> : {node_id1_dict},
-            #                                         ...} =: node_id_dict
-            for node_type, node_id_dict in self.timestamp_local_indices.iteritems():
-                if node_type in self.movable:
-                    result_dict[node_type] = {}
-                    # For all node types <node_type>, all node IDs <node_id>:
-                    # timestamp_local_indices[<node_type>][<node_id>] =
-                    #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
-                    #      <time_stamp1> : local_index_of_time_stamp1_in_node_node_id,
-                    #      ...} =: time_stamp_dict
-                    for node_id, time_stamp_dict in node_id_dict.iteritems():
-                        result_dict[node_type][node_id] = dict()
-                        vertex_id = self.get_id(node_type, node_id)
-                        g2o_vertices = self.graph.optimizer.vertices()
-                        time_stamp_copy = time_stamp_dict.copy()
-                        for time_stamp, _ in time_stamp_copy.iteritems():
-                            if (self.convert_names_to_int(vertex_id, time_stamp) not in
-                                    g2o_vertices):
-                                pass
-                            else:
-                                result_dict[node_type][node_id][time_stamp] = self.graph.vertex_pose(
-                                    self.convert_names_to_int(vertex_id, time_stamp))
+            for node_id, node in self.node_dict.iteritems():
+                if node.is_movable():
+                    result_dict[node_id] = node.get_trajectory()
+
         return result_dict
