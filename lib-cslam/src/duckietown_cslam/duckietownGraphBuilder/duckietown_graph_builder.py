@@ -9,6 +9,120 @@ import g2o
 import geometry as g
 import numpy as np
 
+class CyclicCounter():
+    def __init__(self, total_size, chunck_size, node_type, node_id):
+        self.total_size = total_size
+        self.chunck_size = chunck_size
+        self.front_pointer = 0
+        self.back_pointer = -1
+        self.modes = 0
+        self.mode_types = ["back_to_front", "front_to_back"] 
+        self.removed_indices = []
+        self.node_type = node_type
+        self.node_id = node_id
+
+    def next_index(node_type, node_id):
+        index = self.front_pointer
+
+        # handle index increment according to mode
+        if (mode == 0):
+            # This means that front_pointer is ahead of back pointer (we have not cycled yet)
+            
+            if(self.front_pointer + 1 < self.total_size):
+                self.front_pointer += 1
+            else:
+                if(self.back_pointer > 0):
+                    self.front_pointer = 0
+                    self.mode = 1
+                else:
+                    self.clean_counter()
+                    # TODO : handle if mode changes!!
+
+                    if(self.back_pointer > 0):
+                        self.front_pointer = 0
+                        self.mode = 1
+                    else:
+                        print("[ERROR] Cyclic counter cannot cycle as back pointer is still at 0. Need cleaning")
+                    
+        else:
+            if (self.front_pointer + 1 < self.back_pointer):
+                self.front_pointer +=1
+            else:
+                self.clean_counter()
+                # TODO : handle if mode changes!!
+                if (self.front_pointer + 1 < self.back_pointer):
+                    self.front_pointer +=1
+                else:
+                    print("[ERROR] Cyclic counter front pointer has reached back pointer. Need cleaning")
+        
+        return index
+
+    def remove_index(self, index_to_remove):
+        # security checks
+        if(index_to_remove in self.removed_indices):
+            print("[ERROR] cyclic counter: index_to_remove was already added but not yet freed!")
+            return -1
+        
+        sort(self.removed_indices.append(index_to_remove))
+
+        if len(self.removed_indices) >= self.chunck_size:
+            self.clean_counter()
+
+    def clean_counter(self):        
+        marked_freed = []
+        for i in self.removed_indices:
+            if i == self.back_pointer + 1:
+                self.back_pointer += 1
+                if self.back_pointer == self.total_size -1 :
+                    self.back_pointer = -1
+                    self.modes = 0
+                marked_freed.append(i)
+            elif i > self.back_pointer + 1:
+                break
+        for i in marked_freed:
+            self.removed_indices.remove(i)
+
+
+class CyclicCounterList():
+    def __init__(self, total_size, chunck_size):
+        self.total_size = total_size
+        self.chunck_size = chunck_size
+        self.counters = dict()
+
+    def _init_dicts(self, node_type, node_id):
+        if(node_type not in self.counters):
+            self.counters[node_type] = dict()
+
+        if(node_id not in self.counters[node_type]):
+            self.counters[node_type][node_id] = CyclicCounter(self.total_size, self.chunck_size, node_type, node_id)
+
+    def next_index(node_type, node_id):
+        # initialize all dictionnaries
+        self._init_dicts(node_type, node_id)
+
+        # get the index
+        return self.counters[node_type][node_id].next_index()
+
+    def remove_index(self, node_type, node_id, index_to_remove):
+        # security checks
+        if(node_type not in self.counters):
+            print("[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
+            return -1
+        if(node_id not in self.counters[node_type]):
+            print("[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
+            return -1
+
+        return self.counters[node_type][node_id].remove_index(index_to_remove)
+
+
+    def clean_complete_counter(self):
+        for node_type, node_id_dict in self.counters.iteritems():
+            for node_id, _ in node_id_dict.iteritems():
+                self._clean_counter(node_type, node_id)
+
+    def _clean_counter(self, node_type, node_id):        
+        self.counters[node_type][node_id].clean_counter()
+
 
 class DuckietownGraphBuilder():
     """Creates an internal g2o pose graph, and optimizes over it. At the same
