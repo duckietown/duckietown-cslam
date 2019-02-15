@@ -15,17 +15,17 @@ class CyclicCounter():
         self.chunck_size = chunck_size
         self.front_pointer = 0
         self.back_pointer = -1
-        self.modes = 0
+        self.mode = 0
         self.mode_types = ["back_to_front", "front_to_back"] 
         self.removed_indices = []
         self.node_type = node_type
         self.node_id = node_id
 
-    def next_index(node_type, node_id):
+    def next_index(self):
         index = self.front_pointer
 
         # handle index increment according to mode
-        if (mode == 0):
+        if (self.mode == 0):
             # This means that front_pointer is ahead of back pointer (we have not cycled yet)
             
             if(self.front_pointer + 1 < self.total_size):
@@ -63,13 +63,15 @@ class CyclicCounter():
             print("[ERROR] cyclic counter: index_to_remove was already added but not yet freed!")
             return -1
         
-        sort(self.removed_indices.append(index_to_remove))
-
+        self.removed_indices.append(index_to_remove)
+        
         if len(self.removed_indices) >= self.chunck_size:
             self.clean_counter()
 
-    def clean_counter(self):        
+    def clean_counter(self):
+        # print("Cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))        
         marked_freed = []
+        self.removed_indices.sort()
         for i in self.removed_indices:
             if i == self.back_pointer + 1:
                 self.back_pointer += 1
@@ -81,6 +83,8 @@ class CyclicCounter():
                 break
         for i in marked_freed:
             self.removed_indices.remove(i)
+        # print("After cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))        
+
 
 
 class CyclicCounterList():
@@ -96,7 +100,7 @@ class CyclicCounterList():
         if(node_id not in self.counters[node_type]):
             self.counters[node_type][node_id] = CyclicCounter(self.total_size, self.chunck_size, node_type, node_id)
 
-    def next_index(node_type, node_id):
+    def next_index(self, node_type, node_id):
         # initialize all dictionnaries
         self._init_dicts(node_type, node_id)
 
@@ -113,7 +117,6 @@ class CyclicCounterList():
             return -1
 
         return self.counters[node_type][node_id].remove_index(index_to_remove)
-
 
     def clean_complete_counter(self):
         for node_type, node_id_dict in self.counters.iteritems():
@@ -166,11 +169,9 @@ class DuckietownGraphBuilder():
            movable: List of the types of nodes that, for the purposes of
                     optimization, should be considered as objects that can move
                     in Duckietown (pose can be optimized).
-           num_local_indices_assigned:
-                    Dictionary of dictionaries.
-                    num_local_indices_assigned[<node_type>][<node_id>] stores
-                    the number of 'local indices' already assigned to timestamps
-                    by the node of type <node_type> and with ID <node_id>.
+           cyclic_counters: A custom class of cyclic counters that will give indices
+                            and cycle back to 0 as the first used indices are freed
+                            by cleaning procedures
            last_time_stamp: Dictionary of dictionaries.
                             last_time_stamp[<node_type>][<node_id>] contains the
                             timestamp latest in time among those associated to
@@ -216,8 +217,8 @@ class DuckietownGraphBuilder():
         self.timestamp_local_indices = dict(zip(self.types, initial_dicts))
         # Define movable node types.
         self.movable = ["duckiebot"]
-        # Initialize first-level dictionary of num_local_indices_assigned.
-        self.num_local_indices_assigned = dict()
+        # Initialize ours cyclic counters.
+        self.cyclic_counters = CyclicCounterList(100000, 1000)
         # Initialize first-level dictionary of last_time_stamp.
         self.last_time_stamp = dict()
         # Initialize first-level dictionary of first odometry time stamps.
@@ -298,55 +299,64 @@ class DuckietownGraphBuilder():
                index' or if the the node is not movable and already has
                an associated timestamp).
         """
-        vertex_id = "%s_%s" % (node_type, node_id)
-        # If no nodes of the input node type were ever associated to a timestamp
-        # initialize the first level of the dictionaries.
-        if node_type not in self.num_local_indices_assigned:
-            self.num_local_indices_assigned[node_type] = dict()
-            self.last_time_stamp[node_type] = dict()
-            self.last_odometry_time_stamp[node_type] = dict()
-            self.first_odometry_time_stamp[node_type] = dict()
-        if node_type not in self.timestamp_local_indices:
-            self.timestamp_local_indices[node_type] = dict()
-        # If the input node was never associated to a timestamp initialize the
-        # second level of the dictionaries.
-        if node_id not in self.num_local_indices_assigned[node_type]:
-            self.num_local_indices_assigned[node_type][node_id] = 0
-            self.last_time_stamp[node_type][node_id] = 0.0
-        if node_id not in self.timestamp_local_indices[node_type]:
-            self.timestamp_local_indices[node_type][node_id] = dict()
+        if node_type in self.movable:
+            vertex_id = self.get_id(node_type, node_id)
+            # If no nodes of the input node type were ever associated to a timestamp
+            # initialize the first level of the dictionaries.
+            if node_type not in self.last_time_stamp:
+                self.last_time_stamp[node_type] = dict()
+                self.last_odometry_time_stamp[node_type] = dict()
+                self.first_odometry_time_stamp[node_type] = dict()
+            if node_type not in self.timestamp_local_indices:
+                self.timestamp_local_indices[node_type] = dict()
+            # If the input node was never associated to a timestamp initialize the
+            # second level of the dictionaries.
+            if node_id not in self.last_time_stamp[node_type]:
+                self.last_time_stamp[node_type][node_id] = 0.0
+            if node_id not in self.timestamp_local_indices[node_type]:
+                self.timestamp_local_indices[node_type][node_id] = dict()
 
-        num_local_indices_assigned = self.num_local_indices_assigned[node_type][
-            node_id]
-        if (time_stamp not in self.timestamp_local_indices[node_type][node_id]
-                and
-                (node_type in self.movable or num_local_indices_assigned == 0)):
-            # Assign the next available local index to the timestamp and
-            # increment the number of local indices assigned.
-            self.timestamp_local_indices[node_type][node_id][
-                time_stamp] = num_local_indices_assigned
-            self.num_local_indices_assigned[node_type][
-                node_id] = self.num_local_indices_assigned[node_type][node_id] + 1
-            # If the new timestamp is posterior to all previously-received
-            # timestamps simply set it to be the timestamp furthest in time
-            # among those associated to the node. If, on the contrary, due to
-            # delays in the transmission/reception of the messages this is not
-            # the case, perform retro-interpolation if enabled.
-            if (time_stamp > self.last_time_stamp[node_type][node_id]):
+            if (time_stamp not in self.timestamp_local_indices[node_type][node_id]):
+                # Assign the next available local index to the timestamp and
+                # increment the number of local indices assigned.
+                self.timestamp_local_indices[node_type][node_id][
+                    time_stamp] = self.cyclic_counters.next_index(node_type, node_id)
+                
+                # If the new timestamp is posterior to all previously-received
+                # timestamps simply set it to be the timestamp furthest in time
+                # among those associated to the node. If, on the contrary, due to
+                # delays in the transmission/reception of the messages this is not
+                # the case, perform retro-interpolation if enabled.
+                if (time_stamp > self.last_time_stamp[node_type][node_id]):
+                    self.last_time_stamp[node_type][node_id] = time_stamp
+                else:
+                    if (self.retro_interpolate and node_type in self.movable):
+                        # Check that message is in the odometry chained part of the graph
+                        if(node_id in self.last_odometry_time_stamp[node_type] and node_id in self.first_odometry_time_stamp[node_type]):
+                            if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
+                            time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
+                                # check that optimization was made at least once, so that no absurd edge is created
+                                if(self.chi2 != 0.0):
+                                    self.retrointerpolate(time_stamp, node_type, node_id,
+                                                        vertex_id)
+
+                return True
+            return False
+        else:
+            # If no nodes of the input node type were ever associated to a timestamp
+            # initialize the first level of the dictionaries.
+            if node_type not in self.timestamp_local_indices:
+                self.timestamp_local_indices[node_type] = dict()
+            if node_type not in self.last_time_stamp:    
+                self.last_time_stamp[node_type] = dict()
+            # If the input node was never associated to a timestamp initialize the
+            # second level of the dictionaries.
+            if node_id not in self.timestamp_local_indices[node_type]:
+                self.timestamp_local_indices[node_type][node_id] = {time_stamp : 0}
                 self.last_time_stamp[node_type][node_id] = time_stamp
+                return True
             else:
-                if (self.retro_interpolate and node_type in self.movable):
-                    # Check that message is in the odometry chained part of the graph
-                    if(node_id in self.last_odometry_time_stamp[node_type] and node_id in self.first_odometry_time_stamp[node_type]):
-                        if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
-                           time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
-                            # check that optimization was made at least once, so that no absurd edge is created
-                            if(self.chi2 != 0.0):
-                                self.retrointerpolate(time_stamp, node_type, node_id,
-                                                      vertex_id)
-
-            return True
-        return False
+                return False
 
     def add_vertex(self,
                    vertex_id,
@@ -558,7 +568,7 @@ class DuckietownGraphBuilder():
                         between timestamp old_time_stamp and time_stamp
                         new_time_stamp.
         """
-        vertex_id = "%s_%s" % (node_type, node_id)
+        vertex_id = self.get_id(node_type, node_id)
         # Timestamps for which the interpolation should be performed. Note: also
         # old_time_stamp and new_time_stamp are included.
         # with self.lock:
@@ -738,6 +748,7 @@ class DuckietownGraphBuilder():
                         # Now that it is saved, remove it from the graph
                         for time_stamp in anterior_time_stamps:
                             self.remove_vertex(node_type, node_id, time_stamp)
+                            self.cyclic_counters.remove_index(node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
                             self.timestamp_local_indices[node_type][node_id].pop(
                                 time_stamp)
 
@@ -797,6 +808,7 @@ class DuckietownGraphBuilder():
                         ) if time_stamp < first_odometry_time_stamp]
                         for time_stamp in anterior_time_stamps:
                             self.remove_vertex(node_type, node_id, time_stamp)
+                            self.cyclic_counters.remove_index(node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
                             self.timestamp_local_indices[node_type][node_id].pop(
                                 time_stamp)
 
@@ -833,7 +845,7 @@ class DuckietownGraphBuilder():
                 for node_id, time_stamp_dict in node_id_dict_copy.iteritems():
                     # Get timestamp furthest in time for node with ID node_id.
                     last_time_stamp = self.last_time_stamp[node_type][node_id]
-                    vertex_id = "%s_%s" % (node_type, node_id)
+                    vertex_id = self.get_id(node_type, node_id)
                     if (self.convert_names_to_int(vertex_id, last_time_stamp) not in
                             self.graph.optimizer.vertices()):
                         if (node_type in self.movable):
@@ -874,7 +886,7 @@ class DuckietownGraphBuilder():
                     #      ...} =: time_stamp_dict
                     for node_id, time_stamp_dict in node_id_dict.iteritems():
                         result_dict[node_type][node_id] = dict()
-                        vertex_id = "%s_%s" % (node_type, node_id)
+                        vertex_id = self.get_id(node_type, node_id)
                         g2o_vertices = self.graph.optimizer.vertices()
                         time_stamp_copy = time_stamp_dict.copy()
                         for time_stamp, _ in time_stamp_copy.iteritems():
