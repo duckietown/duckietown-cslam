@@ -226,11 +226,11 @@ class acquisitionProcessor():
                         for idx in range(len(tag["corners"])):
                             cv2.line(image, tuple(tag["corners"][idx-1, :].astype(int)), tuple(tag["corners"][idx, :].astype(int)), (0, 255, 0))
                             # cv2.rectangle(image, (tag["corners"][0, 0].astype(int)-10,tag["corners"][0, 1].astype(int)-10), (tag["corners"][0, 0].astype(int)+15,tag["corners"][0, 1].astype(int)+15), (0, 0, 255), cv2.FILLED)
-                            cv2.putText(image,str(tag["tag_id"]),
-                                        org=(tag["corners"][0, 0].astype(int)+10,tag["corners"][0, 1].astype(int)+10),
-                                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                        fontScale=0.4,
-                                        color=(255, 0, 0))
+                        cv2.putText(image,str(tag["tag_id"]),
+                                    org=(tag["corners"][0, 0].astype(int)+10,tag["corners"][0, 1].astype(int)+10),
+                                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                    fontScale=0.4,
+                                    color=(255, 0, 0))
 
                     # Put device and timestamp to the image
                     cv2.putText(image,'device: '+ self.ACQ_DEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+"+"+str(currRawImage.header.stamp.nsecs),

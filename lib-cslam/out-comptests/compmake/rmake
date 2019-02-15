@@ -1,2 +1,0 @@
-#!/bin/bash
-compmake /media/sf_Duckietown/SLAM/duckietown-cslam/lib-cslam/out-comptests/compmake -c "rmake $*"
