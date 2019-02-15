@@ -8,3 +8,5 @@ lib-cslam/src/duckietown_cslam.egg-info/
 .vscode/
 .idea
 ros-cslam/src/CMakeLists.txt
+lib-cslam/out-comptests
+
