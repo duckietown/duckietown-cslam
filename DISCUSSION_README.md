@@ -30,7 +30,7 @@
     - [ ] real time test with medium values (all above is on same bag file for now)
   - [ ] find out what parameters should be applied
 - [ ] Better retro-interpolation policy ? 
-- [ ] Removing old vertices and edges and fixing watchtowers : see "long term experiment" section
+- [ ] Removing old vertices and edges: see "long term experiment" section
   - [x] Removing old vertices
   - [x] Stocking time defined in params
   - [x] Removing old vertices by chunck of half the stocking size
@@ -48,6 +48,8 @@
   - [x] test on rosbag to lookout for deadlocks
   - [ ] real time test to spot out deadlocks 
 - [ ] Find heuristic to setting watchtowers (and eventually roadsigns) fixed
+- [ ] Factorizing duckietown graph builder in mutliple classes (node class for instance!!):
+  --> Would make the code much more readable and easy to change and maintain!!
 ### Odometry
 - Using visual odometry :
   - [x] Reading their code --> some unclear things:
