@@ -1,8 +1,11 @@
-import threading, traceback, sys
+import threading
+import traceback
+import sys
 
 import g2o
 import geometry as g
 import numpy as np
+
 
 class ControlableLock(object):
     def __init__(self, is_locking=True, verbose=False):
@@ -14,14 +17,14 @@ class ControlableLock(object):
         if(self.is_locking):
             if(self.verbose):
                 print >>sys.stderr, "acquired", self
-                #traceback.print_tb
+                # traceback.print_tb
             self._lock.acquire()
 
     def release(self):
         if(self.is_locking):
             if(self.verbose):
                 print >>sys.stderr, "released", self
-                #traceback.print_tb
+                # traceback.print_tb
             self._lock.release()
 
     def __enter__(self):
@@ -56,7 +59,7 @@ class g2oGraphBuilder():
             vc.set_id(vertex_id)
             vc.set_estimate(vertexPose)
             vc.set_fixed(fixed)
-            
+
             self.optimizer.add_vertex(vc)
             self.set_of_new_vertex.add(vc)
 
@@ -66,18 +69,18 @@ class g2oGraphBuilder():
         vertex 0 and 1 are valid IDs of vertex inside optimizer.
         measure is a Isometry3d that map the transform from vertex0 to vertex1
         '''
-        
-        ## TODO 
+
+        # TODO
         # robust kernels? They are made to reduce the impact of outliers.
         # They have to be specified separatly for each edge, with a value
         # example : robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
         #           edge.set_robust_kernel(robust_kernel)
-        ##
+        
 
         # print("add_edge")
         # print(optimizer.vertices())
         if vertex0_id in self.optimizer.vertices():
-                    
+
             with self.lock:
 
                 if vertex1_id not in self.optimizer.vertices():
@@ -96,7 +99,7 @@ class g2oGraphBuilder():
 
                 if measure_information is not None:
                     edge.set_information(measure_information)
-                
+
                 if robust_kernel_value is not None:
                     robust_kernel = g2o.RobustKernelHuber(robust_kernel_value)
                     edge.set_robust_kernel(robust_kernel)
@@ -108,7 +111,7 @@ class g2oGraphBuilder():
 
         else:
             if vertex1_id in self.optimizer.vertices():
-                with self.lock:    
+                with self.lock:
                     vc0 = g2o.VertexSE3()
                     vc0.set_id(vertex0_id)
                     vc0.set_estimate(
@@ -136,7 +139,8 @@ class g2oGraphBuilder():
                     self.optimizer.add_vertex(vc0)
                     self.set_of_new_vertex.add(vc0)
 
-                self.add_edge(vertex0_id, vertex1_id, measure, robust_kernel_value=robust_kernel_value)
+                self.add_edge(vertex0_id, vertex1_id, measure,
+                              robust_kernel_value=robust_kernel_value)
 
     def vertices_and_edges(self):
         return (self.optimizer.vertices(), self.optimizer.edges())
@@ -152,7 +156,7 @@ class g2oGraphBuilder():
                         "Vertex %i wasn't but is now in g2o graph" % self.last_lost)
                 elif (self.last_lost != 0):
                     print("Vertex %i wasn't and still isn't in g2o graph" %
-                        self.last_lost)
+                          self.last_lost)
                 self.last_lost = vertexId
         return (self.optimizer.vertex(vertexId).estimate())
 
@@ -162,7 +166,6 @@ class g2oGraphBuilder():
                 self.optimizer.vertex(vertexId).set_fixed(True)
             else:
                 print("Vertex %i is not in the g2o graph" % vertexId)
-               
 
     def get_transform(self, vertex1, vertex2):
         # print("get_transform")
@@ -222,7 +225,7 @@ class g2oGraphBuilder():
             else:
                 if(not self.has_removed):
                     self.optimizer.update_initialization(self.set_of_new_vertex,
-                                                    self.set_of_new_edges)
+                                                         self.set_of_new_edges)
                 else:
                     self.optimizer.initialize_optimization()
                     self.has_removed = False
@@ -234,10 +237,10 @@ class g2oGraphBuilder():
                 print('Optimization:')
                 print('Initial chi2 = %f' % self.optimizer.chi2())
             self.optimizer.optimize(number_of_steps, online=online)
-            
+
             if (save_result):
                 self.optimizer.save(output_name)
-                    
+
         return self.optimizer.chi2()
         # batch_stat = self.optimizer.batch_statistics
         # print(batch_stat)

@@ -9,6 +9,7 @@ import g2o
 import geometry as g
 import numpy as np
 
+
 class CyclicCounter():
     def __init__(self, total_size, chunck_size, node_type, node_id):
         self.total_size = total_size
@@ -16,7 +17,7 @@ class CyclicCounter():
         self.front_pointer = 0
         self.back_pointer = -1
         self.mode = 0
-        self.mode_types = ["back_to_front", "front_to_back"] 
+        self.mode_types = ["back_to_front", "front_to_back"]
         self.removed_indices = []
         self.node_type = node_type
         self.node_id = node_id
@@ -27,7 +28,7 @@ class CyclicCounter():
         # handle index increment according to mode
         if (self.mode == 0):
             # This means that front_pointer is ahead of back pointer (we have not cycled yet)
-            
+
             if(self.front_pointer + 1 < self.total_size):
                 self.front_pointer += 1
             else:
@@ -42,40 +43,43 @@ class CyclicCounter():
                         self.front_pointer = 0
                         self.mode = 1
                     else:
-                        print("[ERROR] Cyclic counter cannot cycle as back pointer is still at 0. Need cleaning")
-                    
+                        print(
+                            "[ERROR] Cyclic counter cannot cycle as back pointer is still at 0. Need cleaning")
+
         else:
             if (self.front_pointer + 1 < self.back_pointer):
-                self.front_pointer +=1
+                self.front_pointer += 1
             else:
                 self.clean_counter()
                 # TODO : handle if mode changes!!
                 if (self.front_pointer + 1 < self.back_pointer):
-                    self.front_pointer +=1
+                    self.front_pointer += 1
                 else:
-                    print("[ERROR] Cyclic counter front pointer has reached back pointer. Need cleaning")
-        
+                    print(
+                        "[ERROR] Cyclic counter front pointer has reached back pointer. Need cleaning")
+
         return index
 
     def remove_index(self, index_to_remove):
         # security checks
         if(index_to_remove in self.removed_indices):
-            print("[ERROR] cyclic counter: index_to_remove was already added but not yet freed!")
+            print(
+                "[ERROR] cyclic counter: index_to_remove was already added but not yet freed!")
             return -1
-        
+
         self.removed_indices.append(index_to_remove)
-        
+
         if len(self.removed_indices) >= self.chunck_size:
             self.clean_counter()
 
     def clean_counter(self):
-        # print("Cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))        
+        # print("Cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))
         marked_freed = []
         self.removed_indices.sort()
         for i in self.removed_indices:
             if i == self.back_pointer + 1:
                 self.back_pointer += 1
-                if self.back_pointer == self.total_size -1 :
+                if self.back_pointer == self.total_size - 1:
                     self.back_pointer = -1
                     self.modes = 0
                 marked_freed.append(i)
@@ -83,8 +87,7 @@ class CyclicCounter():
                 break
         for i in marked_freed:
             self.removed_indices.remove(i)
-        # print("After cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))        
-
+        # print("After cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))
 
 
 class CyclicCounterList():
@@ -98,7 +101,8 @@ class CyclicCounterList():
             self.counters[node_type] = dict()
 
         if(node_id not in self.counters[node_type]):
-            self.counters[node_type][node_id] = CyclicCounter(self.total_size, self.chunck_size, node_type, node_id)
+            self.counters[node_type][node_id] = CyclicCounter(
+                self.total_size, self.chunck_size, node_type, node_id)
 
     def next_index(self, node_type, node_id):
         # initialize all dictionnaries
@@ -110,10 +114,12 @@ class CyclicCounterList():
     def remove_index(self, node_type, node_id, index_to_remove):
         # security checks
         if(node_type not in self.counters):
-            print("[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
+            print(
+                "[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
             return -1
         if(node_id not in self.counters[node_type]):
-            print("[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
+            print(
+                "[ERROR] : cyclic counter badly initialized: remove_index called before any next_index call")
             return -1
 
         return self.counters[node_type][node_id].remove_index(index_to_remove)
@@ -123,7 +129,7 @@ class CyclicCounterList():
             for node_id, _ in node_id_dict.iteritems():
                 self._clean_counter(node_type, node_id)
 
-    def _clean_counter(self, node_type, node_id):        
+    def _clean_counter(self, node_type, node_id):
         self.counters[node_type][node_id].clean_counter()
 
 
@@ -321,7 +327,7 @@ class DuckietownGraphBuilder():
                 # increment the number of local indices assigned.
                 self.timestamp_local_indices[node_type][node_id][
                     time_stamp] = self.cyclic_counters.next_index(node_type, node_id)
-                
+
                 # If the new timestamp is posterior to all previously-received
                 # timestamps simply set it to be the timestamp furthest in time
                 # among those associated to the node. If, on the contrary, due to
@@ -334,11 +340,11 @@ class DuckietownGraphBuilder():
                         # Check that message is in the odometry chained part of the graph
                         if(node_id in self.last_odometry_time_stamp[node_type] and node_id in self.first_odometry_time_stamp[node_type]):
                             if(time_stamp > self.first_odometry_time_stamp[node_type][node_id] and
-                            time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
+                               time_stamp < self.last_odometry_time_stamp[node_type][node_id]):
                                 # check that optimization was made at least once, so that no absurd edge is created
                                 if(self.chi2 != 0.0):
                                     self.retrointerpolate(time_stamp, node_type, node_id,
-                                                        vertex_id)
+                                                          vertex_id)
 
                 return True
             return False
@@ -347,12 +353,13 @@ class DuckietownGraphBuilder():
             # initialize the first level of the dictionaries.
             if node_type not in self.timestamp_local_indices:
                 self.timestamp_local_indices[node_type] = dict()
-            if node_type not in self.last_time_stamp:    
+            if node_type not in self.last_time_stamp:
                 self.last_time_stamp[node_type] = dict()
             # If the input node was never associated to a timestamp initialize the
             # second level of the dictionaries.
             if node_id not in self.timestamp_local_indices[node_type]:
-                self.timestamp_local_indices[node_type][node_id] = {time_stamp : 0}
+                self.timestamp_local_indices[node_type][node_id] = {
+                    time_stamp: 0}
                 self.last_time_stamp[node_type][node_id] = time_stamp
                 return True
             else:
@@ -413,7 +420,7 @@ class DuckietownGraphBuilder():
                 # vertex and the newly-added vertex for the pose of the tag.
                 self.graph.add_edge(
                     vertex0_id=0, vertex1_id=vertex_id, measure=vertex_pose, robust_kernel_value=0.1)
-    
+
     def add_edge(self,
                  vertex0_id,
                  vertex1_id,
@@ -446,7 +453,7 @@ class DuckietownGraphBuilder():
                 # Associate timestamps to the vertices.
                 with self.lock:
                     added = self.add_timestamp_to_node(node_type, node_id,
-                                                    time_stamp)
+                                                       time_stamp)
                     if not added:
                         pass
             # Obtain ID of the vertices in the graph in the integer format.
@@ -454,7 +461,8 @@ class DuckietownGraphBuilder():
             vertex1_id_int = self.convert_names_to_int(vertex1_id, time_stamp)
             # Add edge between the two vertices (and automatically also add the
             # vertices if not there already).in the g2o graph.
-            self.graph.add_edge(vertex0_id_int, vertex1_id_int, measure, robust_kernel_value=0.1)
+            self.graph.add_edge(vertex0_id_int, vertex1_id_int,
+                                measure, robust_kernel_value=0.1)
         else:
             [node_type, node_id] = vertex0_id.split("_")
             # Associate timestamps to the vertex.
@@ -505,7 +513,7 @@ class DuckietownGraphBuilder():
     def set_fixed(self, node_type, node_id, time_stamp):
         """ Setting to fixed a specific node
         """
-        id = self.get_id(node_type,node_id)
+        id = self.get_id(node_type, node_id)
         self.graph.set_fixed(self.convert_names_to_int(id, time_stamp))
 
     def convert_names_to_int(self, id, time_stamp):
@@ -573,7 +581,7 @@ class DuckietownGraphBuilder():
         # old_time_stamp and new_time_stamp are included.
         # with self.lock:
         time_stamp_indices_copy = self.timestamp_local_indices[node_type][
-                node_id].copy()
+            node_id].copy()
         to_interpolate = {
             time_stamp:
             self.timestamp_local_indices[node_type][node_id][time_stamp]
@@ -587,10 +595,10 @@ class DuckietownGraphBuilder():
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
         if (total_delta_t == 0.0):
             print("in interpolate, delta t is 0.0, with %s %s and list is:" %
-                (node_type, node_id))
+                  (node_type, node_id))
             print(to_interpolate)
             print("new_time_stamp is %f and old time stamp is %f" %
-                (old_time_stamp, new_time_stamp))
+                  (old_time_stamp, new_time_stamp))
             print(self.timestamp_local_indices[node_type][node_id])
         # Perform a linear interpolation in the Lie algebra associated to SE3
         # group defined by the transform.
@@ -610,7 +618,7 @@ class DuckietownGraphBuilder():
             newR, newt = g.rotation_translation_from_SE3(rel)
             interpolated_measure = g2o.Isometry3d(newR, newt)
             vertex0_id_int = self.convert_names_to_int(vertex_id,
-                                                    sorted_time_stamps[i])
+                                                       sorted_time_stamps[i])
             vertex1_id_int = self.convert_names_to_int(
                 vertex_id, sorted_time_stamps[i + 1])
             # Add an edge to the graph, connecting each timestamp to the one
@@ -690,18 +698,19 @@ class DuckietownGraphBuilder():
                              to file.
                 output_name: Output filename of the result of the optimization.
          """
-        ## TODO : cleaning is gonna be useless when remove_old_poses will have run many times
+        # TODO : cleaning is gonna be useless when remove_old_poses will have run many times
         # Maybe find a way to stop doing it after a while
-        ## 
         
+
         self.clean_graph()
 
         if self.stocking_time is not None:
-            global_last_time_stamp = max(self.last_time_stamp["duckiebot"].values())
+            global_last_time_stamp = max(
+                self.last_time_stamp["duckiebot"].values())
             if(global_last_time_stamp - self.last_cleaning > self.stocking_time/2.0):
                 self.save_and_remove_old_poses(global_last_time_stamp)
                 self.last_cleaning = global_last_time_stamp
-        
+
         with self.lock:
             self.chi2 = self.graph.optimize(
                 number_of_steps,
@@ -735,9 +744,11 @@ class DuckietownGraphBuilder():
                             max_anterior = max(anterior_time_stamps)
                             anterior_time_stamps.remove(max_anterior)
                             self.set_fixed(node_type, node_id, max_anterior)
-                            trajectory_list = self.extract_trajectory(node_type, node_id, max_anterior)
+                            trajectory_list = self.extract_trajectory(
+                                node_type, node_id, max_anterior)
                             if(trajectory_list is not None):
-                                self.save_trajectory(node_type, node_id, trajectory_list)
+                                self.save_trajectory(
+                                    node_type, node_id, trajectory_list)
                             elif trajectory_list == []:
                                 print("No previous trajectory")
                                 pass
@@ -748,7 +759,8 @@ class DuckietownGraphBuilder():
                         # Now that it is saved, remove it from the graph
                         for time_stamp in anterior_time_stamps:
                             self.remove_vertex(node_type, node_id, time_stamp)
-                            self.cyclic_counters.remove_index(node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
+                            self.cyclic_counters.remove_index(
+                                node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
                             self.timestamp_local_indices[node_type][node_id].pop(
                                 time_stamp)
 
@@ -762,7 +774,8 @@ class DuckietownGraphBuilder():
         if (node_type in self.movable and node_type in self.timestamp_local_indices):
             if(node_id in self.timestamp_local_indices[node_type]):
                 # Copy, and extract sorted list of time stamps up until target
-                time_stamps_indices_copy = self.timestamp_local_indices[node_type][node_id].copy()
+                time_stamps_indices_copy = self.timestamp_local_indices[node_type][node_id].copy(
+                )
                 time_stamps = sorted(time_stamps_indices_copy.keys())
                 if (target_time_stamp in time_stamps):
                     target_index = time_stamps.index(target_time_stamp)
@@ -772,18 +785,22 @@ class DuckietownGraphBuilder():
                     pose_stamped_list = []
                     id = self.get_id(node_type, node_id)
                     for time_stamp in time_stamps:
-                        pose = self.graph.vertex_pose(self.convert_names_to_int(id, time_stamp))
+                        pose = self.graph.vertex_pose(
+                            self.convert_names_to_int(id, time_stamp))
                         pose_stamped = (time_stamp, pose)
                         pose_stamped_list.append(pose_stamped)
                     return pose_stamped_list
                 else:
-                    print("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s %s" % (target_time_stamp, node_type, node_id))
+                    print("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s %s" % (
+                        target_time_stamp, node_type, node_id))
                     return None
         else:
             if (node_type not in self.movable):
-                print("[WARNING] trying to extract trajectory of non-movable object %s %s" % (node_type, node_id))
+                print("[WARNING] trying to extract trajectory of non-movable object %s %s" %
+                      (node_type, node_id))
             else:
-                print("[WARNING] trying to extract trajectory of %s %s. Type %s not found" % (node_type, node_id, node_type))
+                print("[WARNING] trying to extract trajectory of %s %s. Type %s not found" % (
+                    node_type, node_id, node_type))
             print("\t\t Will do nothing and return None")
             return None
 
@@ -808,7 +825,8 @@ class DuckietownGraphBuilder():
                         ) if time_stamp < first_odometry_time_stamp]
                         for time_stamp in anterior_time_stamps:
                             self.remove_vertex(node_type, node_id, time_stamp)
-                            self.cyclic_counters.remove_index(node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
+                            self.cyclic_counters.remove_index(
+                                node_type, node_id, self.timestamp_local_indices[node_type][node_id][time_stamp])
                             self.timestamp_local_indices[node_type][node_id].pop(
                                 time_stamp)
 
@@ -840,7 +858,7 @@ class DuckietownGraphBuilder():
                 #     {<time_stamp0> : local_index_of_time_stamp0_in_node_node_id,
                 #      <time_stamp0> : local_index_of_time_stamp1_in_node_node_id,
                 #      ...} =: time_stamp_dict
-                
+
                 node_id_dict_copy = node_id_dict.copy()
                 for node_id, time_stamp_dict in node_id_dict_copy.iteritems():
                     # Get timestamp furthest in time for node with ID node_id.
@@ -849,10 +867,10 @@ class DuckietownGraphBuilder():
                     if (self.convert_names_to_int(vertex_id, last_time_stamp) not in
                             self.graph.optimizer.vertices()):
                         if (node_type in self.movable):
-                            pass 
+                            pass
                             # For odometry nodes that
                             # last_time_stamp = sorted(time_stamp_dict.keys())[-2]
-                            ## TODO : find a way of solving this issue
+                            # TODO : find a way of solving this issue
                     else:
                         result_dict[node_type][node_id] = self.graph.vertex_pose(
                             self.convert_names_to_int(vertex_id, last_time_stamp))

@@ -81,8 +81,10 @@ class PathBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
         threading.Thread.__init__(self)
         self.path_dict = dictionnary
-        self.publisher = rospy.Publisher('/movable_path', Marker, queue_size = 10)
-        self.colors = [[0,0,1],[0,1,0], [1,0,0], [0,1,1],[1,0,1], [1,1,0], [1,1,1]]
+        self.publisher = rospy.Publisher(
+            '/movable_path', Marker, queue_size=10)
+        self.colors = [[0, 0, 1], [0, 1, 0], [1, 0, 0],
+                       [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]
 
     def path_broadcast(self, node_type, node_id, node_path, color_index):
         """ Brodcasts the path for the node
@@ -175,14 +177,15 @@ class TransformListener():
     """
 
     def __init__(self):
-        self.max_iteration                        = rospy.get_param("maximum_g2o_iterations")
-        self.minimum_edge_number_for_optimization = rospy.get_param("minimum_edge_number_for_optimization")
-        self.rejection_sampling_int               = rospy.get_param("rejection_sampling_int")
-        self.max_number_same_edge                 = rospy.get_param("max_number_same_edge")
-        self.verbose                              = rospy.get_param("optim_verbose")
-        self.save_output                          = rospy.get_param("save_g2o_output")
-        self.optimization_frequency               = rospy.get_param("optimization_frequency")
-        self.online_optimization                  = rospy.get_param("online_optimization")
+        self.max_iteration = rospy.get_param("maximum_g2o_iterations")
+        self.minimum_edge_number_for_optimization = rospy.get_param(
+            "minimum_edge_number_for_optimization")
+        self.rejection_sampling_int = rospy.get_param("rejection_sampling_int")
+        self.max_number_same_edge = rospy.get_param("max_number_same_edge")
+        self.verbose = rospy.get_param("optim_verbose")
+        self.save_output = rospy.get_param("save_g2o_output")
+        self.optimization_frequency = rospy.get_param("optimization_frequency")
+        self.online_optimization = rospy.get_param("online_optimization")
 
         self.num_messages_received = 0
         self.edge_counters = dict()
@@ -197,7 +200,8 @@ class TransformListener():
         """
         config_folder = rospy.get_param("config_folder")
         aprilstagDB = "%s/%s" % (config_folder, "apriltagsDB.yaml")
-        aprilstagDB_custom = "%s/%s" % (config_folder, "apriltagsDB_custom.yaml")
+        aprilstagDB_custom = "%s/%s" % (config_folder,
+                                        "apriltagsDB_custom.yaml")
         # Read YAML file.
         for apriltagfile in [aprilstagDB, aprilstagDB_custom]:
             if os.path.isfile(apriltagfile):
@@ -217,8 +221,8 @@ class TransformListener():
                     except yaml.YAMLError as exc:
                         print(exc)
             else:
-                print("apriltagDB file not found at %s" %apriltagfile)
-    
+                print("apriltagDB file not found at %s" % apriltagfile)
+
     def find_vertex_name(self, id):
         """ Returns the format ID of an object in the ID map based on its type.
 
@@ -234,7 +238,7 @@ class TransformListener():
             # print(id)
             id = self.id_map.get(id, "0")
             # print(id)
-        
+
             vertex_type = self.id_map.get(id, "apriltag")
             # print(vertex_type)
         else:
@@ -439,7 +443,7 @@ class TransformListener():
             # Tag detected by a Duckiebot.
             self.handle_duckiebot_message(
                 id0, id1, transform, time_stamp)
-        
+
     def optimization_callback(self, timer_event):
         if (self.num_messages_received >= self.minimum_edge_number_for_optimization):
             # a = rospy.get_time()
@@ -448,13 +452,13 @@ class TransformListener():
                 save_result=self.save_output,
                 verbose=self.verbose,
                 output_name="/tmp/output.g2o",
-                online = self.online_optimization)
+                online=self.online_optimization)
             # b = rospy.get_time()
-            
+
             # Broadcast tree of transforms with TF.
             pose_dict = self.pose_graph.get_all_poses()
             # c = rospy.get_time()
-            
+
             point_broadcaster = PointBroadcaster(pose_dict)
             point_broadcaster.start()
 
@@ -489,8 +493,9 @@ class TransformListener():
 
         # Create a regular callback to invoke optimization on a regular basis
         print(self.optimization_frequency)
-        rospy.Timer(rospy.Duration(self.optimization_period), self.optimization_callback)                 
-        
+        rospy.Timer(rospy.Duration(self.optimization_period),
+                    self.optimization_callback)
+
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
 
