@@ -10,7 +10,7 @@ import geometry as g
 import numpy as np
 
 
-class CyclicCounter():
+class CyclicCounter(object):
     def __init__(self, total_size, chunck_size, node_type, node_id):
         self.total_size = total_size
         self.chunck_size = chunck_size
@@ -90,7 +90,7 @@ class CyclicCounter():
         # print("After cleaning cyclic counter for %s %s : \n front_pointer is %d\n back_pointer is %d\n removed_indices is" % (self.node_type, self.node_id, self.front_pointer, self.back_pointer) + str(self.removed_indices))
 
 
-class CyclicCounterList():
+class CyclicCounterList(object):
     def __init__(self, total_size, chunck_size):
         self.total_size = total_size
         self.chunck_size = chunck_size
@@ -133,7 +133,58 @@ class CyclicCounterList():
         self.counters[node_type][node_id].clean_counter()
 
 
-class DuckietownGraphBuilder():
+class Node(object):
+    def __init__(self, id, types, movable=False):
+        self.id = id
+        self.node_type, self.node_id = id.split("_")
+        self.types = types
+        self.time_stamp_to_indices = dict()
+        self.last_time_stamp = None
+        self.node_lock = g2oGB.ControlableLock()
+        self.movable = movable
+        if(self.type not in self.types):
+            print("Registering node of type %s unkown in types = " % self.node_type + str(self.types))
+
+    def get_g2o_index(self, time_stamp):
+        """Given a timestamp associated to that node, outputs an integer that can be used as a
+           index for the node in g2o (the latter only handles integer indices
+           for the nodes).
+
+           Args:
+              time_stamp: Timestamp.
+
+           Returns:
+              Input ID converted to an integer that can be used as an index by
+              g2o.
+        """
+        b = int(self.node_id) % 1000
+        a = self.types.index(self.node_type) + 1
+        result = a * 10**8 + b * 10**5 
+        return result
+
+
+class MovableNode(Node):
+    def __init__(self, id, types):
+        super().__init__(id, types, movable=True)
+        self.first_odometry_time_stamp = None
+        self.last_odometry_time_stamp = None
+        self.cyclic_counter = CyclicCounter(100000, 1000, node_type, node_id)
+
+    def get_g2o_index(self, time_stamp):
+        """Given a timestamp associated to that node, outputs an integer that can be used as a
+           index for the node in g2o (the latter only handles integer indices
+           for the nodes).
+
+           Args:
+              time_stamp: Timestamp.
+
+           Returns:
+              Input ID converted to an integer that can be used as an index by
+              g2o.
+        """
+        return super().get_g2o_index(time_stamp) + self.time_stamp_to_indices[time_stamp]
+
+class DuckietownGraphBuilder(object):
     """Creates an internal g2o pose graph, and optimizes over it. At the same
        time, it keeps track of the timestamps at which messages related to an
        object (e.g. watchtower, Duckiebot) were received. We refer to objects as
