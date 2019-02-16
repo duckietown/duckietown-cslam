@@ -63,7 +63,7 @@ class g2oGraphBuilder():
             self.optimizer.add_vertex(vc)
             self.set_of_new_vertex.add(vc)
 
-    def add_edge(self, vertex0_id, vertex1_id, measure, measure_information=None, robust_kernel_value=None):
+    def add_edge(self, vertex0_id, vertex1_id, measure, robust_kernel_value=None, measure_information=None):
         '''
         Helper function to add an edge
         vertex 0 and 1 are valid IDs of vertex inside optimizer.
@@ -158,7 +158,9 @@ class g2oGraphBuilder():
                     print("Vertex %i wasn't and still isn't in g2o graph" %
                           self.last_lost)
                 self.last_lost = vertexId
-        return (self.optimizer.vertex(vertexId).estimate())
+                return None
+            else:
+                return (self.optimizer.vertex(vertexId).estimate())
 
     def set_fixed(self, vertexId):
         with self.lock:

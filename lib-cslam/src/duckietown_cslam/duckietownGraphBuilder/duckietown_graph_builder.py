@@ -100,7 +100,9 @@ class Node(object):
         self.node_lock = g2oGB.ControlableLock()
         self.movable = movable
         if(self.node_type not in self.types):
-            print("Registering node of type %s unkown in types = " % self.node_type + str(self.types))
+            print("Registering node of type %s unkown in types = " %
+                  self.node_type + str(self.types))
+        print("Created a nonmovable node named %s" % self.node_id)
 
     def get_g2o_index(self, time_stamp):
         """Given a timestamp associated to that node, outputs an integer that can be used as a
@@ -116,11 +118,11 @@ class Node(object):
         """
         b = int(self.node_number) % 1000
         a = self.types.index(self.node_type) + 1
-        result = a * 10**8 + b * 10**5 
+        result = a * 10**8 + b * 10**5
         return result
 
     def is_movable(self):
-        return self.is_movable
+        return False
 
     def add_timestamp(self, time_stamp):
         if self.time_stamps_to_indices == {}:
@@ -135,15 +137,22 @@ class Node(object):
         vertex_pose = self.duckietown_graph.get_vertex_pose(vertex_id)
         return vertex_pose
 
+
 class MovableNode(Node):
     def __init__(self, node_id, types, duckietown_graph, stocking_time=None):
-        super(MovableNode, self).__init__(node_id, types, duckietown_graph, movable=True)
-        self.first_odometry_time_stamp = None
-        self.last_odometry_time_stamp = None
+        super(MovableNode, self).__init__(
+            node_id, types, duckietown_graph, movable=True)
+
+        self.first_odometry_time_stamp = 0
+        self.last_odometry_time_stamp = 0
         self.cyclic_counter = CyclicCounter(100000, 1000, self.node_id)
         self.stocking_time = stocking_time
+
         print("Created a movable node named %s" % self.node_id)
-    
+
+    def is_movable(self):
+        return True
+
     def get_g2o_index(self, time_stamp):
         """Given a timestamp associated to that node, outputs an integer that can be used as a
            index for the node in g2o (the latter only handles integer indices
@@ -162,7 +171,8 @@ class MovableNode(Node):
         if (time_stamp not in self.time_stamps_to_indices):
             # Assign the next available local index to the timestamp and
             # increment the number of local indices assigned.
-            self.time_stamps_to_indices[time_stamp] = self.cyclic_counter.next_index()
+            self.time_stamps_to_indices[time_stamp] = self.cyclic_counter.next_index(
+            )
 
             # If the new timestamp is posterior to all previously-received
             # timestamps simply set it to be the timestamp furthest in time
@@ -183,7 +193,6 @@ class MovableNode(Node):
 
             return True
         return False
-
 
     def interpolate(self, old_time_stamp, new_time_stamp,
                     measure):
@@ -219,7 +228,7 @@ class MovableNode(Node):
         # with self.lock:
         to_interpolate = {
             time_stamp
-            for time_stamp in self.time_stamp_indices
+            for time_stamp in self.time_stamps_to_indices
             if (time_stamp >= old_time_stamp and time_stamp <= new_time_stamp)
         }
         # Sort the time stamps.
@@ -259,8 +268,8 @@ class MovableNode(Node):
             # Add an edge to the graph, connecting each timestamp to the one
             # following it and using the relative transform obtained by
             # interpolation.
-            interpolation_list.append((vertex0_id_int, vertex1_id_int,
-                                interpolated_measure, 0.1))
+            interpolation_list.append((vertex0_index, vertex1_index,
+                                       interpolated_measure, 0.1))
         if (cumulative_alpha != 1.0):
             pass
         return interpolation_list
@@ -281,12 +290,15 @@ class MovableNode(Node):
         # timestamp before and timestamp after exist) we can go ahead.
         if (time_stamp_before != 0.0 and time_stamp_after != float('inf')):
             return (time_stamp_before, time_stamp_after)
-        return None
+        return (None, None)
 
     def save_and_remove_old_poses(self, reference_time):
         last_accepted_stamps = reference_time - self.stocking_time
+        max_anterior = None
+        anterior_time_stamps_indices = []
         with self.node_lock:
-            anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys() if time_stamp < last_accepted_stamps]
+            anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
+            ) if time_stamp < last_accepted_stamps]
             if(anterior_time_stamps != []):
                 max_anterior = max(anterior_time_stamps)
                 anterior_time_stamps.remove(max_anterior)
@@ -303,17 +315,19 @@ class MovableNode(Node):
                 pass
             # Now that it is saved, remove it from the graph
             for time_stamp in anterior_time_stamps:
-                self.cyclic_counter.remove_index(self.time_stamps_to_indices[time_stamp])
-                self.time_stamps_to_indices.pop(time_stamp) 
-            
-        return max_anterior, anterior_time_stamps
+                self.cyclic_counter.remove_index(
+                    self.time_stamps_to_indices[time_stamp])
+                anterior_time_stamps_indices.append(
+                    self.get_g2o_index(time_stamp))
+                self.time_stamps_to_indices.pop(time_stamp)
 
+        return max_anterior, anterior_time_stamps_indices
 
     def extract_trajectory(self, target_time_stamp):
-        """ This functions extracts the trajectory (which is a list(time stamps + pose)) 
+        """ This functions extracts the trajectory (which is a list(time stamps + pose))
             in a readable format, from oldest time_stamp to the given target_time_stamp
 
-            returns : a list of tuples (time_stamp, pose) 
+            returns : a list of tuples (time_stamp, pose)
                       poses are of g2o format Isometry3d(R, p)
         """
         time_stamps = sorted(self.time_stamps_to_indices.keys())
@@ -324,7 +338,8 @@ class MovableNode(Node):
             # Create list and retrieve all poses
             pose_stamped_list = []
             for time_stamp in time_stamps:
-                pose = self.duckietown_graph.get_vertex_pose(self.get_g2o_index(time_stamp))
+                pose = self.duckietown_graph.get_vertex_pose(
+                    self.get_g2o_index(time_stamp))
                 pose_stamped = (time_stamp, pose)
                 pose_stamped_list.append(pose_stamped)
             return pose_stamped_list
@@ -332,7 +347,6 @@ class MovableNode(Node):
             print("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s" % (
                 target_time_stamp, self.node_id))
             return None
-        
 
     def save_trajectory(self, poses_stamped):
         """ Saves the trajectory to a file corresponding to node_type, node_id
@@ -344,20 +358,29 @@ class MovableNode(Node):
     def get_trajectory(self):
         result_dict = dict()
         g2o_vertices = self.duckietown_graph.graph.optimizer.vertices()
-        for time_stamp, _ in self.timestamps_to_indices.iteritems():
+        for time_stamp, _ in self.time_stamps_to_indices.iteritems():
             vertex_id = self.get_g2o_index(time_stamp)
             if (vertex_id not in g2o_vertices):
                 pass
             else:
-                result_dict[time_stamp] = self.duckietowngraph.get_vertex_pose(vertex_id)
+                result_dict[time_stamp] = self.duckietown_graph.get_vertex_pose(
+                    vertex_id)
+        return result_dict
 
     def clean(self):
-        if(self.first_odometry_time_stamp != None):
-            anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys() if time_stamp < self.first_odometry_time_stamp]
+        anterior_time_stamps_indices = []
+
+        if(self.first_odometry_time_stamp != 0):
+            anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
+            ) if time_stamp < self.first_odometry_time_stamp]
             for time_stamp in anterior_time_stamps:
-                self.cyclic_counter.remove_index(self.time_stamps_to_indices[time_stamp])
+                self.cyclic_counter.remove_index(
+                    self.time_stamps_to_indices[time_stamp])
+                anterior_time_stamps_indices.append(
+                    self.get_g2o_index(time_stamp))
                 self.time_stamps_to_indices.pop(time_stamp)
-            return anterior_time_stamps
+
+        return anterior_time_stamps_indices
 
 
 class DuckietownGraphBuilder(object):
@@ -415,7 +438,6 @@ class DuckietownGraphBuilder(object):
         self.graph = g2oGB.g2oGraphBuilder()
         # Define node types.
         self.types = ["duckiebot", "watchtower", "apriltag"]
-
 
         # Define movable node types.
         self.movable = ["duckiebot"]
@@ -482,12 +504,14 @@ class DuckietownGraphBuilder(object):
         else:
             node_type = node_id.split("_")[0]
             if (node_type in self.movable):
-                node = MovableNode(node_id,self.types, self, self.stocking_time)
+                node = MovableNode(node_id, self.types,
+                                   self, self.stocking_time)
+                self.node_dict[node_id] = node
+
             else:
                 node = Node(node_id, self.types, self)
-            self.node_dict[node_id] = node
+                self.node_dict[node_id] = node
             return node
-
 
     def add_timestamp_to_node(self, node_id, time_stamp):
         """TODO : all docs!!
@@ -533,7 +557,7 @@ class DuckietownGraphBuilder(object):
         """
         # Adds (assigns) a timestamp to a node, by giving it a 'local index'
         # w.r.t. the node.
-        added = self.add_timestamp_to_node(node_id , time_stamp)
+        added = self.add_timestamp_to_node(node_id, time_stamp)
         node = self.get_node(node_id)
         if (not added):
             print(
@@ -556,7 +580,7 @@ class DuckietownGraphBuilder(object):
             vertex_pose = g2o.Isometry3d(R, position)
             vertex_index = node.get_g2o_index(time_stamp)
             self.graph.add_vertex(vertex_index, vertex_pose, fixed=fixed)
-            
+
             if (is_initial_floor_tag):
                 # For initial floor tags, add an edge between the reference
                 # vertex and the newly-added vertex for the pose of the tag.
@@ -637,7 +661,7 @@ class DuckietownGraphBuilder(object):
                     # (object), e.g. a Duckiebot might be seen by a watchtower
                     # before receiving an odometry message => Interpolate.
                     self.interpolate(old_time_stamp, time_stamp,
-                                     node_id, measure)
+                                     node_id_0, measure)
                     return True
 
             else:
@@ -684,8 +708,9 @@ class DuckietownGraphBuilder(object):
                         new_time_stamp.
         """
         node = self.get_node(node_id)
-        interpolation_list = node.interpolate(old_time_stamp, new_time_stamp, measure)
-        
+        interpolation_list = node.interpolate(
+            old_time_stamp, new_time_stamp, measure)
+
         for args in interpolation_list:
             self.graph.add_edge(*args)
 
@@ -738,7 +763,7 @@ class DuckietownGraphBuilder(object):
             if node.last_time_stamp > global_last_time:
                 global_last_time = node.last_time_stamp
         return global_last_time
-    
+
     def optimize(self,
                  number_of_steps,
                  verbose=True,
@@ -757,7 +782,6 @@ class DuckietownGraphBuilder(object):
          """
         # TODO : cleaning is gonna be useless when remove_old_poses will have run many times
         # Maybe find a way to stop doing it after a while
-        
 
         self.clean_graph()
 
@@ -783,18 +807,23 @@ class DuckietownGraphBuilder(object):
         node = self.get_node(node_id)
         self.graph.remove_vertex(node.get_g2o_index(time_stamp))
 
+    def remove_vertex_by_index(self, index):
+        self.graph.remove_vertex(index)
+
     def save_and_remove_old_poses(self, reference_time):
         """
             Gets rid of old vertices in the graph
             TODO : register in a file the path of duckiebots before destroying it here
         """
         for _, node in self.node_dict.iteritems():
-            with self.lock:
-                max_anterior, anterior_time_stamps = node.save_and_remove_old_poses(reference_time)
-                self.set_fixed(node_id, max_anterior)
-
-                for time_stamp in anterior_time_stamps:
-                    self.remove_vertex(node_id, time_stamp)
+            if node.is_movable():
+                with self.lock:
+                    max_anterior, anterior_time_stamps_indices = node.save_and_remove_old_poses(
+                        reference_time)
+                    if(max_anterior != None):
+                        self.set_fixed(node_id, max_anterior)
+                    for index in anterior_time_stamps_indices:
+                        self.remove_vertex_by_index(index)
 
     def clean_graph(self):
         """
@@ -804,10 +833,11 @@ class DuckietownGraphBuilder(object):
         with self.lock:
             for node_id, node in self.node_dict.iteritems():
                 if node.is_movable():
-                    node.__class__ = MovableNode
-                    anterior_time_stamps = node.clean()
-                    for time_stamp in anterior_time_stamps:
-                        self.remove_vertex(node_id, time_stamp)
+                    print(node.node_id)
+                    # node.__class__ = MovableNode
+                    anterior_time_stamps_indices = node.clean()
+                    for index in anterior_time_stamps_indices:
+                        self.remove_vertex_by_index(index)
 
     ###################################
     #        ACCESS FUNCTIONS         #
@@ -829,7 +859,7 @@ class DuckietownGraphBuilder(object):
         """
         with self.lock:
             result_dict = dict()
-            
+
             for node_id, node in self.node_dict.iteritems():
                 result_dict[node_id] = node.get_last_known_position()
 

@@ -31,6 +31,9 @@ class PointBroadcaster(threading.Thread):
                 node_pose: Pose of the node.
         """
         # Create broadcaster and transform.
+        if(node_pose == None):
+            print("No pose given for %s" % node_id)
+            return
         t = geometry_msgs.msg.TransformStamped()
         t.header.stamp = rospy.Time.now()
 
