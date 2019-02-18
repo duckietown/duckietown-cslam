@@ -29,7 +29,9 @@
     - [x] big values   (b = 1 or 2) --> No noticable difference with when using no kernel
     - [ ] real time test with medium values (all above is on same bag file for now)
   - [ ] find out what parameters should be applied
-- [ ] Better retro-interpolation policy ? 
+- [x] Better retro-interpolation policy
+  - [x] Re-read by Amaury, no idea to make it better
+  - [ ] Re read by somebody else?
 - [ ] Removing old vertices and edges: see "long term experiment" section
   - [x] Removing old vertices
   - [x] Stocking time defined in params
@@ -41,6 +43,8 @@
   - [x] Add the possibility to set them
   - [ ] Devise nice heuristics and implement them
 - [ ] Test AprilTag 3 library
+  - [x] Make a python binding
+  - [ ] Test it online
 - [ ] Increase the camera resolution *(Aleks working on it)*
 - [x] Make sense of the underused locks in duckietown_graph_builder
   - [x] reuse same lock as custom lock in g2ographbuilder
@@ -67,37 +71,14 @@
 
 Ideas:  
 - Setting watchtower to fixed state after a certain time. Maybe create a parallel g2o graph with only watchtowers and ground april tag, optimize it, and update the watchtower's positions in the complete one from time to time (to take into account that somebody or some bot moved a watchtower). Time interval to be defined.
-- Removing old edges and point as time passes. Maybe just storing all robot paths as we suppress them from the graph. This way complexity stays limited even with long or "infinite" experiments. Need to find a way to cycle (or re-use) the integer mapping from timestamps to g2o integer identifiers. Amaury is starting to code this part (see his branch).
-
+- Removing old edges and point as time passes. Maybe just storing all robot paths as we suppress them from the graph. This way complexity stays limited even with long or "infinite" experiments. Need to find a way to cycle (or re-use) the integer mapping from timestamps to g2o integer identifiers.
 
 ### Questions for g2o team
 
 - Do we need to call "compute_active_errors" and "compute_initial_guess" at each optimization iteration?
 - What exact purpose does the "online" argument of "optimize" serve? It seems to be used when optimization is done recursivly, which is our case. We might want to try it. We tried it and the g2o c++ lib crashes!
-- What really are robust Kernel. The value we put in it corresponds to the "b" value in chapter 5 on robust kernels?
+- What really are robust Kernel. The value we put in it corresponds to the "b" (or b squared) value in chapter 5 on robust kernels?
 - In remove_vertex, what does the "detach" bool do?
 
 ### TROUBLES
-
-- [ ] Graph builder sometimes crashes and sometimes not on same rosbags!
-  extract of one of the logs from transform_listener_ros.py: I don't know though if that is why it crashed or because the c++ part crashes.
-``` 
-rospy.internal][WARNING] 2019-02-14 14:31:41,485: Unknown error initiating TCP/IP socket to amaury-FX503VM:36401 (http://amaury-FX503VM:44989/): Traceback (most recent call last):
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 557, in connect
-    self.read_header()
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 650, in read_header
-    self._validate_header(read_ros_handshake_header(sock, self.read_buff, self.protocol.buff_size))
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rosgraph/network.py", line 362, in read_ros_handshake_header
-    d = sock.recv(buff_size)
-error: [Errno 104] Connection reset by peer
-
-[rospy.internal][INFO] 2019-02-14 14:31:41,485: topic[/poses_acquisition/odometry] removing connection to http://amaury-FX503VM:44989/
-[rospy.internal][WARNING] 2019-02-14 14:31:41,485: Unknown error initiating TCP/IP socket to amaury-FX503VM:36401 (http://amaury-FX503VM:44989/): Traceback (most recent call last):
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 557, in connect
-    self.read_header()
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 650, in read_header
-    self._validate_header(read_ros_handshake_header(sock, self.read_buff, self.protocol.buff_size))
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rosgraph/network.py", line 362, in read_ros_handshake_header
-    d = sock.recv(buff_size)
-error: [Errno 104] Connection reset by peer
-``` 
+- [x] No reported issues
