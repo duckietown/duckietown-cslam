@@ -116,8 +116,8 @@ class PathBroadcaster(threading.Thread):
             point = geometry_msgs.msg.Point()
             point.x = node_pose.t[0]
             point.y = node_pose.t[1]
-            # point.z = node_pose.t[2]
-            point.z = 0.001
+            point.z = node_pose.t[2]
+            # point.z = 0.001
             line_strip.points.append(point)
         # - Create rotation matrix.
         #   Verify that the rotation is a proper rotation.
@@ -247,13 +247,13 @@ class TransformListener():
 
         return id
 
-    def handle_odometry_message(self, id, transform, time_stamp):
+    def handle_odometry_message(self, node_id, transform, time_stamp):
         """Processes an odometry message, adding an edge to the graph and
            keeping track of the last time stamp before each new odometry message
            (needed to handle edges in the pose graph and connect nodes).
 
            Args:
-               id: ID of the object sending the odometry message.
+               node_id: ID of the object sending the odometry message.
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
@@ -264,27 +264,27 @@ class TransformListener():
 
         # Get the time stamp of the previous odometry message and update the
         # time stamp of the last odometry message with the current timestamp.
-        if (id in self.old_odometry_stamps):
-            old_time_stamp = self.old_odometry_stamps[id]
-        self.old_odometry_stamps[id] = time_stamp
+        if (node_id in self.old_odometry_stamps):
+            old_time_stamp = self.old_odometry_stamps[node_id]
+        self.old_odometry_stamps[node_id] = time_stamp
 
         # Add edge to the graph.
-        return self.pose_graph.add_edge(id, id, transform, time_stamp, old_time_stamp)
+        return self.pose_graph.add_edge(node_id, node_id, transform, time_stamp, old_time_stamp)
 
-    def handle_watchtower_message(self, id0, id1, transform, time_stamp):
+    def handle_watchtower_message(self, node_id0, node_id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a
            watchtower and adds an edge to the graph. If the object seen is a
            Duckiebot, adjusts the pose accordingly.
 
            Args:
-               id0: ID of the object (watchtower) that sees the April tag of the
+               node_id0: ID of the object (watchtower) that sees the April tag of the
                     other object.
-               id1: ID of the object whose April tag is seen by the watchtower.
+               node_id1: ID of the object whose April tag is seen by the watchtower.
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
         # Get type of the object seen.
-        type_of_object_seen = id1.split("_")[0]
+        type_of_object_seen = node_id1.split("_")[0]
         if (type_of_object_seen == "duckiebot"):
             # In case of Duckiebot the pose needs to be adjusted to take into
             # account the pose of the April tag w.r.t. the base frame of the
@@ -301,39 +301,39 @@ class TransformListener():
             transform = transform * H_apriltag_to_base
 
             # Add edge to the graph.
-            return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+            return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
         else:
             # Add edge to the graph.
-            if id0 not in self.edge_counters:
-                self.edge_counters[id0] = dict()
-            if id1 not in self.edge_counters[id0]:
-                self.edge_counters[id0][id1] = 0
+            if node_id0 not in self.edge_counters:
+                self.edge_counters[node_id0] = dict()
+            if node_id1 not in self.edge_counters[node_id0]:
+                self.edge_counters[node_id0][node_id1] = 0
 
-            if(self.edge_counters[id0][id1] < self.max_number_same_edge):
-                self.pose_graph.add_edge(id0, id1, transform, time_stamp)
-                self.edge_counters[id0][id1] += 1
+            if(self.edge_counters[node_id0][node_id1] < self.max_number_same_edge):
+                self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
+                self.edge_counters[node_id0][node_id1] += 1
             else:
                 a = random.randint(0, self.rejection_sampling_int)
                 if(a == 0):
-                    self.edge_counters[id0][id1] += 1
+                    self.edge_counters[node_id0][node_id1] += 1
 
-                    return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+                    return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
 
-    def handle_duckiebot_message(self, id0, id1, transform, time_stamp):
+    def handle_duckiebot_message(self, node_id0, node_id1, transform, time_stamp):
         """Processes a message containing the pose of an object seen by a
            Duckiebot and adds an edge to the graph. Note: we assume that a
            Duckiebot cannot see the April tag of another Duckiebot, so no
            adjustment based on the object seen is needed.
 
            Args:
-               id0: ID of the object (Duckiebot) that sees the April tag of the
+               node_id0: ID of the object (Duckiebot) that sees the April tag of the
                     other object.
-               id1: ID of the object whose April tag is seen by the Duckiebot.
+               node_id1: ID of the object whose April tag is seen by the Duckiebot.
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
         # Get type of the object that sees the other object, for a sanity check.
-        type_of_object_seeing = id0.split("_")[0]
+        type_of_object_seeing = node_id0.split("_")[0]
         if (type_of_object_seeing == "duckiebot"):
             # The pose needs to be adjusted to take into account the relative
             # pose of the camera on the Duckiebot w.r.t. to the base frame of
@@ -352,12 +352,12 @@ class TransformListener():
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
         else:
-            print("This should not be here! %s " % id0)
+            print("This should not be here! %s " % node_id0)
 
         # Add edge to the graph.
-        return self.pose_graph.add_edge(id0, id1, transform, time_stamp)
+        return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
 
-    def filter_name(self, id):
+    def filter_name(self, node_id):
         """ Converts the frame IDs of the objects in the ROS messages (e.g.,
             Duckiebots, watchtowers, etc.) to the format <type>_<tag_id>, where
             <type> should be one of the types defined in DuckietownGraphBuilder
@@ -365,40 +365,40 @@ class TransformListener():
             the April tag of the object in the ID map.
 
             Args:
-                id: Frame ID in the ROS message, to be converted.
+                node_id: Frame ID in the ROS message, to be converted.
 
             Returns:
                 Converted frame ID.
         """
-        if (id.startswith("watchtower")):
-            id = "watchtower_%d" % int(id.strip("watchtower"))
+        if (node_id.startswith("watchtower")):
+            node_id = "watchtower_%d" % int(node_id.strip("watchtower"))
 
-        if (id.startswith("demowatchtower")):
-            id = "watchtower_%d" % int(id.strip("demowatchtower"))
+        if (node_id.startswith("demowatchtower")):
+            node_id = "watchtower_%d" % int(node_id.strip("demowatchtower"))
 
-        elif (len(id.split("_")) == 1):
-            id = self.find_vertex_name(id)
+        elif (len(node_id.split("_")) == 1):
+            node_id = self.find_vertex_name(node_id)
 
-        return id
+        return node_id
 
     def transform_callback(self, data):
         """ ROS callback.
         """
         self.num_messages_received += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
-        id0 = data.header.frame_id
-        id1 = data.child_frame_id
+        node_id0 = data.header.frame_id
+        node_id1 = data.child_frame_id
         # Convert the frame IDs to the right format.
-        id0 = self.filter_name(id0)
-        id1 = self.filter_name(id1)
+        node_id0 = self.filter_name(node_id0)
+        node_id1 = self.filter_name(node_id1)
 
         # Ignore messages from one watchtower to another watchtower (i.e.,
         # odometry messages between watchtowers). TODO: check if we can avoid
         # sending these messages.
         is_from_watchtower = False
-        if (id0.startswith("watchtower")):
+        if (node_id0.startswith("watchtower")):
             is_from_watchtower = True
-            if (id1.startswith("watchtower")):
+            if (node_id1.startswith("watchtower")):
                 # print(data)
                 return 0
 
@@ -426,19 +426,19 @@ class TransformListener():
         time = Time(data.header.stamp)
         time_stamp = time.data.secs + time.data.nsecs * 10**(-9)
 
-        if (id1 == id0):
+        if (node_id1 == node_id0):
             # Same ID: odometry message, e.g. the same Duckiebot sending
             # odometry information at different instances in time.
             self.handle_odometry_message(
-                id1, transform, time_stamp)
+                node_id1, transform, time_stamp)
         elif (is_from_watchtower):
             # Tag detected by a watchtower.
             self.handle_watchtower_message(
-                id0, id1, transform, time_stamp)
+                node_id0, node_id1, transform, time_stamp)
         else:
             # Tag detected by a Duckiebot.
             self.handle_duckiebot_message(
-                id0, id1, transform, time_stamp)
+                node_id0, node_id1, transform, time_stamp)
 
     def optimization_callback(self, timer_event):
         if (self.num_messages_received >= self.minimum_edge_number_for_optimization):

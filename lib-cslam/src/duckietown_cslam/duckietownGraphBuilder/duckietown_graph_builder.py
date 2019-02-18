@@ -191,7 +191,6 @@ class MovableNode(Node):
                 with self.node_lock:
                     self.last_time_stamp = time_stamp
             else:
-                # TODO : handle retrointerpolation
                 if self.retro_interpolate:
                     # Check that message is in the odometry chained part of the graph
                     if(time_stamp > self.first_odometry_time_stamp and time_stamp < self.last_odometry_time_stamp):
@@ -617,7 +616,7 @@ class DuckietownGraphBuilder(object):
                 # For initial floor tags, add an edge between the reference
                 # vertex and the newly-added vertex for the pose of the tag.
                 self.graph.add_edge(
-                    vertex0_id=0, vertex1_id=vertex_index, measure=vertex_pose, robust_kernel_value=0.1)
+                    vertex0_id=0, vertex1_id=vertex_index, measure=vertex_pose)
 
     def add_edge(self,
                  node_id_0,
