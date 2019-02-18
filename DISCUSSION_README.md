@@ -48,8 +48,9 @@
   - [x] test on rosbag to lookout for deadlocks
   - [ ] real time test to spot out deadlocks 
 - [ ] Find heuristic to setting watchtowers (and eventually roadsigns) fixed
-- [ ] Factorizing duckietown graph builder in mutliple classes (node class for instance!!):
-  --> Would make the code much more readable and easy to change and maintain!!
+- [x] Factorizing duckietown graph builder in mutliple classes (node class for instance!!):
+  --> Made the code much more readable and easy to change and maintain!!
+
 ### Odometry
 - Using visual odometry :
   - [x] Reading their code --> some unclear things:
@@ -74,7 +75,7 @@ Ideas:
 - Do we need to call "compute_active_errors" and "compute_initial_guess" at each optimization iteration?
 - What exact purpose does the "online" argument of "optimize" serve? It seems to be used when optimization is done recursivly, which is our case. We might want to try it. We tried it and the g2o c++ lib crashes!
 - What really are robust Kernel. The value we put in it corresponds to the "b" value in chapter 5 on robust kernels?
-
+- In remove_vertex, what does the "detach" bool do?
 
 ### TROUBLES
 

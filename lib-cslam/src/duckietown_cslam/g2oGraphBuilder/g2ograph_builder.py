@@ -63,7 +63,7 @@ class g2oGraphBuilder():
             self.optimizer.add_vertex(vc)
             self.set_of_new_vertex.add(vc)
 
-    def add_edge(self, vertex0_id, vertex1_id, measure, measure_information=None, robust_kernel_value=None):
+    def add_edge(self, vertex0_id, vertex1_id, measure, robust_kernel_value=None, measure_information=None):
         '''
         Helper function to add an edge
         vertex 0 and 1 are valid IDs of vertex inside optimizer.
@@ -75,7 +75,6 @@ class g2oGraphBuilder():
         # They have to be specified separatly for each edge, with a value
         # example : robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
         #           edge.set_robust_kernel(robust_kernel)
-        
 
         # print("add_edge")
         # print(optimizer.vertices())
@@ -143,7 +142,12 @@ class g2oGraphBuilder():
                               robust_kernel_value=robust_kernel_value)
 
     def vertices_and_edges(self):
-        return (self.optimizer.vertices(), self.optimizer.edges())
+        vertices = []
+        edges = []
+        with self.lock:
+            vertices = self.optimizer.vertices()
+            edges = self.optimizer.edges()
+        return vertices, edges
 
     def vertex_pose(self, vertexId):
         # print("vertex_pose")
@@ -158,7 +162,9 @@ class g2oGraphBuilder():
                     print("Vertex %i wasn't and still isn't in g2o graph" %
                           self.last_lost)
                 self.last_lost = vertexId
-        return (self.optimizer.vertex(vertexId).estimate())
+                return None
+            else:
+                return (self.optimizer.vertex(vertexId).estimate())
 
     def set_fixed(self, vertexId):
         with self.lock:
@@ -169,15 +175,16 @@ class g2oGraphBuilder():
 
     def get_transform(self, vertex1, vertex2):
         # print("get_transform")
+        transform = 0
         with self.lock:
             if (vertex1 not in self.optimizer.vertices() or
                     vertex2 not in self.optimizer.vertices()):
                 print("Requesting transform between non existant vertices")
-                return 0
-            vc1 = self.optimizer.vertex(vertex1).estimate()
-            vc2 = self.optimizer.vertex(vertex2).estimate()
-            transfom = vc1.inverse() * vc2
-        return transfom
+            else:
+                vc1 = self.optimizer.vertex(vertex1).estimate()
+                vc2 = self.optimizer.vertex(vertex2).estimate()
+                transform = vc1.inverse() * vc2
+        return transform
 
     def remove_vertex(self, vertex_id):
         # print("remove_vertex")
@@ -213,6 +220,7 @@ class g2oGraphBuilder():
                  output_name="output.g2o",
                  online=False):
         # print("optimize")
+        chi = 0
         with self.lock:
             self.optimizer.set_verbose(verbose)
             if (not self.already_initialized):
@@ -223,24 +231,27 @@ class g2oGraphBuilder():
                 self.already_initialized = True
                 self.optimizer.compute_initial_guess()
             else:
-                if(not self.has_removed):
-                    self.optimizer.update_initialization(self.set_of_new_vertex,
-                                                         self.set_of_new_edges)
-                else:
-                    self.optimizer.initialize_optimization()
-                    self.has_removed = False
+                # if(not self.has_removed):
+                #     self.optimizer.update_initialization(self.set_of_new_vertex,
+                #                                          self.set_of_new_edges)
+                # else:
+                self.optimizer.initialize_optimization()
+                # self.has_removed = False
                 self.set_of_new_edges = set()
                 self.set_of_new_vertex = set()
                 # self.optimizer.compute_initial_guess()
             self.optimizer.compute_active_errors()
-            if (verbose):
+            if verbose:
                 print('Optimization:')
-                print('Initial chi2 = %f' % self.optimizer.chi2())
+                print('Initial chi2 = %f' % self.optimizer.active_chi2())
             self.optimizer.optimize(number_of_steps, online=online)
-
+            chi = self.optimizer.active_chi2()
+            if not verbose:
+                print("Optimization finished with chi2 = %f" % chi)
+                pass
             if (save_result):
                 self.optimizer.save(output_name)
 
-        return self.optimizer.chi2()
+        return chi
         # batch_stat = self.optimizer.batch_statistics
         # print(batch_stat)

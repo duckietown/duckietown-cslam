@@ -32,7 +32,6 @@ RUN cd /graph_optimizer/lib-cslam; python setup.py develop --no-deps
 ## Pose graph optimizer
 ARG ros_nodes=ros-cslam/src/pose_graph_builder
 RUN mkdir -p /graph_optimizer/catkin_ws/src/pose_graph_builder
-
 COPY ${ros_nodes} /graph_optimizer/catkin_ws/src/pose_graph_builder
 
 # Setup the ros-visualization
