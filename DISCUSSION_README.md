@@ -48,8 +48,9 @@
   - [x] test on rosbag to lookout for deadlocks
   - [ ] real time test to spot out deadlocks 
 - [ ] Find heuristic to setting watchtowers (and eventually roadsigns) fixed
-- [ ] Factorizing duckietown graph builder in mutliple classes (node class for instance!!):
-  --> Would make the code much more readable and easy to change and maintain!!
+- [x] Factorizing duckietown graph builder in mutliple classes (node class for instance!!):
+  --> Made the code much more readable and easy to change and maintain!!
+
 ### Odometry
 - Using visual odometry :
   - [x] Reading their code --> some unclear things:
