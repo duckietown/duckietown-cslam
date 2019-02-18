@@ -12,6 +12,7 @@ RUN apt-get install -y qtbase5-dev qtdeclarative5-dev
 RUN apt-get install -y libeigen3-dev
 RUN apt-get install -y libsuitesparse-dev
 RUN apt-get install -y python-pip python-numpy python-scipy 
+RUN apt-get install -y vim
 
 # RUN pip install --upgrade pip
 RUN pip install PyGeometry 
@@ -22,8 +23,6 @@ COPY ${g2o_lib_dir} /graph_optimizer/lib-cslam/src/g2opy
 
 RUN cd /graph_optimizer/lib-cslam/src/g2opy ; mkdir build ; cd build ; cmake -DPYBIND11_PYTHON_VERSION=2.7 ..  ; make -j3; cd ..; python setup.py install
 
-RUN apt-get install -y vim
-
 ARG graph_lib_dir=lib-cslam/
 COPY ${graph_lib_dir} /graph_optimizer/lib-cslam/
 
@@ -33,7 +32,6 @@ RUN cd /graph_optimizer/lib-cslam; python setup.py develop --no-deps
 ## Pose graph optimizer
 ARG ros_nodes=ros-cslam/src/pose_graph_builder
 RUN mkdir -p /graph_optimizer/catkin_ws/src/pose_graph_builder
-
 COPY ${ros_nodes} /graph_optimizer/catkin_ws/src/pose_graph_builder
 
 # Setup the ros-visualization

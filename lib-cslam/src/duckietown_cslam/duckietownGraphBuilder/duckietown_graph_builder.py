@@ -139,10 +139,10 @@ class Node(object):
 
 
 class MovableNode(Node):
-    def __init__(self, node_id, types, duckietown_graph, stocking_time=None):
+    def __init__(self, node_id, types, duckietown_graph, retro_interpolate=True, stocking_time=None):
         super(MovableNode, self).__init__(
             node_id, types, duckietown_graph, movable=True)
-
+        self.retro_interpolate = retro_interpolate
         self.first_odometry_time_stamp = 0
         self.last_odometry_time_stamp = 0
         self.cyclic_counter = CyclicCounter(100000, 1000, self.node_id)
@@ -183,12 +183,12 @@ class MovableNode(Node):
                 self.last_time_stamp = time_stamp
             else:
                 # TODO : handle retrointerpolation
-                # if self.retro_interpolate:
-                #     # Check that message is in the odometry chained part of the graph
-                #     if(time_stamp > self.first_odometry_time_stamp and time_stamp < self.last_odometry_time_stamp):
-                #         # check that optimization was made at least once, so that no absurd edge is created
-                #         if(self.chi2 != 0.0):
-                #             self.retrointerpolate(time_stamp, node_id)
+                if self.retro_interpolate:
+                    # Check that message is in the odometry chained part of the graph
+                    if(time_stamp > self.first_odometry_time_stamp and time_stamp < self.last_odometry_time_stamp):
+                        # check that optimization was made at least once, so that no absurd edge is created
+                        if(self.duckietown_graph.chi2 != 0.0):
+                            self.retrointerpolate(time_stamp)
                 pass
 
             return True
@@ -274,7 +274,7 @@ class MovableNode(Node):
             pass
         return interpolation_list
 
-    def retro_interpolate(self, time_stamp):
+    def retrointerpolate(self, time_stamp):
         time_stamp_before = 0.0
         time_stamp_after = float('inf')
         for time_stamp_it in self.time_stamps_to_indices:
@@ -505,7 +505,7 @@ class DuckietownGraphBuilder(object):
             node_type = node_id.split("_")[0]
             if (node_type in self.movable):
                 node = MovableNode(node_id, self.types,
-                                   self, self.stocking_time)
+                                   self, stocking_time=self.stocking_time, retro_interpolate=self.retro_interpolate)
                 self.node_dict[node_id] = node
 
             else:
@@ -859,7 +859,7 @@ class DuckietownGraphBuilder(object):
         """
         with self.lock:
             result_dict = dict()
-
+            # TODO : dictionnary changed size during iteration!! WTF
             for node_id, node in self.node_dict.iteritems():
                 result_dict[node_id] = node.get_last_known_position()
 
