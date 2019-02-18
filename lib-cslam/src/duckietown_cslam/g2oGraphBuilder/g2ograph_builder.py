@@ -75,7 +75,6 @@ class g2oGraphBuilder():
         # They have to be specified separatly for each edge, with a value
         # example : robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
         #           edge.set_robust_kernel(robust_kernel)
-        
 
         # print("add_edge")
         # print(optimizer.vertices())
@@ -144,10 +143,10 @@ class g2oGraphBuilder():
 
     def vertices_and_edges(self):
         vertices = []
-        edges= []
+        edges = []
         with self.lock:
             vertices = self.optimizer.vertices()
-            edges =  self.optimizer.edges()
+            edges = self.optimizer.edges()
         return vertices, edges
 
     def vertex_pose(self, vertexId):
@@ -237,7 +236,7 @@ class g2oGraphBuilder():
                 #                                          self.set_of_new_edges)
                 # else:
                 self.optimizer.initialize_optimization()
-                    # self.has_removed = False
+                # self.has_removed = False
                 self.set_of_new_edges = set()
                 self.set_of_new_vertex = set()
                 # self.optimizer.compute_initial_guess()

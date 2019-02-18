@@ -488,7 +488,6 @@ class TransformListener():
                          self.transform_callback)
 
         # Create a regular callback to invoke optimization on a regular basis
-        print(self.optimization_frequency)
         rospy.Timer(rospy.Duration(self.optimization_period),
                     self.optimization_callback)
 
