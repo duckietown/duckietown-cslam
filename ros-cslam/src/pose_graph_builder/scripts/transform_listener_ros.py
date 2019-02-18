@@ -116,8 +116,8 @@ class PathBroadcaster(threading.Thread):
             point = geometry_msgs.msg.Point()
             point.x = node_pose.t[0]
             point.y = node_pose.t[1]
-            point.z = node_pose.t[2]
-            # point.z = 0.001
+            # point.z = node_pose.t[2]
+            point.z = 0.001
             line_strip.points.append(point)
         # - Create rotation matrix.
         #   Verify that the rotation is a proper rotation.
