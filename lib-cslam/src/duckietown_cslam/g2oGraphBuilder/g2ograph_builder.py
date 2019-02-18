@@ -143,7 +143,12 @@ class g2oGraphBuilder():
                               robust_kernel_value=robust_kernel_value)
 
     def vertices_and_edges(self):
-        return (self.optimizer.vertices(), self.optimizer.edges())
+        vertices = []
+        edges= []
+        with self.lock:
+            vertices = self.optimizer.vertices()
+            edges =  self.optimizer.edges()
+        return vertices, edges
 
     def vertex_pose(self, vertexId):
         # print("vertex_pose")
@@ -171,15 +176,16 @@ class g2oGraphBuilder():
 
     def get_transform(self, vertex1, vertex2):
         # print("get_transform")
+        transform = 0
         with self.lock:
             if (vertex1 not in self.optimizer.vertices() or
                     vertex2 not in self.optimizer.vertices()):
                 print("Requesting transform between non existant vertices")
-                return 0
-            vc1 = self.optimizer.vertex(vertex1).estimate()
-            vc2 = self.optimizer.vertex(vertex2).estimate()
-            transfom = vc1.inverse() * vc2
-        return transfom
+            else:
+                vc1 = self.optimizer.vertex(vertex1).estimate()
+                vc2 = self.optimizer.vertex(vertex2).estimate()
+                transform = vc1.inverse() * vc2
+        return transform
 
     def remove_vertex(self, vertex_id):
         # print("remove_vertex")
@@ -215,6 +221,7 @@ class g2oGraphBuilder():
                  output_name="output.g2o",
                  online=False):
         # print("optimize")
+        chi = 0
         with self.lock:
             self.optimizer.set_verbose(verbose)
             if (not self.already_initialized):
@@ -225,12 +232,12 @@ class g2oGraphBuilder():
                 self.already_initialized = True
                 self.optimizer.compute_initial_guess()
             else:
-                if(not self.has_removed):
-                    self.optimizer.update_initialization(self.set_of_new_vertex,
-                                                         self.set_of_new_edges)
-                else:
-                    self.optimizer.initialize_optimization()
-                    self.has_removed = False
+                # if(not self.has_removed):
+                #     self.optimizer.update_initialization(self.set_of_new_vertex,
+                #                                          self.set_of_new_edges)
+                # else:
+                self.optimizer.initialize_optimization()
+                    # self.has_removed = False
                 self.set_of_new_edges = set()
                 self.set_of_new_vertex = set()
                 # self.optimizer.compute_initial_guess()
@@ -239,10 +246,10 @@ class g2oGraphBuilder():
                 print('Optimization:')
                 print('Initial chi2 = %f' % self.optimizer.chi2())
             self.optimizer.optimize(number_of_steps, online=online)
-
+            chi = self.optimizer.chi2()
             if (save_result):
                 self.optimizer.save(output_name)
 
-        return self.optimizer.chi2()
+        return chi
         # batch_stat = self.optimizer.batch_statistics
         # print(batch_stat)
