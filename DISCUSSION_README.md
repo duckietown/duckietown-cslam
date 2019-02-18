@@ -75,7 +75,7 @@ Ideas:
 - Do we need to call "compute_active_errors" and "compute_initial_guess" at each optimization iteration?
 - What exact purpose does the "online" argument of "optimize" serve? It seems to be used when optimization is done recursivly, which is our case. We might want to try it. We tried it and the g2o c++ lib crashes!
 - What really are robust Kernel. The value we put in it corresponds to the "b" value in chapter 5 on robust kernels?
-
+- In remove_vertex, what does the "detach" bool do?
 
 ### TROUBLES
 

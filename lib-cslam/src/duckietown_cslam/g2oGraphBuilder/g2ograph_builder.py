@@ -241,11 +241,14 @@ class g2oGraphBuilder():
                 self.set_of_new_vertex = set()
                 # self.optimizer.compute_initial_guess()
             self.optimizer.compute_active_errors()
-            if (verbose):
+            if verbose:
                 print('Optimization:')
-                print('Initial chi2 = %f' % self.optimizer.chi2())
+                print('Initial chi2 = %f' % self.optimizer.active_chi2())
             self.optimizer.optimize(number_of_steps, online=online)
-            chi = self.optimizer.chi2()
+            chi = self.optimizer.active_chi2()
+            if not verbose:
+                print("Optimization finished with chi2 = %f" % chi)
+                pass
             if (save_result):
                 self.optimizer.save(output_name)
 

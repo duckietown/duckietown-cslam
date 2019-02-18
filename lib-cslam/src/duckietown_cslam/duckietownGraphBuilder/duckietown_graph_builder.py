@@ -242,7 +242,7 @@ class MovableNode(Node):
             }
         # Sort the time stamps.
         sorted_time_stamps = sorted(to_interpolate)
-        print("perfoming interpolation on %d nodes" % len(sorted_time_stamps))
+        # print("perfoming interpolation on %d nodes" % len(sorted_time_stamps))
         # Find the total time (time between the last and the first timestamp).
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
         if (total_delta_t == 0.0):
