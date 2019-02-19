@@ -10,8 +10,13 @@ from cv_bridge import CvBridge, CvBridgeError
 
 import sys
 import os
-import multiprocessing
 import cPickle as pickle
+
+import multiprocessing
+import logging
+import traceback
+logger = multiprocessing.log_to_stderr()
+logger.setLevel(logging.INFO)
 
 import numpy as np
 import math
@@ -32,16 +37,21 @@ def runDeviceSideProcess(ROS_MASTER_URI, outputDictQueue, quitEvent):
     """
     Receive and process data from the remote device (Duckiebot or watchtower).
     """
-    os.environ['ROS_MASTER_URI'] = ROS_MASTER_URI
-    ap = acquisitionProcessor(outputDictQueue)
-    ap.update(quitEvent)
 
+    os.environ['ROS_MASTER_URI'] = ROS_MASTER_URI
+    ap = acquisitionProcessor(outputDictQueue, logger)
+    ap.update(quitEvent)
 def runServerSideProcess(ROS_MASTER_URI, outpuDictQueue, quitEvent):
     """
     Publush the processed data to the ROS Master that the graph optimizer uses.
     """
-    os.environ['ROS_MASTER_URI'] = ROS_MASTER_URI
-    publishOnServer(outputDictQueue, quitEvent)
+    try:
+        os.environ['ROS_MASTER_URI'] = ROS_MASTER_URI
+        publishOnServer(outputDictQueue, quitEvent)
+    except Exception as error:
+        serverSideProcessException.put(obj=traceback.format_exc(),
+                                       block=True,
+                                       timeout=None)
 
 if __name__ == '__main__':
     """
@@ -59,11 +69,15 @@ if __name__ == '__main__':
     # outputDictQueue is used to pass data between the two processes
     outputDictQueue = multiprocessing.Queue(maxsize=20)
 
+    # Sharing excepton states
+    deviceSideProcessException = multiprocessing.Queue()
+    serverSideProcessException = multiprocessing.Queue()
+
     deviceSideProcess = multiprocessing.Process(target=runDeviceSideProcess,
-                                                args=(ros_master_uri_device,outputDictQueue,quitEvent,),
+                                                args=(ros_master_uri_device,outputDictQueue,quitEvent),
                                                 name="deviceSideProcess")
     serverSideProcess = multiprocessing.Process(target=runServerSideProcess,
-                                                args=(ros_master_uri_server,outputDictQueue,quitEvent,),
+                                                args=(ros_master_uri_server,outputDictQueue,quitEvent),
                                                 name="serverSideProcess")
 
     deviceSideProcess.start()
@@ -73,10 +87,15 @@ if __name__ == '__main__':
     while True:
         if not deviceSideProcess.is_alive():
             quitEvent.set()
+            exc_info = to_child.recv()
             deviceSideProcess.terminate()
             serverSideProcess.terminate()
             outputDictQueue.close()
-            raise Exception("The device side process exited for some reason. Stopping everything.")
+            print("The device side process exited. Stopping everything.")
+            while not deviceSideProcessException.empty():
+                print('a')
+                print(deviceSideProcessException.get(block=False, timeout=1))
+            deviceSideProcessException.close()
             sys.exit()
 
         if not serverSideProcess.is_alive():
@@ -84,5 +103,7 @@ if __name__ == '__main__':
             deviceSideProcess.terminate()
             serverSideProcess.terminate()
             outputDictQueue.close()
-            raise Exception("The server side process exited for some reason. Stopping everything.")
+            print("The server side process exited. Stopping everything.")
+            e = serverSideProcessException.get(block=False, timeout=1)
+            raise e
             sys.exit()

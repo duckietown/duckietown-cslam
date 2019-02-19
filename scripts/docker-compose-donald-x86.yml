@@ -4,9 +4,9 @@ services:
       image: duckietown/cslam-acquisition:x86
       environment:
         - ACQ_ROS_MASTER_URI_DEVICE=donaldthegreat.local
-        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.180
-        - ACQ_ROS_MASTER_URI_SERVER=duckietown3.local
-        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.17
+        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.43.98
+        - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
+        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.43.63
         - ACQ_DEVICE_NAME=donaldthegreat
         - ACQ_BEAUTIFY=1
         - ACQ_STATIONARY_ODOMETRY=0
