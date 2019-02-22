@@ -1,6 +1,12 @@
 ## Questions for first meeting:
+- NETWORK RELIABILITY!??
+- Should we stick with how the network is set up now, or should we make a dedicated network?
+- HW : Stock of parts for new towers, should we rebuild the old ones (with new design)
 - Design : How and where do we save the trajectory data? Is there a predefined standard for AIDO? 
-
+- Better way to increase the camera resolution?
+- Apriltags3 debugging
+- We should start with performance testing ASAP
+- [for Aleks] HW exercises platform now urgent!!!
 
 ## Topics to handle
 ### Accuracy criterions
@@ -81,4 +87,7 @@ Ideas:
 - In remove_vertex, what does the "detach" bool do?
 
 ### TROUBLES
-- [x] No reported issues
+- network is the bottle neck
+- otherwise the sky is clear
+
+
