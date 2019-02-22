@@ -7,7 +7,11 @@
 - Apriltags3 debugging
 - We should start with performance testing ASAP
 - [for Aleks] HW exercises platform now urgent!!!
-
+- We need CAD models of MegaBots, old and new watchtowers to get transforms to their baselink from cameras/mounted tags
+- It would also be good to have CAD models for watchtowes for better visualization (low priority)
+- Existing framework/example of web interface for controlling watchtowers
+- Distance measurement laser to validate measurements of apriltags (they should be probably approximately correct but its good to verify)
+- Andrea said something about having local bag files (which are split every 5 mins) in the meeting on Wed. Is there any existing code to manage that as well as to auto retreive those from the duckiebots/watchtowers. Although I don't trust bag files after the sys-id assignment, maybe compressed image bags are better? If we can have proper frequency on bag files locally recorded, we can merge them and that will definitely give better results than running the graph optimizer online. Possible issue: Time on all watchtowers/duckiebots should be in perfect sync. This sync can cause problems while doing graph optimization online as well. 
 ## Topics to handle
 ### Accuracy criterions
 **Goals**:
@@ -71,6 +75,12 @@
   - [ ] Testing it!
 
 
+
+### Debugging
+ - Web interface for watchtowers
+   - [ ] Support to launch acquisition
+   - [ ] Support to view images
+   - [ ] Add functions of existing diagnostics UI to this
 
 ### Long term experiments
 **Reminder**: In the long term we want it to run 24/7, so we should anticipate this.
