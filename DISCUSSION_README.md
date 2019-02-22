@@ -1,7 +1,12 @@
 ## Questions for first meeting:
 - NETWORK RELIABILITY!??
+    - Sascha, Mac, Selcuk, Andrea, Jacopo
+    - Systematic debugging (i.e. remove internet)
+    - Check the router specs and statics
+    - avahi 
+    - check if we changed something in the configuration of the duckiebots (net related)
 - Should we stick with how the network is set up now, or should we make a dedicated network?
-- HW : Stock of parts for new towers, should we rebuild the old ones (with new design)
+- HW : Stock of parts for new towers, should we rebuild the old ones (with new design) check RPis of old towers
 - Design : How and where do we save the trajectory data? Is there a predefined standard for AIDO? 
 - Better way to increase the camera resolution?
 - Apriltags3 debugging
@@ -10,7 +15,8 @@
 - We need CAD models of MegaBots, old and new watchtowers to get transforms to their baselink from cameras/mounted tags
 - It would also be good to have CAD models for watchtowes for better visualization (low priority)
 - Existing framework/example of web interface for controlling watchtowers
-- Distance measurement laser to validate measurements of apriltags (they should be probably approximately correct but its good to verify)
+- Distance measurement laser to validate measurements of apriltags (they should be probably approximately correct but its good to verify) -> Marcus
+- CHECK the camera distortion models
 - Andrea said something about having local bag files (which are split every 5 mins) in the meeting on Wed. Is there any existing code to manage that as well as to auto retreive those from the duckiebots/watchtowers. Although I don't trust bag files after the sys-id assignment, maybe compressed image bags are better? If we can have proper frequency on bag files locally recorded, we can merge them and that will definitely give better results than running the graph optimizer online. Possible issue: Time on all watchtowers/duckiebots should be in perfect sync. This sync can cause problems while doing graph optimization online as well. 
 ## Topics to handle
 ### Accuracy criterions
