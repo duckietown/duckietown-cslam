@@ -1,9 +1,11 @@
 ## Questions for first meeting:
-- Design : How and where do we save the trajectory data? Is there a predefined standard for AIDO? 
-- HW : Stock of parts for new towers, should we rebuild the old ones (with new design)
+- NETWORK RELIABILITY!??
 - Should we stick with how the network is set up now, or should we make a dedicated network?
+- HW : Stock of parts for new towers, should we rebuild the old ones (with new design)
+- Design : How and where do we save the trajectory data? Is there a predefined standard for AIDO? 
 - Better way to increase the camera resolution?
 - Apriltags3 debugging
+- We should start with performance testing ASAP
 - [for Aleks] HW exercises platform now urgent!!!
 
 ## Topics to handle
