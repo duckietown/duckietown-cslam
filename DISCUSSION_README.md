@@ -3,6 +3,7 @@
 - HW : Stock of parts for new towers, should we rebuild the old ones (with new design)
 - Should we stick with how the network is set up now, or should we make a dedicated network?
 - Better way to increase the camera resolution?
+- Apriltags3 debugging
 - [for Aleks] HW exercises platform now urgent!!!
 
 ## Topics to handle
