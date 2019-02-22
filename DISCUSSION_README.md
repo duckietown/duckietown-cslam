@@ -85,25 +85,7 @@ Ideas:
 
 ### TROUBLES
 
-- [ ] Graph builder sometimes crashes and sometimes not on same rosbags!
-  extract of one of the logs from transform_listener_ros.py: I don't know though if that is why it crashed or because the c++ part crashes.
-``` 
-rospy.internal][WARNING] 2019-02-14 14:31:41,485: Unknown error initiating TCP/IP socket to amaury-FX503VM:36401 (http://amaury-FX503VM:44989/): Traceback (most recent call last):
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 557, in connect
-    self.read_header()
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 650, in read_header
-    self._validate_header(read_ros_handshake_header(sock, self.read_buff, self.protocol.buff_size))
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rosgraph/network.py", line 362, in read_ros_handshake_header
-    d = sock.recv(buff_size)
-error: [Errno 104] Connection reset by peer
+- network is the bottle neck
+- otherwise the sky is clear
 
-[rospy.internal][INFO] 2019-02-14 14:31:41,485: topic[/poses_acquisition/odometry] removing connection to http://amaury-FX503VM:44989/
-[rospy.internal][WARNING] 2019-02-14 14:31:41,485: Unknown error initiating TCP/IP socket to amaury-FX503VM:36401 (http://amaury-FX503VM:44989/): Traceback (most recent call last):
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 557, in connect
-    self.read_header()
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 650, in read_header
-    self._validate_header(read_ros_handshake_header(sock, self.read_buff, self.protocol.buff_size))
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rosgraph/network.py", line 362, in read_ros_handshake_header
-    d = sock.recv(buff_size)
-error: [Errno 104] Connection reset by peer
 ``` 
