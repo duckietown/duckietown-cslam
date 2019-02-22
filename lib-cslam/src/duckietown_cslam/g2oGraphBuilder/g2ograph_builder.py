@@ -47,9 +47,9 @@ class g2oGraphBuilder():
         self.already_initialized = False
         self.last_lost = 0
         self.lock = ControlableLock(True)
-        self.set_of_new_edges = set()
-        self.set_of_new_vertex = set()
-        self.has_removed = False
+        # self.set_of_new_edges = set()
+        # self.set_of_new_vertex = set()
+        # self.has_removed = False
 
     def add_vertex(self, vertex_id, vertexPose, fixed=False):
         # print("add_vertex")
@@ -61,7 +61,7 @@ class g2oGraphBuilder():
             vc.set_fixed(fixed)
 
             self.optimizer.add_vertex(vc)
-            self.set_of_new_vertex.add(vc)
+            # self.set_of_new_vertex.add(vc)
 
     def add_edge(self, vertex0_id, vertex1_id, measure, robust_kernel_value=None, measure_information=None):
         '''
@@ -89,7 +89,7 @@ class g2oGraphBuilder():
                         self.optimizer.vertex(vertex0_id).estimate() * measure)
                     vc1.set_fixed(False)
                     self.optimizer.add_vertex(vc1)
-                    self.set_of_new_vertex.add(vc1)
+                    # self.set_of_new_vertex.add(vc1)
 
                 edge = g2o.EdgeSE3()
                 edge.set_vertex(0, self.optimizer.vertex(vertex0_id))
@@ -106,7 +106,7 @@ class g2oGraphBuilder():
                 self.optimizer.add_edge(edge)
 
                 # Adding edge to set of new edge to update initialization
-                self.set_of_new_edges.add(edge)
+                # self.set_of_new_edges.add(edge)
 
         else:
             if vertex1_id in self.optimizer.vertices():
@@ -119,7 +119,7 @@ class g2oGraphBuilder():
                     vc0.set_fixed(False)
                     self.optimizer.add_vertex(vc0)
 
-                    self.set_of_new_vertex.add(vc0)
+                    # self.set_of_new_vertex.add(vc0)
                     edge = g2o.EdgeSE3()
                     edge.set_vertex(0, self.optimizer.vertex(vertex0_id))
                     edge.set_vertex(1, self.optimizer.vertex(vertex1_id))
@@ -128,7 +128,7 @@ class g2oGraphBuilder():
                         edge.set_information(measure_information)
                     # edge.set_information(np.eye(6) * 2)
                     finished = self.optimizer.add_edge(edge)
-                    self.set_of_new_edges.add(edge)
+                    # self.set_of_new_edges.add(edge)
 
             else:
                 with self.lock:
@@ -136,7 +136,7 @@ class g2oGraphBuilder():
                     vc0.set_id(vertex0_id)
                     vc0.set_fixed(False)
                     self.optimizer.add_vertex(vc0)
-                    self.set_of_new_vertex.add(vc0)
+                    # self.set_of_new_vertex.add(vc0)
 
                 self.add_edge(vertex0_id, vertex1_id, measure,
                               robust_kernel_value=robust_kernel_value)
@@ -190,23 +190,23 @@ class g2oGraphBuilder():
         # print("remove_vertex")
 
         with self.lock:
-            self.has_removed = True
+            # self.has_removed = True
             # print("trying to remove %i" % vertex_id)
             if(vertex_id in self.optimizer.vertices()):
                 vc = self.optimizer.vertex(vertex_id)
-                # print("it is here, let's remove it")
-                if(vc in self.set_of_new_vertex):
-                    # print("removing %i or the set of new vertex" % vertex_id)
-                    self.set_of_new_vertex.remove(vc)
-                edge_to_remove = []
-                for edge in self.set_of_new_edges:
-                    # print(edge.vertices())
-                    if vc in edge.vertices():
-                        # print("edges to remove added edge")
-                        if edge not in edge_to_remove:
-                            edge_to_remove.append(edge)
-                for edge in edge_to_remove:
-                    self.set_of_new_edges.remove(edge)
+                # # print("it is here, let's remove it")
+                # if(vc in self.set_of_new_vertex):
+                #     # print("removing %i or the set of new vertex" % vertex_id)
+                #     self.set_of_new_vertex.remove(vc)
+                # edge_to_remove = []
+                # for edge in self.set_of_new_edges:
+                #     # print(edge.vertices())
+                #     if vc in edge.vertices():
+                #         # print("edges to remove added edge")
+                #         if edge not in edge_to_remove:
+                #             edge_to_remove.append(edge)
+                # for edge in edge_to_remove:
+                #     self.set_of_new_edges.remove(edge)
                 self.optimizer.remove_vertex(vc, detach=True)
 
                 # print("success")
@@ -226,8 +226,8 @@ class g2oGraphBuilder():
             if (not self.already_initialized):
 
                 self.optimizer.initialize_optimization()
-                self.set_of_new_edges = set()
-                self.set_of_new_vertex = set()
+                # self.set_of_new_edges = set()
+                # self.set_of_new_vertex = set()
                 self.already_initialized = True
                 self.optimizer.compute_initial_guess()
             else:
@@ -237,8 +237,8 @@ class g2oGraphBuilder():
                 # else:
                 self.optimizer.initialize_optimization()
                 # self.has_removed = False
-                self.set_of_new_edges = set()
-                self.set_of_new_vertex = set()
+                # self.set_of_new_edges = set()
+                # self.set_of_new_vertex = set()
                 # self.optimizer.compute_initial_guess()
             self.optimizer.compute_active_errors()
             if verbose:
