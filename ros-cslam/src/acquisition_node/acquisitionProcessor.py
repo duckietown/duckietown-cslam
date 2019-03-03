@@ -73,6 +73,9 @@ class acquisitionProcessor():
             self.outputDictQueue = outputDictQueue
             self.logger = logger
 
+            dsp_options={"beautify": self.ACQ_BEAUTIFY, "tag_size": self.ACQ_TAG_SIZE}
+            self.dsp = deviceSideProcessor(dsp_options, self.logger)
+
         except Exception as e:
             self.logger.warning("acquisitionProcessor initialization failed: : %s" % str(e))
             raise Exception("acquisitionProcessor initialization failed: : %s" % str(e))
@@ -223,9 +226,7 @@ class acquisitionProcessor():
             outputDict = dict()
 
             # Process the image and extract the apriltags
-            dsp_options={"beautify": self.ACQ_BEAUTIFY, "tag_size": self.ACQ_TAG_SIZE}
-            dsp = deviceSideProcessor(dsp_options)
-            outputDict = dsp.process(cv_image,  (np.array(currCameraInfo.K)*scale_matrix).reshape((3,3)), currCameraInfo.D)
+            outputDict = self.dsp.process(cv_image,  (np.array(currCameraInfo.K)*scale_matrix).reshape((3,3)), currCameraInfo.D)
 
             # Add the time stamp and source of the input image to the output
             for idx in range(len(outputDict["apriltags"])):
@@ -299,7 +300,8 @@ class deviceSideProcessor():
     """
     Packages the image rectification and AprilTag detection for images.
     """
-    def __init__(self, options):
+    def __init__(self, options, logger):
+        self.logger = logger
         self.ImageRectifier = None
         self.opt_beautify = options.get("beautify", False)
         self.tag_size = options.get("tag_size", 0.065)

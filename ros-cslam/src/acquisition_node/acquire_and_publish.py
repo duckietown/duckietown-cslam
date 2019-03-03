@@ -87,7 +87,6 @@ if __name__ == '__main__':
     while True:
         if not deviceSideProcess.is_alive():
             quitEvent.set()
-            exc_info = to_child.recv()
             deviceSideProcess.terminate()
             serverSideProcess.terminate()
             outputDictQueue.close()
