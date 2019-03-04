@@ -137,6 +137,9 @@ class Node(object):
         vertex_pose = self.duckietown_graph.get_vertex_pose(vertex_id)
         return vertex_pose
 
+    def add_priors(self):
+        pass
+
 
 class MovableNode(Node):
     def __init__(self, node_id, types, duckietown_graph, retro_interpolate=True, stocking_time=None):
@@ -411,6 +414,12 @@ class MovableNode(Node):
                     self.time_stamps_to_indices.pop(time_stamp)
             for index in anterior_time_stamps_indices:
                 self.duckietown_graph.remove_vertex_by_index(index)
+
+    def add_priors(self):
+        fixed_origin_index = 0
+        
+        
+
 
 
 class DuckietownGraphBuilder(object):
