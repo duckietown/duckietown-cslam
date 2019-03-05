@@ -4,7 +4,7 @@
 ROS_MASTER_HOSTNAME=duckietown3
 ROS_MASTER_IP=192.168.1.15
 
-array=( demowatchtower02 demowatchtower05 demowatchtower06 demowatchtower07 demowatchtower08 demowatchtower09 demowatchtower10 demowatchtower11 demowatchtower12 demowatchtower13 demowatchtower14 demowatchtower15)
+array=(demowatchtower01 demowatchtower02 demowatchtower03 demowatchtower05 demowatchtower06 demowatchtower07 demowatchtower08 demowatchtower09 demowatchtower10 demowatchtower11 demowatchtower12 demowatchtower13 demowatchtower14 demowatchtower15)
 
 echo "We are setting up ${#array[*]} watchtowers"
 echo "If any one of them fails or complains about incompatible Docker version, just run it again"

@@ -10,6 +10,73 @@ import geometry as g
 import numpy as np
 
 
+class Prior(object):
+    def __init__(self, name, from_type, to_type, position, rotation, constraint_list):
+        self.name = name
+        self.from_type = from_type
+        self.to_type = to_type
+        self.position = position
+        self.constraints = constraint_list
+        self.rotation = rotation
+        self.constraint_measure = None
+        self.constraint_measure_info_matrix = None
+
+        self.create_measure()
+        self.create_info_matrix()
+
+    def create_measure(self):
+        t = self.position
+
+        roll_angle = np.deg2rad(self.rotation[0])
+        pitch_angle = np.deg2rad(self.rotation[1])
+        yaw_angle = np.deg2rad(self.rotation[2])
+
+        R_roll = g.rotation_from_axis_angle(np.array([0, 1, 0]), roll_angle)
+        R_pitch = g.rotation_from_axis_angle(np.array([1, 0, 0]), pitch_angle)
+        R_yaw = g.rotation_from_axis_angle(np.array([0, 0, 1]), yaw_angle)
+
+        R = np.matmul(R_roll, np.matmul(R_pitch, R_yaw))
+        self.constraint_measure = g2o.Isometry3d(R, t)
+
+    def create_info_matrix(self):
+        m = np.eye(6)
+        for i in range(len(self.constraints)):
+            if(not self.constraints[i]):
+                m[i, i] = 0
+        self.constraint_measure_info_matrix = m
+
+    def __str__(self):
+        string = 'prior : %s\n' % self.name
+        string += '\tfrom %s to %s\n' % (self.from_type, self.to_type)
+        string += '\tposition: %s\n' % str(self.position)
+        string += '\trotation: %s\n' % str(self.rotation)
+        string += '\tconstraint: %s\n' % str(self.constraints)
+        return string
+
+
+class Priors_handler(object):
+    def __init__(self, priors_filename=None):
+        self.priors_filename = priors_filename
+        self.prior_list = []
+        # load priors from config file
+        self.load_priors()
+
+    def load_priors(self):
+        with open(self.priors_filename, 'r') as priors_file:
+            priors = yaml.load(priors_file)
+            for prior_name, prior in priors.iteritems():
+                from_type = prior['from_type']
+                to_type = prior['to_type']
+                position = prior['position']
+                rotation = prior['rotation']
+                constraints = prior['constraints']
+                constraint_list = [constraints['x'], constraints['y'], constraints['z'],
+                                   constraints['roll'], constraints['pitch'], constraints['yaw']]
+                new_prior = Prior(prior_name, from_type, to_type, position, rotation, constraint_list)
+                self.prior_list.append(new_prior)
+                print(str(new_prior))
+
+
 class CyclicCounter(object):
     def __init__(self, total_size, chunck_size, node_id):
         self.total_size = total_size
@@ -417,9 +484,11 @@ class MovableNode(Node):
 
     def add_priors(self):
         fixed_origin_index = 0
-        
-        
 
+        transform_position = [0.0, 0.0, 0.05]
+        transform_position_relevant = [False, False, True]
+
+        transform_rotation = 0
 
 
 class DuckietownGraphBuilder(object):
@@ -472,7 +541,8 @@ class DuckietownGraphBuilder(object):
                  initial_april_dict={},
                  initial_floor_april_tags="",
                  retro_interpolate=True,
-                 stocking_time=None):
+                 stocking_time=None,
+                 priors_filename=None):
         # Initialize pose graph.
         self.graph = g2oGB.g2oGraphBuilder()
         # Define node types.
@@ -491,6 +561,9 @@ class DuckietownGraphBuilder(object):
 
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
+
+        if(priors_filename is not None):
+            self.priors = Priors_handler(priors_filename)
 
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)

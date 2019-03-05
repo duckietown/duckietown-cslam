@@ -1,0 +1,27 @@
+
+prior1: 
+  from_type: origin
+  to_type: duckiebot
+  position: [0.0, 0.0, 0.1]
+  rotation: [0.0, 0.0, 0.0]
+  constraints:
+    x: False
+    y: False
+    z: True
+    roll: False
+    pitch: False
+    yaw: False
+
+
+onthefloor: 
+  from_type: watchtower
+  to_type: duckiebot
+  position: [0.0, 0.0, 0.1]
+  rotation: [0.0, 0.0, 0.0]
+  constraints:
+    x: False
+    y: False
+    z: True
+    roll: True
+    pitch: False
+    yaw: False

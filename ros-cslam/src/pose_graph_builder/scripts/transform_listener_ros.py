@@ -291,7 +291,7 @@ class TransformListener():
             # Duckiebot.
             t = [0.0, 0.0, 0.1]
             z_angle = 90
-            x_angle = 0
+            x_angle = 180
             z_angle = np.deg2rad(z_angle)
             x_angle = np.deg2rad(x_angle)
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
@@ -475,10 +475,13 @@ class TransformListener():
         # run simultaneously.
         initial_floor_april_tags = "%s/%s" % (rospy.get_param("config_folder"),
                                               "robotarium1.yaml")
+        priors_filename = "%s/%s" % (rospy.get_param("config_folder"),
+                                              "priors.yaml")
         stocking_time = rospy.get_param("stocking_time")
+
         # Build graph based on floor map.
         self.pose_graph = dGB.DuckietownGraphBuilder(
-            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time)
+            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename)
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
