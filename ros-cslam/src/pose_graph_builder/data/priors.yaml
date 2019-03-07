@@ -25,3 +25,16 @@ onthefloor:
     roll: True
     pitch: False
     yaw: False
+
+onthefloor: 
+  from_type: origin
+  to_type: watchtower
+  position: [0.0, 0.0, 0.0]
+  rotation: [0.0, 0.0, 0.0]
+  constraints:
+    x: False
+    y: False
+    z: False
+    roll: False
+    pitch: False
+    yaw: False
