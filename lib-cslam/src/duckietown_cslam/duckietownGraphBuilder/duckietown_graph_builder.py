@@ -552,6 +552,7 @@ class DuckietownGraphBuilder(object):
                  initial_april_dict={},
                  initial_floor_april_tags="",
                  retro_interpolate=True,
+                 using_priors=True,
                  stocking_time=None,
                  priors_filename=None):
         # Initialize pose graph.
@@ -572,7 +573,7 @@ class DuckietownGraphBuilder(object):
 
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
-
+        self.using_priors = using_priors
         if(priors_filename is not None):
             self.priors = Priors_handler(priors_filename)
 
@@ -748,7 +749,8 @@ class DuckietownGraphBuilder(object):
             # vertices if not there already).in the g2o graph.
             self.graph.add_edge(vertex0_index, vertex1_index,
                                 measure, robust_kernel_value=0.1)
-            self.add_priors(node_id_0, node_id_1, time_stamp)
+            if self.using_priors:
+                self.add_priors(node_id_0, node_id_1, time_stamp)
 
         else:
             node = self.get_node(node_id_0)
