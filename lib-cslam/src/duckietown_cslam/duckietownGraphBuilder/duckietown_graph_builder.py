@@ -10,6 +10,95 @@ import geometry as g
 import numpy as np
 
 
+class Prior(object):
+    def __init__(self, name, from_type, to_type, position, rotation, constraint_list):
+        self.name = name
+        self.from_type = from_type
+        self.to_type = to_type
+        self.position = position
+        self.constraints = constraint_list
+        self.rotation = rotation
+        self.measure = None
+        self.measure_infomation = None
+        self.from_origin = False
+        self.create_measure()
+        self.create_info_matrix()
+        if self.from_type == "origin":
+            self.from_origin = True
+
+    def create_measure(self):
+        t = self.position
+
+        roll_angle = np.deg2rad(self.rotation[0])
+        pitch_angle = np.deg2rad(self.rotation[1])
+        yaw_angle = np.deg2rad(self.rotation[2])
+
+        R_roll = g.rotation_from_axis_angle(np.array([0, 1, 0]), roll_angle)
+        R_pitch = g.rotation_from_axis_angle(np.array([1, 0, 0]), pitch_angle)
+        R_yaw = g.rotation_from_axis_angle(np.array([0, 0, 1]), yaw_angle)
+
+        R = np.matmul(R_roll, np.matmul(R_pitch, R_yaw))
+        self.measure = g2o.Isometry3d(R, t)
+
+    def create_info_matrix(self):
+        m = np.eye(6)
+        for i in range(len(self.constraints)):
+            if(not self.constraints[i]):
+                m[i, i] = 0
+        self.measure_information = m
+
+    def is_from_origin(self):
+        return self.from_origin
+
+    def unary_concerns(self, node_type):
+        if not self.from_origin:
+            print("WARNING : binary prior asked for unary check")
+            return False
+        if self.to_type == node_type:
+            return True
+        return False
+
+    def binary_concerns(self, node0_type, node1_type):
+        if self.from_origin:
+            print("WARNING : unary prior asked for binary check")
+            return False
+        if self.from_type == node0_type and self.to_type == node1_type:
+            return True
+        return False
+
+    def __str__(self):
+        string = 'prior : %s\n' % self.name
+        string += '\tfrom %s to %s\n' % (self.from_type, self.to_type)
+        string += '\tposition: %s\n' % str(self.position)
+        string += '\trotation: %s\n' % str(self.rotation)
+        string += '\tconstraint: %s\n' % str(self.constraints)
+        return string
+
+
+class Priors_handler(object):
+    def __init__(self, priors_filename=None):
+        self.priors_filename = priors_filename
+        self.prior_list = []
+        # load priors from config file
+        self.load_priors()
+
+    def load_priors(self):
+        with open(self.priors_filename, 'r') as priors_file:
+            priors = yaml.load(priors_file)
+            for prior_name, prior in priors.iteritems():
+                from_type = prior['from_type']
+                to_type = prior['to_type']
+                position = prior['position']
+                rotation = prior['rotation']
+                constraints = prior['constraints']
+                constraint_list = [constraints['x'], constraints['y'], constraints['z'],
+                                   constraints['roll'], constraints['pitch'], constraints['yaw']]
+                new_prior = Prior(prior_name, from_type, to_type,
+                                  position, rotation, constraint_list)
+                self.prior_list.append(new_prior)
+                print(str(new_prior))
+
+
 class CyclicCounter(object):
     def __init__(self, total_size, chunck_size, node_id):
         self.total_size = total_size
@@ -245,8 +334,8 @@ class MovableNode(Node):
         # Find the total time (time between the last and the first timestamp).
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
         if (total_delta_t == 0.0):
-            print("in interpolate, delta t is 0.0, with %s %s and list is:" %
-                  (node_type, node_id))
+            print("in interpolate, delta t is 0.0, with %s and list is:" %
+                  self.node_id)
             print(to_interpolate)
             print("new_time_stamp is %f and old time stamp is %f" %
                   (old_time_stamp, new_time_stamp))
@@ -463,7 +552,9 @@ class DuckietownGraphBuilder(object):
                  initial_april_dict={},
                  initial_floor_april_tags="",
                  retro_interpolate=True,
-                 stocking_time=None):
+                 using_priors=True,
+                 stocking_time=None,
+                 priors_filename=None):
         # Initialize pose graph.
         self.graph = g2oGB.g2oGraphBuilder()
         # Define node types.
@@ -482,6 +573,9 @@ class DuckietownGraphBuilder(object):
 
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
+        self.using_priors = using_priors
+        if(priors_filename is not None):
+            self.priors = Priors_handler(priors_filename)
 
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
@@ -506,7 +600,7 @@ class DuckietownGraphBuilder(object):
                 # Add vertices for all the floor tags.
                 for key, value in complete_dict.iteritems():
                     if key == "objects":
-                        for myobject, object_value in value.iteritems():
+                        for _, object_value in value.iteritems():
                             if (object_value['kind'] == "floor_tag"):
                                 tag_id = object_value['tag']['~TagInstance'][
                                     'tag_id']
@@ -655,11 +749,14 @@ class DuckietownGraphBuilder(object):
             # vertices if not there already).in the g2o graph.
             self.graph.add_edge(vertex0_index, vertex1_index,
                                 measure, robust_kernel_value=0.1)
+            if self.using_priors:
+                self.add_priors(node_id_0, node_id_1, time_stamp)
+
         else:
             node = self.get_node(node_id_0)
             # Associate timestamps to the vertex.
             # with self.lock:
-            added = node.add_timestamp(time_stamp)
+            node.add_timestamp(time_stamp)
 
             if node.is_movable():
                 # Odometry edge: same vertices, movable object.
@@ -696,7 +793,7 @@ class DuckietownGraphBuilder(object):
             else:
                 print(
                     "Node type %s should be movable if given odometry transform"
-                    % node_type)
+                    % node_id_0)
                 exit(-1)
 
     def set_fixed(self, node_id, time_stamp):
@@ -708,6 +805,21 @@ class DuckietownGraphBuilder(object):
     def get_id(self, node_type, node_id):
         return "%s_%s" % (node_type, node_id)
 
+    def add_priors(self, node_id_0, node_id_1, time_stamp):
+        node0 = self.get_node(node_id_0)
+        node1 = self.get_node(node_id_1)
+
+        for prior in self.priors.prior_list:
+            if(prior.is_from_origin()):
+                for node in [node0, node1]:
+                    if(prior.unary_concerns(node.node_type)):
+                        self.graph.add_edge(0, node.get_g2o_index(
+                            time_stamp), prior.measure, measure_information=prior.measure_information)
+            else:
+                if prior.binary_concerns(node0.node_type, node1.node_type):
+                    self.graph.add_edge(node0.get_g2o_index(time_stamp), node1.get_g2o_index(
+                        time_stamp), prior.measure, measure_information=prior.measure_information)
+
     ###################################
     #        OPTIM FUNCTIONS          #
     ###################################
@@ -715,7 +827,7 @@ class DuckietownGraphBuilder(object):
     def get_global_last_time(self):
         global_last_time = 0
         with self.lock:
-            for node_id, node in self.node_dict.iteritems():
+            for _, node in self.node_dict.iteritems():
                 if node.last_time_stamp > global_last_time:
                     global_last_time = node.last_time_stamp
         return global_last_time
@@ -780,7 +892,7 @@ class DuckietownGraphBuilder(object):
             Considered as useless are vertices that are anterior to the first odometry message
         """
         with self.lock:
-            for node_id, node in self.node_dict.iteritems():
+            for _, node in self.node_dict.iteritems():
                 if node.is_movable():
                     node.clean()
 
@@ -823,8 +935,6 @@ class DuckietownGraphBuilder(object):
         """
         result_dict = dict()
         with self.lock:
-            # TODO : dictionnary changed size during iteration!! WTF
-            node_dict_copy = self.node_dict.copy()
             for node_id, node in self.node_dict.iteritems():
                 if node.is_movable():
                     result_dict[node_id] = node.get_trajectory()
