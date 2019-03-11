@@ -341,7 +341,7 @@ class TransformListener():
             t = [0.1, 0.0, 0.1]
             # This angle is an estimate of the angle by which the plastic
             # support that holds the camera is tilted.
-            y_angle = 105
+            y_angle = 100
             z_angle = -90
             y_angle = np.deg2rad(y_angle)
             z_angle = np.deg2rad(z_angle)
