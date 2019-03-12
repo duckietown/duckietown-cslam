@@ -1,6 +1,6 @@
 import random
 import threading
-
+import csv
 import yaml
 
 import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oGB
@@ -228,7 +228,7 @@ class Node(object):
 
 
 class MovableNode(Node):
-    def __init__(self, node_id, types, duckietown_graph, retro_interpolate=True, stocking_time=None):
+    def __init__(self, node_id, types, duckietown_graph, retro_interpolate=True, stocking_time=None, result_folder="/tmp"):
         super(MovableNode, self).__init__(
             node_id, types, duckietown_graph, movable=True)
         self.retro_interpolate = retro_interpolate
@@ -236,6 +236,7 @@ class MovableNode(Node):
         self.last_odometry_time_stamp = 0
         self.cyclic_counter = CyclicCounter(100000, 1000, self.node_id)
         self.stocking_time = stocking_time
+        self.result_folder = result_folder
 
     def set_last_odometry_time_stamp(self, time_stamp):
         with self.node_lock:
@@ -436,6 +437,40 @@ class MovableNode(Node):
         for index in anterior_time_stamps_indices:
             self.duckietown_graph.remove_vertex_by_index(index)
 
+    def save_and_remove_everything(self, remove=False):
+        time_stamps_indices = []
+        with self.node_lock:
+            time_stamps = self.time_stamps_to_indices.keys()
+        if(time_stamps != []):
+            pose_stamped_list = []
+            for time_stamp in time_stamps:
+                pose = self.duckietown_graph.get_vertex_pose(
+                    self.get_g2o_index(time_stamp))
+                pose_stamped = (time_stamp, pose)
+                pose_stamped_list.append(pose_stamped)
+            if(pose_stamped_list is not None):
+                self.save_trajectory(pose_stamped_list)
+            elif pose_stamped_list == []:
+                print("No stored trajectory")
+                pass
+            else:
+                pass
+        else:
+            pass
+        # Now that it is saved, remove it from the graph
+        if remove:
+            with self.node_lock:
+                for time_stamp in time_stamps:
+                    self.cyclic_counter.remove_index(
+                        self.time_stamps_to_indices[time_stamp])
+                    time_stamps_indices.append(
+                        self.get_g2o_index(time_stamp))
+                    self.time_stamps_to_indices.pop(time_stamp)
+                if(max_anterior != None):
+                    self.set_fixed(max_anterior)
+            for index in time_stamps_indices:
+                self.duckietown_graph.remove_vertex_by_index(index)
+
     def set_fixed(self, time_stamp):
         self.duckietown_graph.set_fixed(self.node_id, time_stamp)
 
@@ -469,8 +504,18 @@ class MovableNode(Node):
         """ Saves the trajectory to a file corresponding to node_type, node_id
             return True is success, False otherwise
         """
+        result_file = "%s/%s" % (self.result_folder, self.id)
+        with open(result_file, mode='a') as trajectory_csv:
+            trajectory_writer = csv.writer(
+                trajectory_csv, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            for pose in poses_stamped:
+                row = [pose[0]]
+                row += pose(1).t
+                row += pose(1).R
+                trajectory_writer.writerow(row)
+
         # TODO : Code this function
-        print("Not saving anything yet! Waiting for design instructions!")
+        print("Trying to save for %!" % self.node_id)
 
     def get_trajectory(self):
         result_dict = dict()
@@ -554,7 +599,8 @@ class DuckietownGraphBuilder(object):
                  retro_interpolate=True,
                  using_priors=True,
                  stocking_time=None,
-                 priors_filename=None):
+                 priors_filename=None,
+                 result_folder="/tmp"):
         # Initialize pose graph.
         self.graph = g2oGB.g2oGraphBuilder()
         # Define node types.
@@ -570,6 +616,8 @@ class DuckietownGraphBuilder(object):
         self.lock = g2oGB.ControlableLock()
 
         self.node_dict = dict()
+
+        self.result_folder = result_folder
 
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
@@ -630,7 +678,7 @@ class DuckietownGraphBuilder(object):
                 node_type = node_id.split("_")[0]
                 if (node_type in self.movable):
                     node = MovableNode(node_id, self.types,
-                                       self, stocking_time=self.stocking_time, retro_interpolate=self.retro_interpolate)
+                                       self, stocking_time=self.stocking_time, retro_interpolate=self.retro_interpolate, result_folder=self.result_folder)
                     self.node_dict[node_id] = node
 
                 else:
@@ -940,3 +988,8 @@ class DuckietownGraphBuilder(object):
                     result_dict[node_id] = node.get_trajectory()
 
         return result_dict
+
+    def on_shutdown(self):
+        for node in self.node_dict.items():
+            if node.is_movable():
+                node.save_and_remove_everything()

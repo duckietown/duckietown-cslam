@@ -310,7 +310,8 @@ class TransformListener():
                 self.edge_counters[node_id0][node_id1] = 0
 
             if(self.edge_counters[node_id0][node_id1] < self.max_number_same_edge):
-                self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
+                self.pose_graph.add_edge(
+                    node_id0, node_id1, transform, time_stamp)
                 self.edge_counters[node_id0][node_id1] += 1
             else:
                 a = random.randint(0, self.rejection_sampling_int)
@@ -476,12 +477,13 @@ class TransformListener():
         initial_floor_april_tags = "%s/%s" % (rospy.get_param("config_folder"),
                                               "robotarium1.yaml")
         priors_filename = "%s/%s" % (rospy.get_param("config_folder"),
-                                              "priors.yaml")
+                                     "priors.yaml")
         stocking_time = rospy.get_param("stocking_time")
         using_priors = rospy.get_param("using_priors")
+        result_folder = rospy.get_param("result_folder")
         # Build graph based on floor map.
         self.pose_graph = dGB.DuckietownGraphBuilder(
-            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, using_priors=using_priors)
+            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, using_priors=using_priors, result_folder=result_folder)
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
@@ -497,12 +499,16 @@ class TransformListener():
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
 
+    def on_shutdown(self):
+        self.pose_graph.on_shutdown()
+
 
 def main():
     rospy.init_node('listener', anonymous=True)
 
     tflistener = TransformListener()
     tflistener.listen()
+    rospy.on_shutdown(tflistener.on_shutdown)
 
 
 if __name__ == '__main__':
