@@ -504,12 +504,12 @@ class TransformListener():
 
 
 def main():
-    rospy.init_node('listener', anonymous=True)
+    rospy.init_node('listener', anonymous=True, disable_signals=True)
 
     tflistener = TransformListener()
     tflistener.listen()
     rospy.on_shutdown(tflistener.on_shutdown)
-
+    # rospy.signal_shutdown(reason)
 
 if __name__ == '__main__':
     main()

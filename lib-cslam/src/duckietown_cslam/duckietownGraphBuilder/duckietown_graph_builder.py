@@ -2,6 +2,7 @@ import random
 import threading
 import csv
 import yaml
+import os
 
 import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oGB
 
@@ -443,7 +444,7 @@ class MovableNode(Node):
             time_stamps = self.time_stamps_to_indices.keys()
         if(time_stamps != []):
             pose_stamped_list = []
-            for time_stamp in time_stamps:
+            for time_stamp in time_stamps.sort():
                 pose = self.duckietown_graph.get_vertex_pose(
                     self.get_g2o_index(time_stamp))
                 pose_stamped = (time_stamp, pose)
@@ -489,7 +490,7 @@ class MovableNode(Node):
 
             # Create list and retrieve all poses
             pose_stamped_list = []
-            for time_stamp in time_stamps:
+            for time_stamp in time_stamps.sort():
                 pose = self.duckietown_graph.get_vertex_pose(
                     self.get_g2o_index(time_stamp))
                 pose_stamped = (time_stamp, pose)
@@ -504,18 +505,26 @@ class MovableNode(Node):
         """ Saves the trajectory to a file corresponding to node_type, node_id
             return True is success, False otherwise
         """
-        result_file = "%s/%s" % (self.result_folder, self.id)
-        with open(result_file, mode='a') as trajectory_csv:
+        result_file = "%s/%s.csv" % (self.result_folder, self.node_id)
+
+        with open(result_file, mode='a+') as trajectory_csv:
             trajectory_writer = csv.writer(
-                trajectory_csv, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                trajectory_csv, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            header = ["time_stamp", "x", "y", "z", "R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
+            trajectory_writer.writerow(header)
+
             for pose in poses_stamped:
                 row = [pose[0]]
-                row += pose(1).t
-                row += pose(1).R
+                row.extend(pose[1].t)
+                row.extend(pose[1].R[0])
+                row.extend(pose[1].R[1])
+                row.extend(pose[1].R[2])
+                print(row)
+                # row = ["coucou", 4, "les cococs"]
                 trajectory_writer.writerow(row)
 
         # TODO : Code this function
-        print("Trying to save for %!" % self.node_id)
+        print("Trying to save for %s" % self.node_id)
 
     def get_trajectory(self):
         result_dict = dict()
@@ -990,6 +999,6 @@ class DuckietownGraphBuilder(object):
         return result_dict
 
     def on_shutdown(self):
-        for node in self.node_dict.items():
+        for node in self.node_dict.itervalues():
             if node.is_movable():
                 node.save_and_remove_everything()
