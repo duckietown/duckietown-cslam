@@ -28,7 +28,7 @@ ENV ACQ_TEST_STREAM 1
 ENV ACQ_BEAUTIFY 1
 
 # Argumens for where the different places from which we will get files from are
-ARG apriltag_dir=lib-cslam/src/apriltag
+ARG apriltag_dir=lib-cslam/src/apriltags3-py
 ARG acquisition_src_dir=ros-cslam/src
 ARG algo_dir=lib-cslam/src/duckietown_cslam/algo
 
@@ -36,17 +36,18 @@ ARG algo_dir=lib-cslam/src/duckietown_cslam/algo
 RUN mkdir /acquisition_node
 
 # Install OpenCV and CvBridge
-RUN apt update
-RUN apt install -y python-opencv
-RUN apt install -y ros-kinetic-cv-bridge
-RUN apt install -y ros-kinetic-rospy
+RUN apt-get update
+RUN apt-get install -f -y python-opencv
+RUN apt-get install -y ros-kinetic-cv-bridge
+RUN apt-get install -y ros-kinetic-rospy
 
 # Copy and install the April tag library and configure the environment variables for it
 RUN mkdir /acquisition_node/apriltag
-COPY ${apriltag_dir} /acquisition_node/apriltag
-RUN cd /acquisition_node/apriltag ; mkdir build ; cd build ; cmake .. -DCMAKE_BUILD_TYPE=Release ; make -j4
-ENV ACQ_APRILTAG_LIB /acquisition_node/apriltag/python
-ENV ACQ_APRILTAG_SO /acquisition_node/apriltag/build/lib
+COPY ${apriltag_dir}/apriltags /acquisition_node/apriltag
+RUN  /bin/bash -c "cd /acquisition_node/apriltag; make clean; make || true"
+COPY ${apriltag_dir}/apriltags3.py /acquisition_node/apriltag/apriltags3.py
+ENV ACQ_APRILTAG_LIB /acquisition_node/apriltag/
+ENV ACQ_APRILTAG_SO /acquisition_node/apriltag/
 
 # Setup the duckietown_msgs
 RUN mkdir -p /catkin-ws/src
@@ -57,7 +58,6 @@ RUN /bin/bash -c "source /catkin-ws/devel/setup.bash; cd /catkin-ws/; catkin_mak
 # Copy the Python files
 COPY ${acquisition_src_dir}/acquisition_node/acquisitionProcessor.py /acquisition_node
 COPY ${algo_dir}/image_rectifier.py /acquisition_node
-COPY ${algo_dir}/aprilTagProcessor.py /acquisition_node
 COPY ${acquisition_src_dir}/acquisition_node/serverSidePublisher.py /acquisition_node
 COPY ${acquisition_src_dir}/acquisition_node/acquire_and_publish.py /acquisition_node
 

@@ -91,5 +91,5 @@ def publishOnServer(outputDictQueue, quitEvent):
         except KeyboardInterrupt:
             raise( Exception("Exiting") )
         except Exception as e:
-            print("Exception: %s", str(e))
+            print("Exception: %s" % str(e))
             pass
