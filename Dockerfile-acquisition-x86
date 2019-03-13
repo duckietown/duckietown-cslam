@@ -42,7 +42,7 @@ RUN apt-get install -y ros-kinetic-rospy
 # Copy and install the April tag library and configure the environment variables for it
 RUN mkdir /acquisition_node/apriltag
 COPY ${apriltag_dir}/apriltags /acquisition_node/apriltag
-RUN  /bin/bash -c "cd /acquisition_node/apriltag; make"
+RUN  /bin/bash -c "cd /acquisition_node/apriltag;  make clean; make || true" #true added to override opencv error
 COPY ${apriltag_dir}/apriltags3.py /acquisition_node/apriltag/apriltags3.py
 ENV ACQ_APRILTAG_LIB /acquisition_node/apriltag/
 ENV ACQ_APRILTAG_SO /acquisition_node/apriltag/
