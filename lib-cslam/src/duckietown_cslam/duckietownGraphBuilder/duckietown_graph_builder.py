@@ -444,7 +444,7 @@ class MovableNode(Node):
             time_stamps = self.time_stamps_to_indices.keys()
         if(time_stamps != []):
             pose_stamped_list = []
-            for time_stamp in time_stamps.sort():
+            for time_stamp in sorted(time_stamps):
                 pose = self.duckietown_graph.get_vertex_pose(
                     self.get_g2o_index(time_stamp))
                 pose_stamped = (time_stamp, pose)
@@ -490,7 +490,7 @@ class MovableNode(Node):
 
             # Create list and retrieve all poses
             pose_stamped_list = []
-            for time_stamp in time_stamps.sort():
+            for time_stamp in sorted(time_stamps):
                 pose = self.duckietown_graph.get_vertex_pose(
                     self.get_g2o_index(time_stamp))
                 pose_stamped = (time_stamp, pose)

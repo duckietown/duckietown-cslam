@@ -13,7 +13,10 @@ for index in ${!array[*]}
 do
     printf "\nSetting up %s\n" ${array[$index]}
     docker -H ${array[$index]}.local start roscore || echo "ERROR: Starting roscore on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
-    docker -H ${array[$index]}.local start ros-picam || echo "ERROR: Starting ros-picam on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
+    docker -H ${array[$index]}.local stop ros_picam
+    docker -H ${array[$index]}.local rm ros_picam
+    docker -H ${array[$index]}.local run -d --name ros_picam --network=host --device /dev/vchiq -v /data:/data aleksandarpetrov/rpi-duckiebot-ros-picam:highresshutter
+    # docker -H ${array[$index]}.local start ros-picam || echo "ERROR: Starting ros-picam on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
     docker -H ${array[$index]}.local stop cslam-acquisition || echo "Didn't stop older cslam-acquisition, probably doesn't exist, so don't worry."
     docker -H ${array[$index]}.local rm cslam-acquisition || echo "Didn't remove older cslam-acquisition, probably doesn't exist, so don't worry."
     docker -H ${array[$index]}.local pull duckietown/cslam-acquisition:rpi

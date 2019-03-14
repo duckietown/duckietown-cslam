@@ -338,7 +338,6 @@ class TransformListener():
         # Get type of the object that sees the other object, for a sanity check.
         type_of_object_seeing = node_id0.split("_")[0]
         if (type_of_object_seeing == "duckiebot"):
-
             # The pose needs to be adjusted to take into account the relative
             # pose of the camera on the Duckiebot w.r.t. to the base frame of
             # the Duckiebot.
@@ -352,7 +351,7 @@ class TransformListener():
             R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
 
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
-            R = np.matmul(R_z, R_x)
+            R = np.matmul(R_x, R_z)
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
         else:
