@@ -1,13 +1,13 @@
 version: '3'
 services:
   acquisition_node_donald:
-      image: duckietown/cslam-acquisition:x86
+      image: duckietown/cslam-acquisition:apriltag3
       environment:
-        - ACQ_ROS_MASTER_URI_DEVICE=donaldthegreat.local
-        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.180
-        - ACQ_ROS_MASTER_URI_SERVER=duckietown3.local
-        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.17
-        - ACQ_DEVICE_NAME=donaldthegreat
+        - ACQ_ROS_MASTER_URI_DEVICE=amauryduckiebot
+        - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.220
+        - ACQ_ROS_MASTER_URI_SERVER=duckietown3
+        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.15
+        - ACQ_DEVICE_NAME=amauryduckiebot
         - ACQ_BEAUTIFY=1
         - ACQ_STATIONARY_ODOMETRY=0
         - ACQ_ODOMETRY_UPDATE_RATE=15

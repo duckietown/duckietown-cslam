@@ -495,7 +495,7 @@ class TransformListener():
         rospy.Subscriber("/poses_acquisition/poses", TransformStamped,
                          self.transform_callback)
         rospy.Subscriber("/poses_acquisition/odometry", TransformStamped,
-                         self.transform_callback)
+                         self.transform_callback) 
 
         # Create a regular callback to invoke optimization on a regular basis
         rospy.Timer(rospy.Duration(self.optimization_period),
