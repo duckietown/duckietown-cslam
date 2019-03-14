@@ -1,6 +1,6 @@
  
 # G2O PARAMS
-optim_verbose : True
+optim_verbose : False
 online_optimization : False
 maximum_g2o_iterations : 20
 save_g2o_output : False

@@ -2,15 +2,15 @@
 prior1: 
   from_type: origin
   to_type: duckiebot
-  position: [0.0, 0.0, 0.1]
+  position: [0.0, 0.0, 0.08]
   rotation: [0.0, 0.0, 0.0]
   constraints:
     x: False
     y: False
     z: True
-    roll: False
-    pitch: False
-    yaw: False
+    qx: False
+    qy: False
+    qz: False
 
 onthefloor: 
   from_type: origin
@@ -21,6 +21,6 @@ onthefloor:
     x: False
     y: False
     z: False
-    roll: False
-    pitch: False
-    yaw: False
+    qx: False
+    qy: False
+    qz: False

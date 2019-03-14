@@ -103,7 +103,6 @@ Ideas:
 - In remove_vertex, what does the "detach" bool do?
 
 ### TROUBLES
-- network is the bottle neck
-- otherwise the sky is clear
+- The sky is clear
 
 

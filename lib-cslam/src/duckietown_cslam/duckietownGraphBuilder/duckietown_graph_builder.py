@@ -92,7 +92,7 @@ class Priors_handler(object):
                 rotation = prior['rotation']
                 constraints = prior['constraints']
                 constraint_list = [constraints['x'], constraints['y'], constraints['z'],
-                                   constraints['roll'], constraints['pitch'], constraints['yaw']]
+                                   constraints['qx'], constraints['qy'], constraints['qz']]
                 new_prior = Prior(prior_name, from_type, to_type,
                                   position, rotation, constraint_list)
                 self.prior_list.append(new_prior)
