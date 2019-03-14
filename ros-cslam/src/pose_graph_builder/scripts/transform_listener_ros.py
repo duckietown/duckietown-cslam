@@ -116,8 +116,8 @@ class PathBroadcaster(threading.Thread):
             point = geometry_msgs.msg.Point()
             point.x = node_pose.t[0]
             point.y = node_pose.t[1]
-            # point.z = node_pose.t[2]
-            point.z = 0.001
+            point.z = node_pose.t[2]
+            # point.z = 0.001
             line_strip.points.append(point)
         # - Create rotation matrix.
         #   Verify that the rotation is a proper rotation.
@@ -285,13 +285,15 @@ class TransformListener():
         """
         # Get type of the object seen.
         type_of_object_seen = node_id1.split("_")[0]
+
         if (type_of_object_seen == "duckiebot"):
+            print("watzchtower %s is seing duckiebot %s" % (node_id0, node_id1))
             # In case of Duckiebot the pose needs to be adjusted to take into
             # account the pose of the April tag w.r.t. the base frame of the
             # Duckiebot.
-            t = [0.0, 0.0, 0.1]
+            t = [0.0, 0.0, 0.055]
             z_angle = 90
-            x_angle = 180
+            x_angle = 178
             z_angle = np.deg2rad(z_angle)
             x_angle = np.deg2rad(x_angle)
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
@@ -336,20 +338,21 @@ class TransformListener():
         # Get type of the object that sees the other object, for a sanity check.
         type_of_object_seeing = node_id0.split("_")[0]
         if (type_of_object_seeing == "duckiebot"):
+
             # The pose needs to be adjusted to take into account the relative
             # pose of the camera on the Duckiebot w.r.t. to the base frame of
             # the Duckiebot.
-            t = [0.1, 0.0, 0.1]
+            t = [0.075, 0.0, 0.025]
             # This angle is an estimate of the angle by which the plastic
             # support that holds the camera is tilted.
-            y_angle = 100
+            x_angle = -102
             z_angle = -90
-            y_angle = np.deg2rad(y_angle)
+            x_angle = np.deg2rad(x_angle)
             z_angle = np.deg2rad(z_angle)
-            R_y = g.rotation_from_axis_angle(np.array([0, 1, 0]), y_angle)
+            R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
 
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
-            R = np.matmul(R_y, R_z)
+            R = np.matmul(R_z, R_x)
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
         else:
@@ -389,6 +392,8 @@ class TransformListener():
         # Get frame IDs of the objects to which the ROS messages are referred.
         node_id0 = data.header.frame_id
         node_id1 = data.child_frame_id
+        if(node_id1 == "407"):
+            print("\t\t\t\t !!!!!!!!! %s should be seing donald" % node_id0)
         # Convert the frame IDs to the right format.
         node_id0 = self.filter_name(node_id0)
         node_id1 = self.filter_name(node_id1)
