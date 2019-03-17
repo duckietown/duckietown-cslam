@@ -1,7 +1,7 @@
 version: '3'
 services:
   acquisition_node_duckiebotHostname:
-      image: duckietown/cslam-acquisition:x86
+      image: duckietown/cslam-acquisition:apriltag3
       environment:
         - ACQ_ROS_MASTER_URI_DEVICE=duckiebotHostname.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=XXX.XXX.XXX.XXX
