@@ -7,7 +7,7 @@ import rospkg
 import os
 import yaml
 
-def get_trafficsign_marker(marker_id, x, y, q, marker_type):
+def get_trafficsign_marker(marker_id, trans, q, marker_type):
     
     if marker_type == "T-intersection":
         marker_type = "T-intersect"
@@ -24,16 +24,16 @@ def get_trafficsign_marker(marker_id, x, y, q, marker_type):
                            "sign_" + marker_type.replace('-','_') + ".dae"
     marker.mesh_use_embedded_materials = True
     
-    marker.pose.position.x = x
-    marker.pose.position.y = y
-    marker.pose.position.z = -0.04
+    marker.pose.position.x = trans[0]
+    marker.pose.position.y = trans[1]
+    marker.pose.position.z = trans[2]
 
     marker.scale.x = 1
     marker.scale.y = 1
     marker.scale.z = 1
 
-    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
-    q = tf.transformations.quaternion_from_euler(0, 0, yaw-math.pi/2)
+    # (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    # q = tf.transformations.quaternion_from_euler(0, 0, yaw-math.pi/2)
 
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
@@ -43,7 +43,7 @@ def get_trafficsign_marker(marker_id, x, y, q, marker_type):
     return marker
 
 
-def get_apriltag_marker(marker_id, x, y, q):
+def get_apriltag_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
@@ -55,16 +55,16 @@ def get_apriltag_marker(marker_id, x, y, q):
     marker.mesh_resource = "package://duckietown_visualization/meshes/apriltags/apriltag.dae"
     marker.mesh_use_embedded_materials = True
     
-    marker.pose.position.x = x
-    marker.pose.position.y = y
-    marker.pose.position.z = -0.04
+    marker.pose.position.x = trans[0]
+    marker.pose.position.y = trans[1]
+    marker.pose.position.z = trans[2]
 
     marker.scale.x = 0.064
     marker.scale.y = 0.064
     marker.scale.z = 1
     
-    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
-    q = tf.transformations.quaternion_from_euler(0, 0, yaw)
+    # (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    # q = tf.transformations.quaternion_from_euler(0, 0, yaw)
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
     marker.pose.orientation.z = q[2]
@@ -72,7 +72,7 @@ def get_apriltag_marker(marker_id, x, y, q):
 
     return marker
 
-def get_watchtower_marker(marker_id, x, y, q):
+def get_watchtower_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
@@ -84,8 +84,8 @@ def get_watchtower_marker(marker_id, x, y, q):
     marker.mesh_resource = "package://duckietown_visualization/meshes/watchtower/watchtower.dae"
     marker.mesh_use_embedded_materials = True
     
-    marker.pose.position.x = x
-    marker.pose.position.y = y
+    marker.pose.position.x = trans[0]
+    marker.pose.position.y = trans[1]
     marker.pose.position.z = 0
 
     marker.scale.x = 1
@@ -101,7 +101,7 @@ def get_watchtower_marker(marker_id, x, y, q):
 
     return marker
 
-def get_duckiebot_marker(marker_id, x, y, q):
+def get_duckiebot_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
@@ -113,16 +113,16 @@ def get_duckiebot_marker(marker_id, x, y, q):
     marker.mesh_resource = "package://duckietown_visualization/meshes/duckiebot/duckiebot.dae"
     marker.mesh_use_embedded_materials = True
     
-    marker.pose.position.x = x
-    marker.pose.position.y = y
-    marker.pose.position.z = 0
+    marker.pose.position.x = trans[0]
+    marker.pose.position.y = trans[1]
+    marker.pose.position.z = trans[2]
 
     marker.scale.x = 1
     marker.scale.y = 1
     marker.scale.z = 1
     
-    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
-    q = tf.transformations.quaternion_from_euler(0, 0, yaw)
+    # (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    # q = tf.transformations.quaternion_from_euler(0, 0, yaw)
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
     marker.pose.orientation.z = q[2]
@@ -144,7 +144,7 @@ def get_markers(duckiebots,watchtowers,apriltags,listener):
             tf.ExtrapolationException):
             continue
         tag_id = int(duckiebots[it].split('_')[-1])
-        marker_array.markers.append(get_duckiebot_marker(tag_id,trans[0],trans[1],rot))
+        marker_array.markers.append(get_duckiebot_marker(tag_id,trans,rot))
     
     for it in range(len(watchtowers)): 
         try:
@@ -154,7 +154,7 @@ def get_markers(duckiebots,watchtowers,apriltags,listener):
             tf.ExtrapolationException):
             continue
         tag_id = int(watchtowers[it].split('_')[-1])
-        marker_array.markers.append(get_watchtower_marker(tag_id,trans[0],trans[1],rot))
+        marker_array.markers.append(get_watchtower_marker(tag_id,trans,rot))
     
     for it in range(len(apriltags)): 
         try:
@@ -166,10 +166,10 @@ def get_markers(duckiebots,watchtowers,apriltags,listener):
         tag_id = int(apriltags[it].split('_')[-1])
 
         if tag_id not in trafficsign_apriltags:
-            marker_array.markers.append(get_apriltag_marker(tag_id,trans[0],trans[1],rot))
+            marker_array.markers.append(get_apriltag_marker(tag_id,trans,rot))
         else:
             marker_type = trafficsign_apriltags[tag_id]
-            marker_array.markers.append(get_trafficsign_marker(tag_id,trans[0],trans[1],rot,marker_type))
+            marker_array.markers.append(get_trafficsign_marker(tag_id,trans,rot,marker_type))
 
     return marker_array
 
