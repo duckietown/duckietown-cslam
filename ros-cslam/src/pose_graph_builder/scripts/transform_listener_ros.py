@@ -15,6 +15,7 @@ import tf_conversions
 from geometry_msgs.msg import *
 from std_msgs.msg import Header, String, Time
 from visualization_msgs.msg import *
+from nav_msgs.msg import Odometry, Path
 
 
 class PointBroadcaster(threading.Thread):
@@ -81,8 +82,9 @@ class PathBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
         threading.Thread.__init__(self)
         self.path_dict = dictionnary
+        self.path = Path()
         self.publisher = rospy.Publisher(
-            '/movable_path', Marker, queue_size=10)
+            '/movable_path', Path, queue_size=10)
         self.colors = [[0, 0, 1], [0, 1, 0], [1, 0, 0],
                        [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]
 
@@ -94,44 +96,53 @@ class PathBroadcaster(threading.Thread):
                 node_path: Path of the node. Dictionnary of {timestamp : g2oTransform}
         """
         # Create broadcaster and transform.
-        line_strip = visualization_msgs.msg.Marker()
-        line_strip.header.stamp = rospy.Time.now()
-        line_strip.type = 4  # line_strip
         # Set frame ID. TODO: change it depending on the node type.
+        self.path.header.stamp = rospy.Time.now()
         if (node_id.startswith("duckiebot")):
-            line_strip.header.frame_id = "map"
+            self.path.header.frame_id = "map"
         else:
-            line_strip.header.frame_id = "map"
+            self.path.header.frame_id = "map"
         # Set frame ID.
-        line_strip.id = int(node_id.split("_")[1])
-        line_strip.color.r = self.colors[color_index][0]
-        line_strip.color.g = self.colors[color_index][1]
-        line_strip.color.b = self.colors[color_index][2]
-        line_strip.color.a = 1.0
-        line_strip.scale.x = 0.01
+        # line_strip.id = int(node_id.split("_")[1])
+        # line_strip.color.r = self.colors[color_index][0]
+        # line_strip.color.g = self.colors[color_index][1]
+        # line_strip.color.b = self.colors[color_index][2]
+        # line_strip.color.a = 1.0
+        # line_strip.scale.x = 0.01
         # Set transform:
         # - Create translation vector.
         for time_stamp in sorted(node_path.keys()):
             node_pose = self.path_dict[node_id][time_stamp]
-            point = geometry_msgs.msg.Point()
-            point.x = node_pose.t[0]
-            point.y = node_pose.t[1]
-            point.z = node_pose.t[2]
+            pose_stamped = geometry_msgs.msg.PoseStamped()
+            q = g.rotations.quaternion_from_rotation(node_pose.R)
+            
+            pose = Pose()
+            pose.position.x = node_pose.t[0]
+            pose.position.y = node_pose.t[1]
+            pose.position.z = node_pose.t[2]
+            pose.orientation.w = q[0]
+            pose.orientation.x = q[1]
+            pose.orientation.y = q[2]
+            pose.orientation.z = q[3]
+            pose_stamped.pose = pose
+            pose_stamped.header.stamp.secs = int(time_stamp)
+            pose_stamped.header.stamp.nsecs = (
+                time_stamp - int(time_stamp)) * 10**9
+
             # point.z = 0.001
-            line_strip.points.append(point)
+            self.path.poses.append(pose_stamped)
         # - Create rotation matrix.
         #   Verify that the rotation is a proper rotation.
         # det = np.linalg.det(node_pose.R)
         # if (det < 0):
         #     print("after optim : det = %f" % det)
         #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
-        # q = g.rotations.quaternion_from_rotation(node_pose.R)
         # t.transform.rotation.w = q[0]
         # t.transform.rotation.x = q[1]
         # t.transform.rotation.y = q[2]
         # t.transform.rotation.z = q[3]
         # Send the transform.
-        self.publisher.publish(line_strip)
+        self.publisher.publish(self.path)
         # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
         # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
 
@@ -287,7 +298,8 @@ class TransformListener():
         type_of_object_seen = node_id1.split("_")[0]
 
         if (type_of_object_seen == "duckiebot"):
-            print("watzchtower %s is seing duckiebot %s" % (node_id0, node_id1))
+            print("watzchtower %s is seing duckiebot %s" %
+                  (node_id0, node_id1))
             # In case of Duckiebot the pose needs to be adjusted to take into
             # account the pose of the April tag w.r.t. the base frame of the
             # Duckiebot.
@@ -494,7 +506,7 @@ class TransformListener():
         rospy.Subscriber("/poses_acquisition/poses", TransformStamped,
                          self.transform_callback)
         rospy.Subscriber("/poses_acquisition/odometry", TransformStamped,
-                         self.transform_callback) 
+                         self.transform_callback)
 
         # Create a regular callback to invoke optimization on a regular basis
         rospy.Timer(rospy.Duration(self.optimization_period),
@@ -514,6 +526,7 @@ def main():
     tflistener.listen()
     rospy.on_shutdown(tflistener.on_shutdown)
     # rospy.signal_shutdown(reason)
+
 
 if __name__ == '__main__':
     main()
