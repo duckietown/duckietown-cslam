@@ -72,7 +72,7 @@ def get_apriltag_marker(marker_id, trans, q):
 
     return marker
 
-def get_watchtower_marker(marker_id, x, y, q):
+def get_watchtower_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
@@ -86,14 +86,14 @@ def get_watchtower_marker(marker_id, x, y, q):
     
     marker.pose.position.x = trans[0]
     marker.pose.position.y = trans[1]
-    marker.pose.position.z = trans[2]
+    marker.pose.position.z = 0
 
     marker.scale.x = 1
     marker.scale.y = 1
     marker.scale.z = 1
     
-    # (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
-    # q = tf.transformations.quaternion_from_euler(0, 0, yaw)
+    (_,_,yaw) = tf.transformations.euler_from_quaternion(q)
+    q = tf.transformations.quaternion_from_euler(0, 0, yaw)
     marker.pose.orientation.x = q[0]
     marker.pose.orientation.y = q[1]
     marker.pose.orientation.z = q[2]
@@ -101,7 +101,7 @@ def get_watchtower_marker(marker_id, x, y, q):
 
     return marker
 
-def get_duckiebot_marker(marker_id, x, y, q):
+def get_duckiebot_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
