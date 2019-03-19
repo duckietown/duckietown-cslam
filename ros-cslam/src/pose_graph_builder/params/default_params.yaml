@@ -8,9 +8,9 @@ save_g2o_output : False
 
 # DUCKIETOWN_GRAPH PARAMS
 stocking_time : 300
-optimization_frequency : 2.0
+optimization_frequency : 0.1
 minimum_edge_number_for_optimization : 100
 rejection_sampling_int : 20
 max_number_same_edge : 50
 using_priors : False
-result_folder : "/graph_optimizer/catkin_ws/data"
+result_folder : "/data"

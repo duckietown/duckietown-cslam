@@ -310,9 +310,9 @@ class TransformListener():
             x_angle = np.deg2rad(x_angle)
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
             R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
-            R = np.matmul(R_x, R_z)
+            R = np.matmul(R_x, R_z) ## verified!
             H_apriltag_to_base = g2o.Isometry3d(R, t)
-            transform = transform * H_apriltag_to_base
+            transform = transform * H_apriltag_to_base.inverse()
 
             # Add edge to the graph.
             return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
@@ -363,7 +363,7 @@ class TransformListener():
             R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
 
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
-            R = np.matmul(R_x, R_z)
+            R = np.matmul(R_z, R_x) ## verified
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
         else:
