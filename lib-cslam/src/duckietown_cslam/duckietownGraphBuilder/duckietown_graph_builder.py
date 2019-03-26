@@ -43,9 +43,16 @@ class Prior(object):
 
     def create_info_matrix(self):
         m = np.eye(6)
-        for i in range(len(self.constraints)):
+        for i in range(0,3):
             if(not self.constraints[i]):
                 m[i, i] = 0
+            else:
+                m[i, i] = 400
+        for i in range(3,6):
+            if(not self.constraints[i]):
+                m[i, i] = 0
+            else:
+                m[i, i] = 25
         self.measure_information = m
 
     def is_from_origin(self):
@@ -999,6 +1006,7 @@ class DuckietownGraphBuilder(object):
         return result_dict
 
     def on_shutdown(self):
-        for node in self.node_dict.itervalues():
-            if node.is_movable():
-                node.save_and_remove_everything()
+        with self.lock:
+            for node in self.node_dict.itervalues():
+                if node.is_movable():
+                    node.save_and_remove_everything()
