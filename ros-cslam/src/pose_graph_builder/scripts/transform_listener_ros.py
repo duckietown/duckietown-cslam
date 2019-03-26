@@ -24,7 +24,7 @@ class PointBroadcaster(threading.Thread):
         threading.Thread.__init__(self)
         self.pose_dict = dictionnary
         self.br = tf2_ros.TransformBroadcaster()
-        
+
     def tfbroadcast(self, node_id, node_pose):
         """ Brodcasts a node in the tree of transforms with TF.
 
@@ -88,8 +88,7 @@ class PathBroadcaster(threading.Thread):
             '/movable_path', Path, queue_size=10)
         self.colors = [[0, 0, 1], [0, 1, 0], [1, 0, 0],
                        [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]
-    
-    
+
     def path_broadcast(self, node_id, node_path, color_index):
         """ Brodcasts the path for the node
 
@@ -117,7 +116,7 @@ class PathBroadcaster(threading.Thread):
             node_pose = self.path_dict[node_id][time_stamp]
             pose_stamped = geometry_msgs.msg.PoseStamped()
             q = g.rotations.quaternion_from_rotation(node_pose.R)
-            
+
             pose = Pose()
             pose.position.x = node_pose.t[0]
             pose.position.y = node_pose.t[1]
@@ -312,7 +311,7 @@ class TransformListener():
             x_angle = np.deg2rad(x_angle)
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
             R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
-            R = np.matmul(R_x, R_z) ## verified!
+            R = np.matmul(R_x, R_z)  # verified!
             H_apriltag_to_base = g2o.Isometry3d(R, t)
             transform = transform * H_apriltag_to_base.inverse()
 
@@ -365,7 +364,7 @@ class TransformListener():
             R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
 
             R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
-            R = np.matmul(R_z, R_x) ## verified
+            R = np.matmul(R_z, R_x)  # verified
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
         else:
@@ -523,8 +522,10 @@ class TransformListener():
     def signal_handler(self, sig, frame):
         print('You pressed Ctrl+C! Experiment will be saved and ended')
         self.pose_graph.on_shutdown()
-        rospy.signal_shutdown("Shutting down after cleaning and recording data")
+        rospy.signal_shutdown(
+            "Shutting down after cleaning and recording data")
         print("Every thing should be down")
+
 
 def main():
     rospy.init_node('listener', anonymous=True, disable_signals=True)
