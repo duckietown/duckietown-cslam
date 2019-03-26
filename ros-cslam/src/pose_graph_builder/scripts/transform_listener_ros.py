@@ -2,7 +2,8 @@
 import os
 import random
 import threading
-
+import signal
+import sys
 import yaml
 
 import duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder as dGB
@@ -23,7 +24,7 @@ class PointBroadcaster(threading.Thread):
         threading.Thread.__init__(self)
         self.pose_dict = dictionnary
         self.br = tf2_ros.TransformBroadcaster()
-
+        
     def tfbroadcast(self, node_id, node_pose):
         """ Brodcasts a node in the tree of transforms with TF.
 
@@ -87,7 +88,8 @@ class PathBroadcaster(threading.Thread):
             '/movable_path', Path, queue_size=10)
         self.colors = [[0, 0, 1], [0, 1, 0], [1, 0, 0],
                        [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]
-
+    
+    
     def path_broadcast(self, node_id, node_path, color_index):
         """ Brodcasts the path for the node
 
@@ -515,16 +517,24 @@ class TransformListener():
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
 
-    def on_shutdown(self):
-        self.pose_graph.on_shutdown()
+    # def on_shutdown(self):
+    #     self.pose_graph.on_shutdown()
 
+    def signal_handler(self, sig, frame):
+        print('You pressed Ctrl+C! Experiment will be saved and ended')
+        self.pose_graph.on_shutdown()
+        rospy.signal_shutdown("Shutting down after cleaning and recording data")
+        print("Every thing should be down")
 
 def main():
     rospy.init_node('listener', anonymous=True, disable_signals=True)
 
     tflistener = TransformListener()
+    # rospy.on_shutdown(tflistener.on_shutdown)
+    signal.signal(signal.SIGINT, tflistener.signal_handler)
+    signal.signal(signal.SIGTERM, tflistener.signal_handler)
+
     tflistener.listen()
-    rospy.on_shutdown(tflistener.on_shutdown)
     # rospy.signal_shutdown(reason)
 
 
