@@ -247,15 +247,17 @@ class acquisitionProcessor():
                         cv2.putText(image,str(tag["tag_id"]),
                                     org=(tag["corners"][0, 0].astype(int)+10,tag["corners"][0, 1].astype(int)+10),
                                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                    fontScale=0.4,
+                                    fontScale=1.0,
+                                    thickness=2,
                                     color=(255, 0, 0))
 
                     # Put device and timestamp to the image
                     cv2.putText(image,'device: '+ self.ACQ_DEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+"+"+str(currRawImage.header.stamp.nsecs),
                                 org=(30,30),
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                fontScale=0.6,
-                                color=(0, 255, 0))
+                                fontScale=1.0,
+                                thickness=2,
+                                color=(255, 0, 0))
 
                     # Add the original and diagnostic info to the outputDict
                     outputDict["test_stream_image"] = self.bridge.cv2_to_compressed_imgmsg(image, dst_format='png')
