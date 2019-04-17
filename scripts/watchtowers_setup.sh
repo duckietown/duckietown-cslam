@@ -4,10 +4,12 @@
 ROS_MASTER_HOSTNAME=duckietown3
 ROS_MASTER_IP=192.168.1.15
 
-if [ $#==2 ]
-then
+if (( $#==2 )); then
+  printf "Using the command line HOSTNAME and IP\n"
   ROS_MASTER_HOSTNAME=$1
   ROS_MASTER_IP=$2
+else
+  printf "Using the default HOSTNAME and IP\n"  
 fi
 
 array=(demowatchtower01 demowatchtower02 demowatchtower03 demowatchtower05 demowatchtower06 demowatchtower07 demowatchtower08 demowatchtower09 demowatchtower10 demowatchtower11 demowatchtower12 demowatchtower13 demowatchtower14 demowatchtower15)
