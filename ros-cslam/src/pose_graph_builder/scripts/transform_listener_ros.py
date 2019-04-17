@@ -17,7 +17,7 @@ from geometry_msgs.msg import *
 from std_msgs.msg import Header, String, Time
 from visualization_msgs.msg import *
 from nav_msgs.msg import Odometry, Path
-
+from duckietown_msgs.msg import AprilTagDetection
 
 class PointBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
@@ -397,13 +397,19 @@ class TransformListener():
 
         return node_id
 
-    def transform_callback(self, data):
+    def transform_callback(self, data, msg_type):
         """ ROS callback.
         """
         self.num_messages_received += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
         node_id0 = data.header.frame_id
-        node_id1 = data.child_frame_id
+        if msg_type=="AprilTagDetection":
+            node_id1 = str(data.tag_id)
+        elif msg_type=="TransformStamped":
+            node_id1 = data.child_frame_id
+        else:
+            raise Exception("Transform callback received unsupported msg_type %s" % msg_type)
+
         if(node_id1 == "407"):
             print("\t\t\t\t !!!!!!!!! %s should be seing donald" % node_id0)
         # Convert the frame IDs to the right format.
@@ -504,10 +510,10 @@ class TransformListener():
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
-        rospy.Subscriber("/poses_acquisition/poses", TransformStamped,
-                         self.transform_callback)
+        rospy.Subscriber("/poses_acquisition/poses", AprilTagDetection,
+                         lambda msg: self.transform_callback(msg, "AprilTagDetection"))
         rospy.Subscriber("/poses_acquisition/odometry", TransformStamped,
-                         self.transform_callback)
+                         lambda msg: self.transform_callback(msg, "TransformStamped"))
 
         # Create a regular callback to invoke optimization on a regular basis
         rospy.Timer(rospy.Duration(self.optimization_period),

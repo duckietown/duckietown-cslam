@@ -352,7 +352,13 @@ class deviceSideProcessor():
                 outputDict["apriltags"].append({'tag_id': atag.tag_id,
                                                 'corners': atag.corners,
                                                 'qvec': self.mat2quat(atag.pose_R),
-                                                'tvec': atag.pose_t })
+                                                'tvec': atag.pose_t,
+                                                'tag_family': atag.tag_family,
+                                                'hamming': atag.hamming,
+                                                'decision_margin': atag.decision_margin,
+                                                'homography': atag.homography,
+                                                'center': atag.center,
+                                                'pose_error': atag.pose_err})
             return outputDict
 
         except Exception as e:
