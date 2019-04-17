@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from geometry_msgs.msg import TransformStamped, AprilTagDetection
+from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import CompressedImage, Image, CameraInfo
 from duckietown_msgs.msg import AprilTagDetection
 import cPickle as pickle
