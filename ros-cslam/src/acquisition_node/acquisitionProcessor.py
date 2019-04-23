@@ -63,7 +63,7 @@ class acquisitionProcessor():
 
             if self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE>0: #Only if set (probably not for watchtowers)
                 self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
-                                                            lambda msg: self.odometry_callback,  queue_size = 1)
+                                                            self.odometry_callback,  queue_size = 1)
         elif self.mode == 'postprocessing':
             self.bag_topics = {'raw_image': '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW,
                                'camera_info': '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO}
@@ -367,7 +367,7 @@ class acquisitionProcessor():
         self.lastCameraImage = ros_data
         self.lastImageProcessed = False
 
-    def camera_image_callback(self, ros_data):
+    def odometry_callback(self, ros_data):
         """
         Callback function that is executed upon reception of a new odometry message.
         """

@@ -71,10 +71,10 @@ def runServerSideProcess(ROS_MASTER_URI, outpuDictQueue, quitEvent):
     if ACQ_SERVER_MODE == 'live':
         logger.info('Server side processor starting in LIVE mode')
         os.environ['ROS_MASTER_URI'] = ROS_MASTER_URI
-        publishOnServer(outputDictQueue, quitEvent, logger)
+        publishOnServer(outputDictQueue, quitEvent, logger, mode='live')
     elif ACQ_SERVER_MODE == 'postprocessing':
         logger.info('Server side processor starting in POSTPROCESSING mode')
-        raise Exception("SERVER POSTPROCESSING NOT IMPLEMENTED YET")
+        publishOnServer(outputDictQueue, quitEvent, logger, mode='postprocessing')
 
 if __name__ == '__main__':
     """
@@ -103,7 +103,6 @@ if __name__ == '__main__':
 
     # Start the processes
 
-    os.environ['ROS_MASTER_URI'] = ros_master_uri_server
     deviceSideProcess = multiprocessing.Process(target=runDeviceSideProcess,
                                                 args=(ros_master_uri_device,outputDictQueue,quitEvent),
                                                 name="deviceSideProcess")
@@ -132,7 +131,8 @@ if __name__ == '__main__':
                 time.sleep(0.1)
             outputDictQueue.close()
             # Give time for submitting the last message to the server
-            time.sleep(0.2)
+            serverSideProcess.join()
+            time.sleep(0.5)
             serverSideProcess.terminate()
             print("The device side process exited. Stopping everything.")
             sys.exit()

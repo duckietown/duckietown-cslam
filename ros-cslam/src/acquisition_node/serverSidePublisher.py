@@ -12,10 +12,22 @@ import Queue
 import collections
 import yaml
 
-def publishOnServer(outputDictQueue, quitEvent, logger):
+# A mockup class that behaves as rospy.Publish but instead saves to a rosbag
+class MockupPublisher():
+    def __init__(self, bag, topic):
+        self.bag = bag
+        self.topic = topic
+    def publish(self, msg):
+        self.bag.write(self.topic, msg)
+
+def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
     """
     Publishes the processed data on the ROS Master that the graph optimizer uses.
     """
+
+    assert(mode=='live' or mode=='postprocessing')
+
+    logger.info("Setting up the server side process")
 
     # Get the environment variables
     ACQ_POSES_TOPIC = os.getenv('ACQ_POSES_TOPIC', "poses")
@@ -27,18 +39,48 @@ def publishOnServer(outputDictQueue, quitEvent, logger):
     seq_stamper = 0
     counts = collections.Counter()
 
-    publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, AprilTagDetection, queue_size=1)
-    publisherOdometry = rospy.Publisher("/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
+    # Different initialization of the topics for live and postprocessing modes
+    if mode=='live':
+        # Setup the topics
+        publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, AprilTagDetection, queue_size=1)
+        publisherOdometry = rospy.Publisher("/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
 
-    # If the test stream is requested
-    if ACQ_TEST_STREAM:
-        publisherTestImages = rospy.Publisher("/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-        publisherRawImages = rospy.Publisher("/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-        publisherRectifiedImages = rospy.Publisher("/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-        publisherCameraInfoRaw = rospy.Publisher("/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
-        publisherCameraInfoRectified = rospy.Publisher("/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
+        # If the test stream is requested
+        if ACQ_TEST_STREAM:
+            publisherTestImages = rospy.Publisher("/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
+            publisherRawImages = rospy.Publisher("/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
+            publisherRectifiedImages = rospy.Publisher("/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
+            publisherCameraInfoRaw = rospy.Publisher("/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
+            publisherCameraInfoRectified = rospy.Publisher("/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
 
-    rospy.init_node('acquisition_node_'+ACQ_DEVICE_NAME)
+        # Init the node (live mode only)
+        rospy.init_node('acquisition_node_'+ACQ_DEVICE_NAME)
+
+    elif mode=='postprocessing':
+
+        # Open the bag (postprocessing mode only)
+        ACQ_OUTPUT_BAG = os.getenv('ACQ_OUTPUT_BAG', None)
+        if ACQ_OUTPUT_BAG == None:
+            raise Exception("ACQ_OUTPUT_BAG must be set if the server processor is in postprocessing mode!")
+        if os.path.exists(ACQ_OUTPUT_BAG):
+            bag = rosbag.Bag(ACQ_OUTPUT_BAG, 'a')
+        else:
+            bag = rosbag.Bag(ACQ_OUTPUT_BAG, 'w')
+
+
+        # Setup the topics
+        publisherPoses = MockupPublisher(bag, "/poses_acquisition/"+ACQ_POSES_TOPIC)
+        publisherOdometry = MockupPublisher(bag, "/poses_acquisition/"+ACQ_ODOMETRY_TOPIC)
+
+        # If the test stream is requested
+        if ACQ_TEST_STREAM:
+            publisherTestImages = MockupPublisher(bag, "/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed")
+            publisherRawImages = MockupPublisher(bag, "/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed")
+            publisherRectifiedImages = MockupPublisher(bag, "/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME+"/compressed")
+            publisherCameraInfoRaw = MockupPublisher(bag, "/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME)
+            publisherCameraInfoRectified = MockupPublisher(bag, "/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME)
+
+    logger.info("Setting up the server side process completed. Waiting for messages.")
 
     # Run continuously, check for new data arriving from the acquisitionProcessor and processed it when it arrives
     while not quitEvent.is_set():
@@ -72,7 +114,8 @@ def publishOnServer(outputDictQueue, quitEvent, logger):
                     newApriltagDetectionMsg.pose_error = tag["pose_error"]
 
                     publisherPoses.publish(newApriltagDetectionMsg)
-                    logger.info("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
+                    if mode=="live":
+                        logger.info("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
 
                     counts[newApriltagDetectionMsg.tag_id] += 1
 
@@ -113,6 +156,10 @@ def publishOnServer(outputDictQueue, quitEvent, logger):
         except Exception as e:
             logger.warning("Exception: %s" % str(e))
             pass
+
+    # Close the bag (postprocessing mode only)
+    if mode=='postprocessing':
+        bag.close()
 
     # Save or append to an existing file:
     if ACQ_OBSERVATIONS_STATISTICS_OUTPUT:

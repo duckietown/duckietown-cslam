@@ -1,6 +1,6 @@
 version: '3'
 services:
-  acquisition_node_ab01_bag:
+  acquisition_node_watchtower09_bag:
       image: duckietown/cslam-acquisition:x86-post
       volumes:
         - /FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/:/bags
@@ -11,13 +11,14 @@ services:
         - ACQ_OBSERVATIONS_STATISTICS_OUTPUT=/bags/statistics.yaml
         - ACQ_DEVICE_MODE=postprocessing
         - ACQ_DEVICE_THREADS=4
-        - ACQ_DEVICE_BAG=/bags/autobot04_2019-04-18-12-27-21.bag
-        - ACQ_SERVER_MODE=live
-        - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
-        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.104
-        - ACQ_DEVICE_NAME=autobot04
+        - ACQ_DEVICE_BAG=/bags/watchtower09_2019-04-18-12-27-26.bag
+        - ACQ_SERVER_MODE=postprocessing
+        - ACQ_OUTPUT_BAG=/bags/processed.bag
+        # - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
+        # - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.104
+        - ACQ_DEVICE_NAME=watchtower09
         - ACQ_BEAUTIFY=0
-        - ACQ_STATIONARY_ODOMETRY=1
+        # - ACQ_STATIONARY_ODOMETRY=1
         # - ACQ_ODOMETRY_UPDATE_RATE=0
         # - ACQ_POSES_UPDATE_RATE=15
         - ACQ_TEST_STREAM=1
