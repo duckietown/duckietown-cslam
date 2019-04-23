@@ -3,6 +3,7 @@
 import rospy
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import CompressedImage, Image, CameraInfo
+from duckietown_msgs.msg import AprilTagDetection
 import cPickle as pickle
 import os
 
@@ -19,7 +20,7 @@ def publishOnServer(outputDictQueue, quitEvent):
 
     seq_stamper = 0
 
-    publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, TransformStamped, queue_size=1)
+    publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, AprilTagDetection, queue_size=1)
     publisherOdometry = rospy.Publisher("/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
 
     # If the test stream is requested
@@ -43,21 +44,28 @@ def publishOnServer(outputDictQueue, quitEvent):
             if "apriltags" in incomingData:
                 for tag in incomingData["apriltags"]:
                     # Publish the relative pose
-                    newTransformStamped = TransformStamped()
-                    newTransformStamped.header.seq = seq_stamper
-                    newTransformStamped.header.stamp.secs = int(tag["timestamp_secs"])
-                    newTransformStamped.header.stamp.nsecs = int(tag["timestamp_nsecs"])
-                    newTransformStamped.header.frame_id = str(tag["source"])
-                    newTransformStamped.child_frame_id = str(tag["tag_id"])
-                    newTransformStamped.transform.translation.x = float(tag["tvec"][0])
-                    newTransformStamped.transform.translation.y = float(tag["tvec"][1])
-                    newTransformStamped.transform.translation.z = float(tag["tvec"][2])
-                    newTransformStamped.transform.rotation.x = float(tag["qvec"][0])
-                    newTransformStamped.transform.rotation.y = float(tag["qvec"][1])
-                    newTransformStamped.transform.rotation.z = float(tag["qvec"][2])
-                    newTransformStamped.transform.rotation.w = float(tag["qvec"][3])
+                    newApriltagDetectionMsg = AprilTagDetection()
+                    newApriltagDetectionMsg.header.seq = seq_stamper
+                    newApriltagDetectionMsg.header.stamp.secs = int(tag["timestamp_secs"])
+                    newApriltagDetectionMsg.header.stamp.nsecs = int(tag["timestamp_nsecs"])
+                    newApriltagDetectionMsg.header.frame_id = str(tag["source"])
+                    newApriltagDetectionMsg.transform.translation.x = float(tag["tvec"][0])
+                    newApriltagDetectionMsg.transform.translation.y = float(tag["tvec"][1])
+                    newApriltagDetectionMsg.transform.translation.z = float(tag["tvec"][2])
+                    newApriltagDetectionMsg.transform.rotation.x = float(tag["qvec"][0])
+                    newApriltagDetectionMsg.transform.rotation.y = float(tag["qvec"][1])
+                    newApriltagDetectionMsg.transform.rotation.z = float(tag["qvec"][2])
+                    newApriltagDetectionMsg.transform.rotation.w = float(tag["qvec"][3])
+                    newApriltagDetectionMsg.tag_id = int(tag["tag_id"])
+                    newApriltagDetectionMsg.tag_family = tag["tag_family"]
+                    newApriltagDetectionMsg.hamming = int(tag["hamming"])
+                    newApriltagDetectionMsg.decision_margin = float(tag["decision_margin"])
+                    newApriltagDetectionMsg.homography = tag["homography"].flatten()
+                    newApriltagDetectionMsg.center = tag["center"]
+                    newApriltagDetectionMsg.corners = tag["corners"].flatten()
+                    newApriltagDetectionMsg.pose_error = tag["pose_error"]
 
-                    publisherPoses.publish(newTransformStamped)
+                    publisherPoses.publish(newApriltagDetectionMsg)
                     print("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
 
             if "odometry" in incomingData:
