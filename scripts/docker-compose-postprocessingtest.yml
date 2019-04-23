@@ -1,0 +1,27 @@
+version: '3'
+services:
+  acquisition_node_ab01_bag:
+      image: duckietown/cslam-acquisition:x86-post
+      volumes:
+        - /FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/:/bags
+      environment:
+        # - ACQ_DEVICE_MODE=live
+        # - ACQ_ROS_MASTER_URI_DEVICE=watchtower01.local
+        # - ACQ_ROS_MASTER_URI_DEVICE_IP=192.168.1.30
+        - ACQ_OBSERVATIONS_STATISTICS_OUTPUT=/bags/statistics.yaml
+        - ACQ_DEVICE_MODE=postprocessing
+        - ACQ_DEVICE_THREADS=4
+        - ACQ_DEVICE_BAG=/bags/autobot04_2019-04-18-12-27-21.bag
+        - ACQ_SERVER_MODE=live
+        - ACQ_ROS_MASTER_URI_SERVER=ubuntu-Aleks.local
+        - ACQ_ROS_MASTER_URI_SERVER_IP=192.168.1.104
+        - ACQ_DEVICE_NAME=autobot04
+        - ACQ_BEAUTIFY=0
+        - ACQ_STATIONARY_ODOMETRY=1
+        # - ACQ_ODOMETRY_UPDATE_RATE=0
+        # - ACQ_POSES_UPDATE_RATE=15
+        - ACQ_TEST_STREAM=1
+        # - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
+        - ACQ_TOPIC_RAW=camera_node/image/compressed
+      network_mode: "host"
+      # restart: always

@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import rospy
-from sensor_msgs.msg import CompressedImage, Image, CameraInfo
+import rosbag
+from std_msgs.msg import Header
+from sensor_msgs.msg import CompressedImage, Image, CameraInfo, RegionOfInterest
 from geometry_msgs.msg import TransformStamped
 from duckietown_msgs.msg import Pose2DStamped
 
@@ -12,6 +14,7 @@ import os
 import sys
 import cPickle as pickle
 import numpy as np
+from pathos.multiprocessing import ProcessingPool
 
 import math
 
@@ -22,73 +25,96 @@ ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
 sys.path.append(ACQ_APRILTAG_LIB)
 import apriltags3
 
+dsp = None
+
 class acquisitionProcessor():
     """
     Processes the data coming from a remote device (Duckiebot or watchtower).
     """
-    def __init__(self, outputDictQueue, logger):
+    def __init__(self, logger, mode='live'):
 
-        try:
-            # Get the environment variables
+        self.mode = mode
+        if self.mode != 'live' and self.mode != 'postprocessing':
+            raise Exception("The argument mode should be 'live' or 'postprocessing'. Received %s instead." % self.mode)
+
+        # Get the environment variables
+        self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
+        self.ACQ_TOPIC_RAW = os.getenv('ACQ_TOPIC_RAW', 'camera_node/image/raw')
+        self.ACQ_TOPIC_CAMERAINFO = os.getenv('ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
+        self.ACQ_TOPIC_VELOCITY_TO_POSE = os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', None)
+        self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
+        self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
+        self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
+        self.ACQ_STATIONARY_ODOMETRY = bool(int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
+
+        if self.mode == 'live':
             self.ACQ_POSES_UPDATE_RATE = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10)) #Hz
             self.ACQ_ODOMETRY_UPDATE_RATE = float(os.getenv('ACQ_ODOMETRY_UPDATE_RATE', 30)) #Hz
-            self.ACQ_STATIONARY_ODOMETRY = bool(int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
-            self.ACQ_SOCKET_HOST = os.getenv('ACQ_SOCKET_HOST', '127.0.0.1')
-            self.ACQ_SOCKET_PORT = int(os.getenv('ACQ_SOCKET_PORT', 65432))
-            self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', "watchtower10")
-            self.ACQ_TOPIC_RAW = os.getenv('ACQ_TOPIC_RAW', "camera_node/image/raw")
-            self.ACQ_TOPIC_CAMERAINFO = os.getenv('ACQ_TOPIC_CAMERAINFO', "camera_node/camera_info")
-            self.ACQ_TOPIC_VELOCITY_TO_POSE = os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', None)
-            self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
-            self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
-            self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
+        elif self.mode == 'postprocessing':
+            pass
 
-            # Initialize ROS nodes and subscribe to topics
+        # Initialize ROS nodes and subscribe to topics
+        if self.mode == 'live':
             rospy.init_node('acquisition_processor', anonymous=True, disable_signals=True)
-            self.subscriberRawImage = rospy.Subscriber("/"+self.ACQ_DEVICE_NAME+"/"+self.ACQ_TOPIC_RAW, CompressedImage,
+            self.subscriberRawImage = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW, CompressedImage,
                                                         self.camera_image_callback,  queue_size = 1)
-            self.subscriberCameraInfo = rospy.Subscriber("/"+self.ACQ_DEVICE_NAME+"/"+self.ACQ_TOPIC_CAMERAINFO, CameraInfo,
+            self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO, CameraInfo,
                                                         self.camera_info_callback,  queue_size = 1)
 
             if self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE>0: #Only if set (probably not for watchtowers)
-                self.subscriberCameraInfo = rospy.Subscriber("/"+self.ACQ_DEVICE_NAME+"/"+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
-                                                            self.odometry_callback,  queue_size = 1)
+                self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
+                                                            lambda msg: self.odometry_callback,  queue_size = 1)
+        elif self.mode == 'postprocessing':
+            self.bag_topics = {'raw_image': '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW,
+                               'camera_info': '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO}
+            if self.ACQ_TOPIC_VELOCITY_TO_POSE: #Only if set (probably not for watchtowers)
+                self.bag_topics['odometry'] = '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_VELOCITY_TO_POSE
 
-            # CvBridge is neccessary for the image processing
-            self.bridge = CvBridge()
+        # CvBridge is neccessary for the image processing
+        self.bridge = CvBridge()
 
-            # Initialize atributes
-            self.lastCameraInfo = None
-            self.lastCameraImage = None
-            self.lastImageProcessed = False
+        # Initialize atributes
+        self.lastCameraInfo = None
+        self.lastCameraImage = None
+        self.lastImageProcessed = True
+        self.lastOdometry = None
+        self.lastOdometryProcessed = True
 
-            self.previousOdometry = Pose2DStamped()
-            self.previousOdometry.x = 0.0
-            self.previousOdometry.y = 0.0
-            self.previousOdometry.theta = 0.0
+        self.previousOdometry = Pose2DStamped()
+        self.previousOdometry.x = 0.0
+        self.previousOdometry.y = 0.0
+        self.previousOdometry.theta = 0.0
 
+        if self.mode == 'live':
             self.timeLastPub_odometry = rospy.get_time()
             self.timeLastPub_poses = rospy.get_time()
 
-            self.outputDictQueue = outputDictQueue
-            self.logger = logger
+        self.logger = logger
 
-            dsp_options={"beautify": self.ACQ_BEAUTIFY, "tag_size": self.ACQ_TAG_SIZE}
-            self.dsp = deviceSideProcessor(dsp_options, self.logger)
+        # Initialize the device side processor
+        self.dsp_options={'beautify': self.ACQ_BEAUTIFY, 'tag_size': self.ACQ_TAG_SIZE}
+        self.dsp = None
 
-        except Exception as e:
-            self.logger.warning("acquisitionProcessor initialization failed: : %s" % str(e))
-            raise Exception("acquisitionProcessor initialization failed: : %s" % str(e))
+        self.logger.info('Acquisition processor is set up.')
 
-    def update(self, quitEvent):
+    def liveUpdate(self, outputDictQueue, quitEvent):
         """
         Runs constantly and processes new data as it comes.
         """
 
-        try:
-            while not quitEvent.is_set():
-                #check if we want odometry and if it has been sent in the last X secs
-                if self.ACQ_STATIONARY_ODOMETRY and self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE>0 and rospy.get_time() - self.timeLastPub_odometry >= 1.0/self.ACQ_ODOMETRY_UPDATE_RATE:
+        assert(self.mode=='live')
+
+        while not quitEvent.is_set():
+            #check if we want odometry:
+            if self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_POSES_UPDATE_RATE > 0 and rospy.get_time() - self.timeLastPub_poses >= 1.0/self.ACQ_POSES_UPDATE_RATE:
+                odometry = None
+                # If we have a new actual message, use it
+                if not self.lastOdometryProcessed:
+                    odometry = self.odometry_process(self.lastOdometry)
+                    self.lastOdometryProcessed = True
+
+                # Else send a dummy message if requested and if live (only if no other message has been sent for the last 0.2 secs)
+                elif self.ACQ_STATIONARY_ODOMETRY:
                     odometry = TransformStamped()
                     odometry.header.seq = 0
                     odometry.header.stamp = rospy.get_rostime()
@@ -102,186 +128,230 @@ class acquisitionProcessor():
                     odometry.transform.rotation.z = 0
                     odometry.transform.rotation.w = 1
 
-                    self.timeLastPub_odometry = rospy.get_time()
+                # Do these only if an odometry message was generated
+                if odometry is not None:
+                    # Update the last odometry time
+                    if self.mode == 'live':
+                        self.timeLastPub_odometry = rospy.get_time()
 
-                    self.outputDictQueue.put(obj=pickle.dumps({"odometry": odometry}, protocol=-1),
-                                             block=True,
-                                             timeout=None)
+                    outputDictQueue.put(obj=pickle.dumps({'odometry': odometry}, protocol=-1),
+                                        block=True,
+                                        timeout=None)
 
-                # Check if the last data was not yet processed and if it's time to process it (in order to sustain the deisred update rate)
-                if rospy.get_time() - self.timeLastPub_poses >= 1.0/self.ACQ_POSES_UPDATE_RATE and not self.lastImageProcessed:
-                    self.timeLastPub_poses = rospy.get_time()
-                    outputDict = self.camera_image_process()
+            # Check if the last image data was not yet processed and if it's time to process it (in order to sustain the deisred update rate)
+            if rospy.get_time() - self.timeLastPub_poses >= 1.0/self.ACQ_POSES_UPDATE_RATE and not self.lastImageProcessed:
+                self.timeLastPub_poses = rospy.get_time()
+
+                if self.lastCameraInfo is not None and self.lastCameraImage is not None:
+                    # Collect latest ros_data
+                    currRawImage = self.lastCameraImage
+                    currCameraInfo = self.lastCameraInfo
+                    outputDict = self.camera_image_process(currRawImage, currCameraInfo)
                     if outputDict is not None:
-                        self.outputDictQueue.put(obj=pickle.dumps(outputDict, protocol=-1),
-                                                 block=True,
-                                                 timeout=None)
+                        outputDictQueue.put(obj=pickle.dumps(outputDict, protocol=-1),
+                                            block=True,
+                                            timeout=None)
                         self.lastImageProcessed = True
 
-        except Exception as e:
-            self.logger.warning("acquisitionProcessor update failed: : %s" % str(e))
-            raise Exception("acquisitionProcessor update failed: : %s" % str(e))
+
+    def postprocess(self, outputDictQueue, bag, n_threads = 8):
+        """
+        Processes the data from a ROS bag.
+        IMPORTANT: This will load all the bag contents in RAM! Make sure that
+        the bag size is not too big and that you have sufficient RAM memory.
+        """
+
+        assert(self.mode=='postprocessing')
+
+        self.logger.info('Postprocessing started')
+
+        # Setup the ProcessingPool. We use pathos as it uses dill instead of pickle which packeges more classes
+
+        p = ProcessingPool(n_threads)
+        self.logger.info('Bag loaded')
+
+        # We process each topic separately.
+
+        # Odometry needs to be processed sequentially as it has to subtract the poses of subsequent messages
+        if self.ACQ_TOPIC_VELOCITY_TO_POSE: #Only if set (probably not for watchtowers)
+            self.logger.info('Odometry processing starting')
+            for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['odometry']):
+                odometry = self.odometry_process(self.lastOdometry)
+                outputDictQueue.put(obj=pickle.dumps({'odometry': odometry}, protocol=-1),
+                                    block=True,
+                                    timeout=None)
+            self.logger.info('Odometry processing finished')
 
 
-    def odometry_callback(self, ros_data):
+        # The images can be processed in parallel. We assume the camera info does not change so we simply take the first one
+        self.logger.info('Getting the camera info')
+        for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['camera_info']):
+            cameraInfo = self.debagify_msg(msg)
+            break
+        self.logger.info('Camera info obtained')
+
+        def full_process(msg):
+            return self.camera_image_process(msg, cameraInfo)
+
+        self.logger.info('Loading the camera images')
+        msgs_to_process = [self.debagify_msg(msg) for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['raw_image'])]
+
+        self.logger.info('Processing the camera images')
+        results = p.map(full_process, msgs_to_process)
+        for result in results:
+            if result is not None:
+                outputDictQueue.put(obj=pickle.dumps(result, protocol=-1),
+                                    block=True,
+                                    timeout=None)
+
+        self.logger.info('Finished processing the camera images')
+
+        bag.close()
+
+
+    def odometry_process(self, ros_data, outputDictQueue):
         """
         Callback function that is executed upon reception of new odometry data.
         """
-        try:
-            # Prepare the new ROS message for the processed odometry
-            odometry = TransformStamped()
-            odometry.header.seq = 0
-            odometry.header = ros_data.header
-            odometry.header.frame_id = self.ACQ_DEVICE_NAME
-            odometry.child_frame_id = self.ACQ_DEVICE_NAME
 
-            # Transform the incoming data to quaternions
-            transform_current = np.array([[math.cos(ros_data.theta), -1.0 * math.sin(ros_data.theta), ros_data.x],
-                                          [math.sin(ros_data.theta), math.cos(ros_data.theta), ros_data.y],
-                                          [0.0, 0.0, 1.0]])
+        # Prepare the new ROS message for the processed odometry
+        odometry = TransformStamped()
+        odometry.header.seq = 0
+        odometry.header = ros_data.header
+        odometry.header.frame_id = self.ACQ_DEVICE_NAME
+        odometry.child_frame_id = self.ACQ_DEVICE_NAME
 
-            transform_previous = np.array([[math.cos(self.previousOdometry.theta), -1.0 * math.sin(self.previousOdometry.theta), self.previousOdometry.x],
-                                               [math.sin(self.previousOdometry.theta), math.cos(self.previousOdometry.theta), self.previousOdometry.y],
-                                               [0.0, 0.0, 1.0]])
+        # Transform the incoming data to quaternions
+        transform_current = np.array([[math.cos(ros_data.theta), -1.0 * math.sin(ros_data.theta), ros_data.x],
+                                      [math.sin(ros_data.theta), math.cos(ros_data.theta), ros_data.y],
+                                      [0.0, 0.0, 1.0]])
 
-            transform_previous_inv = np.linalg.inv(transform_previous)
+        transform_previous = np.array([[math.cos(self.previousOdometry.theta), -1.0 * math.sin(self.previousOdometry.theta), self.previousOdometry.x],
+                                           [math.sin(self.previousOdometry.theta), math.cos(self.previousOdometry.theta), self.previousOdometry.y],
+                                           [0.0, 0.0, 1.0]])
 
-            self.previousOdometry = ros_data
+        transform_previous_inv = np.linalg.inv(transform_previous)
 
-            transform_relative = np.matmul(transform_previous_inv, transform_current)
+        self.previousOdometry = ros_data
 
-            angle = math.atan2(transform_relative[1][0], transform_relative[0][0])
+        transform_relative = np.matmul(transform_previous_inv, transform_current)
 
-            x = transform_relative[0][2]
+        angle = math.atan2(transform_relative[1][0], transform_relative[0][0])
 
-            y = transform_relative[1][2]
+        x = transform_relative[0][2]
 
-
-            cy = math.cos(angle * 0.5)
-            sy = math.sin(angle * 0.5)
-            cp = 1.0
-            sp = 0.0
-            cr = 1.0
-            sr = 0.0
-
-            q_w = cy * cp * cr + sy * sp * sr
-            q_x = cy * cp * sr - sy * sp * cr
-            q_y = sy * cp * sr + cy * sp * cr
-            q_z = sy * cp * cr - cy * sp * sr
+        y = transform_relative[1][2]
 
 
-            # Save the resuts to the new odometry relative pose message
-            odometry.transform.translation.x = x
-            odometry.transform.translation.y = y
-            odometry.transform.translation.z = 0
-            odometry.transform.rotation.x = q_x
-            odometry.transform.rotation.y = q_y
-            odometry.transform.rotation.z = q_z
-            odometry.transform.rotation.w = q_w
+        cy = math.cos(angle * 0.5)
+        sy = math.sin(angle * 0.5)
+        cp = 1.0
+        sp = 0.0
+        cr = 1.0
+        sr = 0.0
 
-            # Add the new data to the queue so that the server side publisher can publish them on the other ROS Master
-            self.outputDictQueue.put(obj=pickle.dumps({"odometry": odometry}, protocol=-1),
-                                     block=True,
-                                     timeout=None)
+        q_w = cy * cp * cr + sy * sp * sr
+        q_x = cy * cp * sr - sy * sp * cr
+        q_y = sy * cp * sr + cy * sp * cr
+        q_z = sy * cp * cr - cy * sp * sr
 
-            # Update the last odometry time
-            self.timeLastPub_odometry = rospy.get_time()
 
-            self.logger.warning('ODO CALLBACK')
+        # Save the resuts to the new odometry relative pose message
+        odometry.transform.translation.x = x
+        odometry.transform.translation.y = y
+        odometry.transform.translation.z = 0
+        odometry.transform.rotation.x = q_x
+        odometry.transform.rotation.y = q_y
+        odometry.transform.rotation.z = q_z
+        odometry.transform.rotation.w = q_w
 
-        except Exception as e:
-            self.logger.warning("acquisitionProcessor odometry_callback failed: : %s" % str(e))
-            pass
+        return odometry
 
-    def camera_image_process(self):
+    def camera_image_process(self, currRawImage, currCameraInfo):
         """
-        Contains the camera image processing necessary.
+        Contains the necessary camera image processing.
         """
 
         outputDict = None
-        # If there is new data to process
-        if self.lastCameraInfo is not None and self.lastCameraImage is not None:
-            # Collect latest ros_data
-            currRawImage = self.lastCameraImage
-            currCameraInfo = self.lastCameraInfo
 
-            # Convert from ROS image message to numpy array
-            cv_image = self.bridge.compressed_imgmsg_to_cv2(currRawImage, desired_encoding="mono8")
+        # Use the right dsp, depending on the mode
+        if self.mode == 'live':
+            if self.dsp == None:
+                self.dsp = deviceSideProcessor(self.dsp_options, self.logger)
+            dsp = self.dsp
+        if self.mode == 'postprocessing':
+            global dsp
+            if dsp == None:
+                dsp = deviceSideProcessor(self.dsp_options, self.logger)
+        assert(dsp is not None)
 
-            # Scale the K matrix if the image resolution is not the same as in the calibration
-            currRawImage_height = cv_image.shape[0]
-            currRawImage_width = cv_image.shape[1]
+        # Convert from ROS image message to numpy array
+        cv_image = self.bridge.compressed_imgmsg_to_cv2(currRawImage, desired_encoding='mono8')
 
-            scale_matrix = np.ones(9)
-            if currCameraInfo.height != currRawImage_height or currCameraInfo.width != currRawImage_width:
-                scale_width = float(currRawImage_width) / currCameraInfo.width
-                scale_height = float(currRawImage_height) / currCameraInfo.height
+        # Scale the K matrix if the image resolution is not the same as in the calibration
+        currRawImage_height = cv_image.shape[0]
+        currRawImage_width = cv_image.shape[1]
 
-                scale_matrix[0] *= scale_width
-                scale_matrix[2] *= scale_width
-                scale_matrix[4] *= scale_height
-                scale_matrix[5] *= scale_height
+        scale_matrix = np.ones(9)
+        if currCameraInfo.height != currRawImage_height or currCameraInfo.width != currRawImage_width:
+            scale_width = float(currRawImage_width) / currCameraInfo.width
+            scale_height = float(currRawImage_height) / currCameraInfo.height
 
-
-            outputDict = dict()
-
-            # Process the image and extract the apriltags
-            outputDict = self.dsp.process(cv_image,  (np.array(currCameraInfo.K)*scale_matrix).reshape((3,3)), currCameraInfo.D)
-
-            # Add the time stamp and source of the input image to the output
-            for idx in range(len(outputDict["apriltags"])):
-                outputDict["apriltags"][idx]["timestamp_secs"] = currRawImage.header.stamp.secs
-                outputDict["apriltags"][idx]["timestamp_nsecs"] = currRawImage.header.stamp.nsecs
-                outputDict["apriltags"][idx]["source"] = self.ACQ_DEVICE_NAME
-
-            # Generate a diagnostic image
-            if self.ACQ_TEST_STREAM==1:
-                try:
-                    image = np.copy(outputDict['rect_image'])
-
-                    # Put the AprilTag bound boxes and numbers to the image
-                    for tag in outputDict["apriltags"]:
-                        for idx in range(len(tag["corners"])):
-                            cv2.line(image, tuple(tag["corners"][idx-1, :].astype(int)), tuple(tag["corners"][idx, :].astype(int)), (0, 255, 0))
-                            # cv2.rectangle(image, (tag["corners"][0, 0].astype(int)-10,tag["corners"][0, 1].astype(int)-10), (tag["corners"][0, 0].astype(int)+15,tag["corners"][0, 1].astype(int)+15), (0, 0, 255), cv2.FILLED)
-                        cv2.putText(image,str(tag["tag_id"]),
-                                    org=(tag["corners"][0, 0].astype(int)+10,tag["corners"][0, 1].astype(int)+10),
-                                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                    fontScale=1.0,
-                                    thickness=2,
-                                    color=(255, 0, 0))
-
-                    # Put device and timestamp to the image
-                    cv2.putText(image,'device: '+ self.ACQ_DEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+"+"+str(currRawImage.header.stamp.nsecs),
-                                org=(30,30),
-                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                fontScale=1.0,
-                                thickness=2,
-                                color=(255, 0, 0))
-
-                    # Add the original and diagnostic info to the outputDict
-                    outputDict["test_stream_image"] = self.bridge.cv2_to_compressed_imgmsg(image, dst_format='png')
-                    outputDict["test_stream_image"].header.stamp.secs = currRawImage.header.stamp.secs
-                    outputDict["test_stream_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
-                    outputDict["test_stream_image"].header.frame_id = self.ACQ_DEVICE_NAME
-
-                    outputDict["raw_image"] = self.lastCameraImage
-                    outputDict["raw_camera_info"] = self.lastCameraInfo
-
-                    outputDict["rectified_image"] = self.bridge.cv2_to_compressed_imgmsg(outputDict["rect_image"], dst_format='png')
-                    outputDict["rectified_image"].header.stamp.secs = currRawImage.header.stamp.secs
-                    outputDict["rectified_image"].header.stamp.nsecs = currRawImage.header.stamp.nsecs
-                    outputDict["rectified_image"].header.frame_id = self.ACQ_DEVICE_NAME
-
-                    #THIS DOESN'T WORK YET
-                    # print(outputDict["newCameraMatrix"])
-                    # outputDict["rectified_camera_info"] = self.lastCameraInfo
-                    # outputDict["rectified_camera_info"].K = list(np.array(outputDict["newCameraMatrix"].flatten(order="C")))
+            scale_matrix[0] *= scale_width
+            scale_matrix[2] *= scale_width
+            scale_matrix[4] *= scale_height
+            scale_matrix[5] *= scale_height
 
 
-                except Exception as e:
-                    self.logger.warning("acquisitionProcessor odometry_callback failed: : %s" % str(e))
-                    pass
+        outputDict = dict()
+
+        # Process the image and extract the apriltags
+        outputDict = dsp.process(cv_image,  (np.array(currCameraInfo.K)*scale_matrix).reshape((3,3)), currCameraInfo.D)
+
+        # Add the time stamp and source of the input image to the output
+        for idx in range(len(outputDict['apriltags'])):
+            outputDict['apriltags'][idx]['timestamp_secs'] = currRawImage.header.stamp.secs
+            outputDict['apriltags'][idx]['timestamp_nsecs'] = currRawImage.header.stamp.nsecs
+            outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
+
+        # Generate a diagnostic image
+        if self.ACQ_TEST_STREAM==1:
+            image = np.copy(outputDict['rect_image'])
+
+            # Put the AprilTag bound boxes and numbers to the image
+            for tag in outputDict['apriltags']:
+                for idx in range(len(tag['corners'])):
+                    cv2.line(image, tuple(tag['corners'][idx-1, :].astype(int)), tuple(tag['corners'][idx, :].astype(int)), (0, 255, 0))
+                    # cv2.rectangle(image, (tag['corners'][0, 0].astype(int)-10,tag['corners'][0, 1].astype(int)-10), (tag['corners'][0, 0].astype(int)+15,tag['corners'][0, 1].astype(int)+15), (0, 0, 255), cv2.FILLED)
+                cv2.putText(image,str(tag['tag_id']),
+                            org=(tag['corners'][0, 0].astype(int)+10,tag['corners'][0, 1].astype(int)+10),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=1.0,
+                            thickness=2,
+                            color=(255, 0, 0))
+
+            # Put device and timestamp to the image
+            cv2.putText(image,'device: '+ self.ACQ_DEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+'+'+str(currRawImage.header.stamp.nsecs),
+                        org=(30,30),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=1.0,
+                        thickness=2,
+                        color=(255, 0, 0))
+
+            # Add the original and diagnostic info to the outputDict
+            outputDict['test_stream_image'] = self.bridge.cv2_to_compressed_imgmsg(image, dst_format='png')
+            outputDict['test_stream_image'].header.stamp.secs = currRawImage.header.stamp.secs
+            outputDict['test_stream_image'].header.stamp.nsecs = currRawImage.header.stamp.nsecs
+            outputDict['test_stream_image'].header.frame_id = self.ACQ_DEVICE_NAME
+
+            outputDict['raw_image'] = currRawImage
+            outputDict['raw_camera_info'] = currCameraInfo
+
+            outputDict['rectified_image'] = self.bridge.cv2_to_compressed_imgmsg(outputDict['rect_image'], dst_format='png')
+            outputDict['rectified_image'].header.stamp.secs = currRawImage.header.stamp.secs
+            outputDict['rectified_image'].header.stamp.nsecs = currRawImage.header.stamp.nsecs
+            outputDict['rectified_image'].header.frame_id = self.ACQ_DEVICE_NAME
+
         return outputDict
 
     def camera_info_callback(self, ros_data):
@@ -297,6 +367,53 @@ class acquisitionProcessor():
         self.lastCameraImage = ros_data
         self.lastImageProcessed = False
 
+    def camera_image_callback(self, ros_data):
+        """
+        Callback function that is executed upon reception of a new odometry message.
+        """
+        self.lastOdometry = ros_data
+        self.lastOdometryProcessed = False
+
+    def debagify_msg(self, msg):
+        """
+        The messages read from the rosbags do not have the correct classes so we need to reinitialize themself.
+        """
+        if 'Header' in str(type(msg)):
+            newMsg = Header()
+            newMsg.seq = msg.seq
+            newMsg.stamp.secs = msg.stamp.secs
+            newMsg.stamp.nsecs = msg.stamp.nsecs
+            newMsg.frame_id = msg.frame_id
+            return newMsg
+        if 'RegionOfInterest' in str(type(msg)):
+            newMsg = RegionOfInterest()
+            newMsg.x_offset = msg.x_offset
+            newMsg.y_offset = msg.y_offset
+            newMsg.height = msg.height
+            newMsg.width = msg.width
+            newMsg.do_rectify = msg.do_rectify
+            return newMsg
+        if '_sensor_msgs__CompressedImage' in str(type(msg)):
+            im = self.bridge.compressed_imgmsg_to_cv2(msg).copy()
+            newMsg = self.bridge.cv2_to_compressed_imgmsg(im)
+            newMsg.header = self.debagify_msg(msg.header)
+            return newMsg
+        if '_sensor_msgs__CameraInfo' in str(type(msg)):
+            newMsg = CameraInfo()
+            newMsg.header = self.debagify_msg(msg.header)
+            newMsg.height = msg.height
+            newMsg.width  = msg.width
+            newMsg.distortion_model = msg.distortion_model
+            newMsg.D = msg.D
+            newMsg.P = msg.P
+            newMsg.R = msg.R
+            newMsg.K = msg.K
+            newMsg.binning_x = msg.binning_x
+            newMsg.binning_y = msg.binning_y
+            newMsg.roi = self.debagify_msg(msg.roi)
+            return newMsg
+        raise Exception("Message type %s could not be debagified" % str(type(msg)))
+
 
 class deviceSideProcessor():
     """
@@ -305,11 +422,11 @@ class deviceSideProcessor():
     def __init__(self, options, logger):
         self.logger = logger
         self.ImageRectifier = None
-        self.opt_beautify = options.get("beautify", False)
-        self.tag_size = options.get("tag_size", 0.065)
+        self.opt_beautify = options.get('beautify', False)
+        self.tag_size = options.get('tag_size', 0.065)
         self.aprilTagProcessor = apriltags3.Detector(searchpath=[ACQ_APRILTAG_SO],
                                families='tag36h11',
-                               nthreads=14,
+                               nthreads=4,
                                quad_decimate=1.0,
                                quad_sigma=0.0,
                                refine_edges=1,
@@ -345,11 +462,11 @@ class deviceSideProcessor():
 
             # 4. Package output
             outputDict = dict()
-            outputDict["rect_image"] = rect_image
-            outputDict["new_camera_matrix"] = newCameraMatrix
-            outputDict["apriltags"] = list()
+            outputDict['rect_image'] = rect_image
+            outputDict['new_camera_matrix'] = newCameraMatrix
+            outputDict['apriltags'] = list()
             for atag in tags:
-                outputDict["apriltags"].append({'tag_id': atag.tag_id,
+                outputDict['apriltags'].append({'tag_id': atag.tag_id,
                                                 'corners': atag.corners,
                                                 'qvec': self.mat2quat(atag.pose_R),
                                                 'tvec': atag.pose_t,
@@ -362,7 +479,7 @@ class deviceSideProcessor():
             return outputDict
 
         except Exception as e:
-            self.logger.warning("deviceSideProcessor process failed: : %s" % str(e))
+            self.logger.warning('deviceSideProcessor process failed: : %s' % str(e))
             pass
 
     def mat2quat(self, M):
@@ -385,5 +502,5 @@ class deviceSideProcessor():
                 q *= -1
             return q
         except:
-            self.logger.warning("deviceSideProcessor process failed: : %s" % str(e))
+            self.logger.warning('deviceSideProcessor process failed: : %s' % str(e))
             pass

@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 
 import rospy
+import rosbag
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import CompressedImage, Image, CameraInfo
 from duckietown_msgs.msg import AprilTagDetection
 import cPickle as pickle
 import os
+import numpy as np
+import Queue
+import collections
+import yaml
 
-def publishOnServer(outputDictQueue, quitEvent):
+def publishOnServer(outputDictQueue, quitEvent, logger):
     """
     Publishes the processed data on the ROS Master that the graph optimizer uses.
     """
@@ -17,8 +22,10 @@ def publishOnServer(outputDictQueue, quitEvent):
     ACQ_ODOMETRY_TOPIC = os.getenv('ACQ_ODOMETRY_TOPIC', "odometry")
     ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', "watchtower10")
     ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
+    ACQ_OBSERVATIONS_STATISTICS_OUTPUT = os.getenv('ACQ_OBSERVATIONS_STATISTICS_OUTPUT', None)
 
     seq_stamper = 0
+    counts = collections.Counter()
 
     publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, AprilTagDetection, queue_size=1)
     publisherOdometry = rospy.Publisher("/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
@@ -36,10 +43,9 @@ def publishOnServer(outputDictQueue, quitEvent):
     # Run continuously, check for new data arriving from the acquisitionProcessor and processed it when it arrives
     while not quitEvent.is_set():
         try:
-            newQueueData = outputDictQueue.get(block=True, timeout=1)
+            newQueueData = outputDictQueue.get(block=True, timeout=5)
+            # logger.info("Backlog of messages to send: %d messages" % outputDictQueue.qsize())
             incomingData = pickle.loads(newQueueData)
-
-            print("Backlog of messages to send: %d messages" % outputDictQueue.qsize())
 
             if "apriltags" in incomingData:
                 for tag in incomingData["apriltags"]:
@@ -66,10 +72,13 @@ def publishOnServer(outputDictQueue, quitEvent):
                     newApriltagDetectionMsg.pose_error = tag["pose_error"]
 
                     publisherPoses.publish(newApriltagDetectionMsg)
-                    print("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
+                    logger.info("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
+
+                    counts[newApriltagDetectionMsg.tag_id] += 1
 
             if "odometry" in incomingData:
                 publisherOdometry.publish(incomingData["odometry"])
+                counts["odometry"] += 1
 
             # Publish the test and raw data if submitted and requested:
             if ACQ_TEST_STREAM:
@@ -98,6 +107,26 @@ def publishOnServer(outputDictQueue, quitEvent):
 
         except KeyboardInterrupt:
             raise( Exception("Exiting") )
+        except Queue.Empty:
+            if os.getenv('ACQ_DEVICE_MODE', 'live') == 'live':
+                logger.warning("No messages received in the last 5 seconds!")
         except Exception as e:
-            print("Exception: %s" % str(e))
+            logger.warning("Exception: %s" % str(e))
             pass
+
+    # Save or append to an existing file:
+    if ACQ_OBSERVATIONS_STATISTICS_OUTPUT:
+        logger.info("Saving statistics to %s", ACQ_OBSERVATIONS_STATISTICS_OUTPUT)
+        new_stats = dict()
+        for id, count in counts.iteritems():
+            new_stats[id] = count
+
+        yaml.dump({ACQ_DEVICE_NAME: new_stats}, open(ACQ_OBSERVATIONS_STATISTICS_OUTPUT,'a'))
+
+    # print the observation statistics in the terminal
+    logger.info("\n\n")
+    logger.info("----------------------------------------------------")
+    logger.info("COUNTS OF OBSERVED APRIL TAGS AND ODOMETRY MESSAGES:")
+    logger.info("Device: %s" % ACQ_DEVICE_NAME)
+    for id, count in counts.iteritems():
+        logger.info("tag: {0}\t{1} observations".format(id, count))
