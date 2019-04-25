@@ -1,0 +1,17 @@
+version: '3'
+services:
+  WesQuackerson:
+      image: duckietown/cslam-wes-quackerson:latest
+      volumes:
+        - /FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/:/bags
+      environment:
+        - OUTPUT_FRAMERATE=12
+        - MIN_SHOT_LENGTH=12
+        - ATMSGS_BAG=/bags/processed.bag
+        - VIDEO_BAGS=/bags
+        - POSES_TOPIC=/poses_acquisition/poses
+        - VIDEO_TOPIC=/camera_node/image/compressed
+        - OUTPUT_FILE=/bags/overheadVideo.mp4
+        - TRACKED_AT_ID=410
+        - CAMERA_RESOLUTION_HEIGHT=1296
+        - CAMERA_RESOLUTION_WIDTH=972

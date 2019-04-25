@@ -1,0 +1,34 @@
+FROM ros:kinetic-ros-core
+
+MAINTAINER Aleksandar Petrov <alpetrov@ethz.ch>
+
+# OPTIONALLY YOU CAN ALSO SPECIFY + DEFAULT VALUES
+ENV OUTPUT_FRAMERATE 12
+ENV MIN_SHOT_LENGTH 12
+ENV ATMSGS_BAG /bags/processed.bag
+ENV VIDEO_BAGS /bags
+ENV POSES_TOPIC /poses_acquisition/poses
+ENV VIDEO_TOPIC /camera_node/image/compressed
+ENV OUTPUT_FILE /bags/overheadVideo.mp4
+ENV TRACKED_AT_ID 410
+ENV CAMERA_RESOLUTION_HEIGHT 1296
+ENV CAMERA_RESOLUTION_WIDTH 972
+
+# Install OpenCV and CvBridge
+RUN apt-get update
+RUN apt-get install -f -y python-opencv
+RUN apt-get install -y ros-kinetic-cv-bridge
+RUN apt-get install -y ros-kinetic-rospy
+RUN apt-get install -y python-pip; pip install pathos multiprocessing-logging
+
+# Setup the duckietown_msgs
+RUN mkdir -p /catkin-ws/src
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
+COPY ros-cslam/src/duckietown_msgs /catkin-ws/src/duckietown_msgs
+RUN /bin/bash -c "source /catkin-ws/devel/setup.bash; cd /catkin-ws/; catkin_make"
+
+# Get the actual script in
+COPY WesQuackerson/WesQuackerson.py /WesQuackerson.py
+
+# Start the processes
+CMD /bin/bash -c "cd / ; source /catkin-ws/devel/setup.bash; python WesQuackerson.py"
