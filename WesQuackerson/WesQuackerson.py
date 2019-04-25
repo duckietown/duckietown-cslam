@@ -27,7 +27,8 @@ VIDEO_TOPIC = os.getenv('VIDEO_TOPIC', "/camera_node/image/compressed")
 OUTPUT_FILE = os.getenv('OUTPUT_FILE', "/bags/overheadVideo.mp4")
 
 TRACKED_AT_ID = int(os.getenv('TRACKED_AT_ID',410))
-CAMERA_RESOLUTION = (int(os.getenv('CAMERA_RESOLUTION_HEIGHT',410)),int(os.getenv('CAMERA_RESOLUTION_WIDTH',972)))
+CAMERA_RESOLUTION = (int(os.getenv('CAMERA_RESOLUTION_HEIGHT',1296)),int(os.getenv('CAMERA_RESOLUTION_WIDTH',972)))
+TITLE_CARD = int(os.getenv('TITLE_CARD',1))
 
 print("Starting the awesome WesQuackerson movie generation process.")
 print("We are reading the AT messages from %s and video bags from %s." % (ATMSGS_BAG, VIDEO_BAGS))
@@ -224,6 +225,12 @@ def makeVideo(cutTimeline, cameras, timestamps):
     # Setup the video recording
     fourcc = cv2.VideoWriter_fourcc(*'X264')
     video = cv2.VideoWriter(OUTPUT_FILE,fourcc,OUTPUT_FRAMERATE,CAMERA_RESOLUTION)
+
+    # Add the titlecard if requested`
+    if TITLE_CARD == 1:
+        img = cv2.imread('/titlecard.png',cv2.IMREAD_COLOR)
+        for i in range(2*OUTPUT_FRAMERATE):
+            video.write(img)
 
     # Add the frame one by one
     last_camera = None

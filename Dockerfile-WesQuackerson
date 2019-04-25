@@ -13,6 +13,7 @@ ENV OUTPUT_FILE /bags/overheadVideo.mp4
 ENV TRACKED_AT_ID 410
 ENV CAMERA_RESOLUTION_HEIGHT 1296
 ENV CAMERA_RESOLUTION_WIDTH 972
+ENV TITLE_CARD 1
 
 # Install OpenCV and CvBridge
 RUN apt-get update
@@ -29,6 +30,7 @@ RUN /bin/bash -c "source /catkin-ws/devel/setup.bash; cd /catkin-ws/; catkin_mak
 
 # Get the actual script in
 COPY WesQuackerson/WesQuackerson.py /WesQuackerson.py
+COPY WesQuackerson/titlecard.png /titlecard.png
 
 # Start the processes
 CMD /bin/bash -c "cd / ; source /catkin-ws/devel/setup.bash; python WesQuackerson.py"

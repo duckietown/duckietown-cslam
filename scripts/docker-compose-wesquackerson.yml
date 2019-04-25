@@ -15,3 +15,4 @@ services:
         - TRACKED_AT_ID=410
         - CAMERA_RESOLUTION_HEIGHT=1296
         - CAMERA_RESOLUTION_WIDTH=972
+        - TITLE_CARD=1
