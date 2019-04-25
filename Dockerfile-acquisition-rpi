@@ -40,6 +40,7 @@ RUN apt-get update
 RUN apt-get install -f -y python-opencv
 RUN apt-get install -y ros-kinetic-cv-bridge
 RUN apt-get install -y ros-kinetic-rospy
+RUN apt-get install -y python-pip; pip install pathos multiprocessing-logging
 
 # Copy and install the April tag library and configure the environment variables for it
 RUN mkdir /acquisition_node/apriltag

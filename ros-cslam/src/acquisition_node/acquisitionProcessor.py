@@ -39,7 +39,7 @@ class acquisitionProcessor():
 
         # Get the environment variables
         self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
-        self.ACQ_TOPIC_RAW = os.getenv('ACQ_TOPIC_RAW', 'camera_node/image/raw')
+        self.ACQ_TOPIC_RAW = os.getenv('ACQ_TOPIC_RAW', 'camera_node/image/compressed')
         self.ACQ_TOPIC_CAMERAINFO = os.getenv('ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
         self.ACQ_TOPIC_VELOCITY_TO_POSE = os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', None)
         self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))

@@ -4,7 +4,7 @@ devices=(autobot04 watchtower01 watchtower02 watchtower03 watchtower04 watchtowe
 BAGS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/"
 OUTPUT_BAG_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/processed.bag"
 STATISTICS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/statistics.yaml"
-ACQ_TEST_STREAM=1
+ACQ_TEST_STREAM=0
 
 printf "Setting up the acquisition batch bag processing. Sit back and enjoy.\n\n"
 
