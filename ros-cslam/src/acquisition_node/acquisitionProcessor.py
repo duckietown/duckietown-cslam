@@ -46,6 +46,7 @@ class acquisitionProcessor():
         self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
         self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
         self.ACQ_STATIONARY_ODOMETRY = bool(int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
+        self.ACQ_APRILTAG_QUAD_DECIMATE  = float(os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
 
         if self.mode == 'live':
             self.ACQ_POSES_UPDATE_RATE = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10)) #Hz

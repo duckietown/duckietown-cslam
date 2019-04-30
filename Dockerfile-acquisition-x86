@@ -24,6 +24,7 @@ ENV ACQ_POSES_TOPIC poses
 ENV ACQ_ODOMETRY_TOPIC odometry
 ENV ACQ_TEST_STREAM 1
 ENV ACQ_BEAUTIFY 1
+ENV ACQ_APRILTAG_QUAD_DECIMATE 1.0
 
 # Argumens for where the different places from which we will get files from are
 ARG apriltag_dir=lib-cslam/src/apriltags3-py
