@@ -38,7 +38,7 @@ do
                                       -e ACQ_ROS_MASTER_URI_DEVICE_IP=127.0.0.1 \
                                       -e ACQ_SERVER_MODE=live \
                                       -e ACQ_ROS_MASTER_URI_SERVER=${ROS_MASTER_HOSTNAME} \
-                                      -e ACQ_ROS_MASTER_URI_ROS_MASTER_IP=${ROS_MASTER_IP} \
+                                      -e ACQ_ROS_MASTER_URI_SERVER_IP=${ROS_MASTER_IP} \
                                       -e ACQ_DEVICE_NAME=${array[$index]} \
                                       -e ACQ_BEAUTIFY=1 \
                                       -e ACQ_STATIONARY_ODOMETRY=0 \
