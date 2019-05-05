@@ -1,10 +1,10 @@
 # PARAMETERS TO SETUP
-devices=(autobot04 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
+devices=(autobot04)
 
-BAGS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/"
-OUTPUT_BAG_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/processed.bag"
-STATISTICS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/statistics.yaml"
-ACQ_TEST_STREAM=0
+BAGS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/onlybot/"
+OUTPUT_BAG_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/onlybot/processed.bag"
+STATISTICS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/onlybot/statistics.yaml"
+ACQ_TEST_STREAM=1
 
 printf "Setting up the acquisition batch bag processing. Sit back and enjoy.\n\n"
 
@@ -35,6 +35,13 @@ do
     file=$(find "${BAGS_PATH}" -name "*$device*")
     filename=$(basename "${file}")
 
+    # If it is an autobot, toggle visual odometry
+    if [[ $string == *"autobot"* ]]; then
+      VO_FLAG=1
+    else
+      VO_FLAG=0
+    fi
+
     printf "##########################################################################\n"
     printf "STARTING PROCESSING ${devices[$index]}\n\n"
 
@@ -53,7 +60,9 @@ do
                 -v "${BAGS_PATH}":"/bags" \
                 -v "${OUTPUT_BAG_DIR}":"/outputbag" \
                 -v "${STATISTICS_DIR}":"/statistics" \
-                duckietown/cslam-acquisition:x86-post
+                -v ACQ_ODOMETRY_POST_VISUAL_ODOMETRY=$VO_FLAG \
+                -v ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES=SURF \
+                duckietown/cslam-acquisition:x86-doubletrouble
 
     printf "FINISHED PROCESSING ${devices[$index]}\n\n"
 done

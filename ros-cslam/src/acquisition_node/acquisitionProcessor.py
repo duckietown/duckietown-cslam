@@ -25,6 +25,11 @@ ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
 sys.path.append(ACQ_APRILTAG_LIB)
 import apriltags3
 
+ACQ_VISUAL_ODOMETRY_LIB = os.getenv('ACQ_VISUAL_ODOMETRY_LIB')
+sys.path.append(ACQ_VISUAL_ODOMETRY_LIB)
+from Common_Modules import *
+from py_MVO import VisualOdometry
+
 dsp = None
 
 class acquisitionProcessor():
@@ -47,6 +52,8 @@ class acquisitionProcessor():
         self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
         self.ACQ_STATIONARY_ODOMETRY = bool(int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
         self.ACQ_APRILTAG_QUAD_DECIMATE  = float(os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
+        self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY = bool(int(os.getenv('ACQ_ODOMETRY_POST_VISUAL_ODOMETRY', 0)))
+        self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES = os.getenv('ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES', 'SURF')
 
         if self.mode == 'live':
             self.ACQ_POSES_UPDATE_RATE = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10)) #Hz
@@ -81,10 +88,7 @@ class acquisitionProcessor():
         self.lastOdometry = None
         self.lastOdometryProcessed = True
 
-        self.previousOdometry = Pose2DStamped()
-        self.previousOdometry.x = 0.0
-        self.previousOdometry.y = 0.0
-        self.previousOdometry.theta = 0.0
+        self.previousOdometry = {'x': 0.0, 'y': 0.0, 'theta': 0.0}
 
         if self.mode == 'live':
             self.timeLastPub_odometry = rospy.get_time()
@@ -111,7 +115,8 @@ class acquisitionProcessor():
                 odometry = None
                 # If we have a new actual message, use it
                 if not self.lastOdometryProcessed:
-                    odometry = self.odometry_process(self.lastOdometry)
+
+                    odometry = self.odometry_process(self.lastOdometry.x, self.lastOdometry.y, self.lastOdometry.theta, self.lastOdometry.header)
                     self.lastOdometryProcessed = True
 
                 # Else send a dummy message if requested and if live (only if no other message has been sent for the last 0.2 secs)
@@ -173,23 +178,14 @@ class acquisitionProcessor():
 
         # We process each topic separately.
 
-        # Odometry needs to be processed sequentially as it has to subtract the poses of subsequent messages
-        if self.ACQ_TOPIC_VELOCITY_TO_POSE: #Only if set (probably not for watchtowers)
-            self.logger.info('Odometry processing starting')
-            for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['odometry']):
-                odometry = self.odometry_process(self.lastOdometry)
-                outputDictQueue.put(obj=pickle.dumps({'odometry': odometry}, protocol=-1),
-                                    block=True,
-                                    timeout=None)
-            self.logger.info('Odometry processing finished')
-
-
-        # The images can be processed in parallel. We assume the camera info does not change so we simply take the first one
+        # [CAMERA INFO] The images can be processed in parallel. We assume the camera info does not change so we simply take the first one
         self.logger.info('Getting the camera info')
         for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['camera_info']):
             cameraInfo = self.debagify_msg(msg)
             break
         self.logger.info('Camera info obtained')
+
+        # [APRIL TAGS]
 
         def full_process(msg):
             return self.camera_image_process(msg, cameraInfo)
@@ -204,13 +200,49 @@ class acquisitionProcessor():
                 outputDictQueue.put(obj=pickle.dumps(result, protocol=-1),
                                     block=True,
                                     timeout=None)
-
+        bag.close()
         self.logger.info('Finished processing the camera images')
 
-        bag.close()
+        # [ODOMETRY]  Odometry needs to be processed sequentially as it has to subtract the poses of subsequent messages
+        if self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY: # If visual odometry was requested
+            self.logger.info('Odometry processing starting. Using Visual Odometry (VO). This will be slow.')
+
+            # We reuse the rectified images and the new camera matrix from results
+            K = results[0]['new_camera_matrix'].reshape((3,3))
+
+            # Setting up the visual odometry
+            vo = VisualOdometry(K, self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES, pitch_adjust=np.deg2rad(10.0))
+            clahe = cv2.createCLAHE(clipLimit=5.0)
+
+            # Iterating through the images one by one
+            for img_id, res in enumerate(results):
+
+                img = res['rect_image']
+                img = clahe.apply(img)
+
+                if vo.update(img, img_id):
+                    # The scaling is rather arbitrary, it seems that VO gives centimeters, but in general the scaling is fishy...
+                    odometry = self.odometry_process(0.01*vo.relative_pose_x, 0.01*vo.relative_pose_y, 0.01*vo.relative_pose_theta, res['rectified_image'].header)
+                    outputDictQueue.put(obj=pickle.dumps({'odometry': odometry}, protocol=-1),
+                                        block=True,
+                                        timeout=None)
+
+                if img_id%100 == 0:
+                    self.logger.info('VO: %d/%d frames processed.' % (img_id+1, len(results)))
+
+            self.logger.info('Odometry processing finished')
+
+        elif self.ACQ_TOPIC_VELOCITY_TO_POSE: # If VO was not requested and only if set (probably not for watchtowers)
+            self.logger.info('Odometry processing starting. Using topic %s' % self.ACQ_TOPIC_VELOCITY_TO_POSE)
+            for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['odometry']):
+                odometry = self.odometry_process(msg.x, msg.y, msg.theta, msg.header)
+                outputDictQueue.put(obj=pickle.dumps({'odometry': odometry}, protocol=-1),
+                                    block=True,
+                                    timeout=None)
+            self.logger.info('Odometry processing finished')
 
 
-    def odometry_process(self, ros_data, outputDictQueue):
+    def odometry_process(self, x, y, theta, header):
         """
         Callback function that is executed upon reception of new odometry data.
         """
@@ -218,22 +250,22 @@ class acquisitionProcessor():
         # Prepare the new ROS message for the processed odometry
         odometry = TransformStamped()
         odometry.header.seq = 0
-        odometry.header = ros_data.header
+        odometry.header = header
         odometry.header.frame_id = self.ACQ_DEVICE_NAME
         odometry.child_frame_id = self.ACQ_DEVICE_NAME
 
         # Transform the incoming data to quaternions
-        transform_current = np.array([[math.cos(ros_data.theta), -1.0 * math.sin(ros_data.theta), ros_data.x],
-                                      [math.sin(ros_data.theta), math.cos(ros_data.theta), ros_data.y],
+        transform_current = np.array([[math.cos(theta), -1.0 * math.sin(theta), x],
+                                      [math.sin(theta), math.cos(theta), y],
                                       [0.0, 0.0, 1.0]])
 
-        transform_previous = np.array([[math.cos(self.previousOdometry.theta), -1.0 * math.sin(self.previousOdometry.theta), self.previousOdometry.x],
-                                           [math.sin(self.previousOdometry.theta), math.cos(self.previousOdometry.theta), self.previousOdometry.y],
+        transform_previous = np.array([[math.cos(self.previousOdometry["theta"]), -1.0 * math.sin(self.previousOdometry["theta"]), self.previousOdometry["x"]],
+                                           [math.sin(self.previousOdometry["theta"]), math.cos(self.previousOdometry["theta"]), self.previousOdometry["y"]],
                                            [0.0, 0.0, 1.0]])
 
         transform_previous_inv = np.linalg.inv(transform_previous)
 
-        self.previousOdometry = ros_data
+        self.previousOdometry = {'x': x, 'y': y, 'theta': theta}
 
         transform_relative = np.matmul(transform_previous_inv, transform_current)
 
