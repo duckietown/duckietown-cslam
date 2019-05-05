@@ -1,5 +1,5 @@
 # PARAMETERS TO SETUP
-devices=(autobot04)
+devices=(autobot04 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
 
 BAGS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment"
 OUTPUT_BAG_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/processed.bag"
@@ -34,13 +34,6 @@ do
     device=${devices[$index]}
     file=$(find "${BAGS_PATH}" -name "*$device*")
     filename=$(basename "${file}")
-
-    # If it is an autobot, toggle visual odometry
-    if [[ $string == *"autobot"* ]]; then
-      VO_FLAG=1
-    else
-      VO_FLAG=0
-    fi
 
     printf "##########################################################################\n"
     printf "STARTING PROCESSING ${devices[$index]}\n\n"
