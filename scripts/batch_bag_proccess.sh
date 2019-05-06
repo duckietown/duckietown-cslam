@@ -6,7 +6,7 @@ BAGS_PATH="${FOLDER_PATH}/bags"
 OUTPUT_BAG_PATH="${FOLDER_PATH}/bags/processed.bag"
 STATISTICS_PATH="${FOLDER_PATH}/bags/statistics.yaml"
 ACQ_TEST_STREAM=0
-echo PATH
+
 printf "Setting up the acquisition batch bag processing. Sit back and enjoy.\n\n"
 
 OUTPUT_BAG_DIR=$(dirname "${OUTPUT_BAG_PATH}")
