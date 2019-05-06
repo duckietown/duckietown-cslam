@@ -5,7 +5,7 @@
 This code is a heavily modified version of [visual odometry](https://github.com/Transportation-Inspection/visual_odometry). The rest of this README file is the one of the original project. It's applicability to the current modifications is highly limited.
 
 
-﻿# Py-MVO: Monocular Visual Odometry using Python
+# Py-MVO: Monocular Visual Odometry using Python
 
 The project implements Mononocular Visual Odometry utilizing [OpenCV 3.1.0-dev](https://github.com/opencv/opencv)
 with the [opencv_contrib](https://github.com/opencv/opencv_contrib) modules.

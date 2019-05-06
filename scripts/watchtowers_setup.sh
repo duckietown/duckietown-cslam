@@ -2,7 +2,7 @@
 
 # ALWAYS SET THESE TWO:
 ROS_MASTER_HOSTNAME=duckietown3
-ROS_MASTER_IP=192.168.1.15
+ROS_MASTER_IP=192.168.1.176
 
 if (( $#==2 )); then
   printf "Using the COMMAND LINE hostname and ip address\n"
@@ -12,7 +12,11 @@ else
   printf "Using the DEFAULT hostname and ip address\n"
 fi
 
-array=(watchtower21 watchtower22 watchtower23 watchtower24 watchtower25 watchtower26 watchtower27 watchtower28 watchtower29 watchtower30 watchtower31 watchtower32 watchtower33 watchtower34 watchtower35)
+police_array=(watchtower21 watchtower22 watchtower23 watchtower24 watchtower25 watchtower26 watchtower27 watchtower28 watchtower29 watchtower30 watchtower31 watchtower32 watchtower33 watchtower34 watchtower35 )
+montreal_array=(watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
+eth_array=(watchtower41 watchtower42 watchtower43 watchtower44 watchtower45 watchtower46 watchtower47 watchtower48 watchtower49 watchtower50 watchtower51 watchtower52 watchtower53 watchtower54)
+
+array=(${police_array[@]} ${eth_array[@]} ${montreal_array[@]})
 
 echo "Setting up watchtowers with ROS_MASTER as $ROS_MASTER_HOSTNAME and IP as $ROS_MASTER_IP"
 echo "We are setting up ${#array[*]} watchtowers"
@@ -50,3 +54,5 @@ do
                                       -e ACQ_APRILTAG_QUAD_DECIMATE=2.0 \
                                       duckietown/cslam-acquisition:rpi-doubletrouble || echo "ERROR: Starting cslam-acquisition on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
 done
+
+sleep 4253513513513513513513513513513513513 
