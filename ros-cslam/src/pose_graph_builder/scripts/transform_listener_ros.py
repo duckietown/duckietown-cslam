@@ -498,7 +498,7 @@ class TransformListener():
         # name for our 'listener' node so that multiple listeners can
         # run simultaneously.
         initial_floor_april_tags = "%s/%s" % (rospy.get_param("config_folder"),
-                                              "robotarium1.yaml")
+                                              "robotarium2.yaml")
         priors_filename = "%s/%s" % (rospy.get_param("config_folder"),
                                      "priors.yaml")
         stocking_time = rospy.get_param("stocking_time")
