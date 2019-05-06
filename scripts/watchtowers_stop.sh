@@ -1,7 +1,13 @@
 #!/bin/bash
 
-array=(demowatchtower01 demowatchtower02 demowatchtower03 demowatchtower04 demowatchtower05 demowatchtower06 demowatchtower07 demowatchtower08 demowatchtower09 demowatchtower10 demowatchtower11 demowatchtower12 demowatchtower13 demowatchtower14 demowatchtower15 )
+# array=(watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 )
+police_array=(watchtower21 watchtower22 watchtower23 watchtower24 watchtower25 watchtower26 watchtower27 watchtower28 watchtower29 watchtower30 watchtower31 watchtower32 watchtower33 watchtower34 watchtower35 )
+montreal_array=(watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
+eth_array=(watchtower41 watchtower42 watchtower43 watchtower44 watchtower45 watchtower46 watchtower47 watchtower48 watchtower49 watchtower50 watchtower51 watchtower52 watchtower53 watchtower54)
 
+array=(${police_array[@]} ${eth_array[@]})
+
+echo $array
 echo "We are stopping ${#array[*]} watchtowers"
 
 for index in ${!array[*]}

@@ -53,7 +53,7 @@ do
                 -v "${BAGS_PATH}":"/bags" \
                 -v "${OUTPUT_BAG_DIR}":"/outputbag" \
                 -v "${STATISTICS_DIR}":"/statistics" \
-                duckietown/cslam-acquisition:x86-post
+                duckietown/cslam-acquisition:x86-doubletrouble
 
     printf "FINISHED PROCESSING ${devices[$index]}\n\n"
 done
