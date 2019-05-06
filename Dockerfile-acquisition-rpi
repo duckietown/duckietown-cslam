@@ -26,9 +26,13 @@ ENV ACQ_POSES_TOPIC poses
 ENV ACQ_ODOMETRY_TOPIC odometry
 ENV ACQ_TEST_STREAM 1
 ENV ACQ_BEAUTIFY 1
+ENV ACQ_APRILTAG_QUAD_DECIMATE 1.0
+ENV ACQ_ODOMETRY_POST_VISUAL_ODOMETRY 0
+ENV ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES SURF
 
 # Argumens for where the different places from which we will get files from are
 ARG apriltag_dir=lib-cslam/src/apriltags3-py
+ARG visual_odometry_dir=lib-cslam/src/visual_odometry
 ARG acquisition_src_dir=ros-cslam/src
 ARG algo_dir=lib-cslam/src/duckietown_cslam/algo
 
@@ -49,6 +53,11 @@ RUN  /bin/bash -c "mkdir /acquisition_node/apriltag/build; cd /acquisition_node/
 COPY ${apriltag_dir}/apriltags3.py /acquisition_node/apriltag/apriltags3.py
 ENV ACQ_APRILTAG_LIB /acquisition_node/apriltag/
 ENV ACQ_APRILTAG_SO /acquisition_node/apriltag/build/lib
+
+# Copy the Visual Odometry library
+RUN mkdir /acquisition_node/visual_odometry
+COPY ${visual_odometry_dir} /acquisition_node/visual_odometry
+ENV ACQ_VISUAL_ODOMETRY_LIB /acquisition_node/visual_odometry/src/
 
 # Setup the duckietown_msgs
 RUN mkdir -p /catkin-ws/src

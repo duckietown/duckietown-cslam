@@ -80,7 +80,7 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
             publisherCameraInfoRaw = MockupPublisher(bag, "/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME)
             publisherCameraInfoRectified = MockupPublisher(bag, "/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME)
 
-    logger.info("Setting up the server side process completed. Waiting for messages.")
+    logger.info("Setting up the server side process completed. Waiting for messages...")
 
     # Run continuously, check for new data arriving from the acquisitionProcessor and processed it when it arrives
     while not quitEvent.is_set():
@@ -143,8 +143,18 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
                 if "raw_camera_info" in incomingData:
                     publisherCameraInfoRaw.publish(incomingData["raw_camera_info"])
 
-                if "rectified_camera_info" in incomingData:
-                    publisherCameraInfoRectified.publish(incomingData["rectified_camera_info"])
+                if "new_camera_matrix" in incomingData:
+                    new_camera_info = CameraInfo()
+                    try:
+                        new_camera_info.header = incomingData["raw_camera_info"].header
+                        new_camera_info.height = incomingData["raw_image"].shape[0]
+                        new_camera_info.width = incomingData["raw_image"].shape[1]
+                        new_camera_info.distortion_model = incomingData["raw_camera_info"].distortion_model
+                        new_camera_info.D = [0.0, 0.0, 0.0, 0.0, 0.0]
+                    except:
+                        pass
+                    new_camera_info.K = incomingData["new_camera_matrix"].flatten()
+                    publisherCameraInfoRectified.publish(new_camera_info)
 
             seq_stamper+=1
 

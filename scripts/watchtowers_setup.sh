@@ -25,16 +25,34 @@ echo "If any one of them fails or complains about incompatible Docker version, j
 for index in ${!array[*]}
 do
     printf "\nSetting up %s\n" ${array[$index]}
-    # docker -H ${array[$index]}.local start roscore || echo "ERROR: Starting roscore on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
-    # docker -H ${array[$index]}.local stop ros-picam
-    # docker -H ${array[$index]}.local rm ros-picam
-    # docker -H ${array[$index]}.local run -d --name ros-picam --network=host --device /dev/vchiq -v /data:/data aleksandarpetrov/rpi-duckiebot-ros-picam:highresshutter
-    # # docker -H ${array[$index]}.local start ros-picam || echo "ERROR: Starting ros-picam on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
-    # docker -H ${array[$index]}.local stop cslam-acquisition || echo "Didn't stop older cslam-acquisition, probably doesn't exist, so don't worry."
-    # docker -H ${array[$index]}.local rm cslam-acquisition || echo "Didn't remove older cslam-acquisition, probably doesn't exist, so don't worry."
-    # docker -H ${array[$index]}.local pull duckietown/cslam-acquisition:rpi
-    docker -H ${array[$index]}.local pull duckietown/rpi-duckiebot-base:master19 
-    # docker -H ${array[$index]}.local run -d --name cslam-acquisition --restart always --network=host -e ACQ_ROS_MASTER_URI_DEVICE=${array[$index]} -e ACQ_ROS_MASTER_URI_DEVICE_IP=127.0.0.1 -e ACQ_ROS_MASTER_URI_SERVER=${ROS_MASTER_HOSTNAME} -e ACQ_ROS_MASTER_URI_ROS_MASTER_IP=${ROS_MASTER_IP}  -e ACQ_DEVICE_NAME=${array[$index]} -e ACQ_BEAUTIFY=1 -e ACQ_STATIONARY_ODOMETRY=0 -e ACQ_ODOMETRY_UPDATE_RATE=0 -e ACQ_POSES_UPDATE_RATE=15 -e ACQ_TEST_STREAM=0 -e ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose -e ACQ_TOPIC_RAW=camera_node/image/compressed duckietown/cslam-acquisition:rpi || echo "ERROR: Starting cslam-acquisition on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
+    docker -H ${array[$index]}.local start roscore || echo "ERROR: Starting roscore on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
+    docker -H ${array[$index]}.local stop ros_picam
+    docker -H ${array[$index]}.local rm ros_picam
+    docker -H ${array[$index]}.local run -d --name ros_picam --network=host --device /dev/vchiq -v /data:/data aleksandarpetrov/rpi-duckiebot-ros-picam:highresshutter
+    # docker -H ${array[$index]}.local start ros-picam || echo "ERROR: Starting ros-picam on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
+    docker -H ${array[$index]}.local stop cslam-acquisition || echo "Didn't stop older cslam-acquisition, probably doesn't exist, so don't worry."
+    docker -H ${array[$index]}.local rm cslam-acquisition || echo "Didn't remove older cslam-acquisition, probably doesn't exist, so don't worry."
+    docker -H ${array[$index]}.local pull duckietown/cslam-acquisition:rpi-doubletrouble
+    docker -H ${array[$index]}.local  run -d \
+                                      --name cslam-acquisition \
+                                      --restart always \
+                                      --network=host \
+                                      -e ACQ_DEVICE_MODE=live \
+                                      -e ACQ_ROS_MASTER_URI_DEVICE=${array[$index]} \
+                                      -e ACQ_ROS_MASTER_URI_DEVICE_IP=127.0.0.1 \
+                                      -e ACQ_SERVER_MODE=live \
+                                      -e ACQ_ROS_MASTER_URI_SERVER=${ROS_MASTER_HOSTNAME} \
+                                      -e ACQ_ROS_MASTER_URI_SERVER_IP=${ROS_MASTER_IP} \
+                                      -e ACQ_DEVICE_NAME=${array[$index]} \
+                                      -e ACQ_BEAUTIFY=1 \
+                                      -e ACQ_STATIONARY_ODOMETRY=0 \
+                                      -e ACQ_ODOMETRY_UPDATE_RATE=0 \
+                                      -e ACQ_POSES_UPDATE_RATE=15 \
+                                      -e ACQ_TEST_STREAM=1 \
+                                      -e ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose \
+                                      -e ACQ_TOPIC_RAW=camera_node/image/compressed \
+                                      -e ACQ_APRILTAG_QUAD_DECIMATE=2.0 \
+                                      duckietown/cslam-acquisition:rpi-doubletrouble || echo "ERROR: Starting cslam-acquisition on ${array[$index]} failed. Probably this watchtower wasn't configured properly or we can't connect via the network."
 done
 
 sleep 4253513513513513513513513513513513513 

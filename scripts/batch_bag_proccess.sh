@@ -1,7 +1,7 @@
 # PARAMETERS TO SETUP
-devices=(autobot04 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
+devices=(autobot04)
 
-BAGS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/"
+BAGS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment"
 OUTPUT_BAG_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/processed.bag"
 STATISTICS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/statistics.yaml"
 ACQ_TEST_STREAM=0
@@ -35,8 +35,24 @@ do
     file=$(find "${BAGS_PATH}" -name "*$device*")
     filename=$(basename "${file}")
 
+    # If it is an autobot, toggle visual odometry
+    if [[ $string == *"autobot"* ]]; then
+      VO_FLAG=1
+    else
+      VO_FLAG=0
+    fi
+
     printf "##########################################################################\n"
     printf "STARTING PROCESSING ${devices[$index]}\n\n"
+
+    # If it is an autobot, toggle visual odometry
+    if [[ $device == *"autobot"* ]]; then
+      VO_FLAG=1
+      printf "AUTOBOT DETECTED. WILL PROCESS WITH VISUAL ODOMETRY!\n"
+    else
+      VO_FLAG=0
+      printf "NOT AUTOBOT. Will process without visual odometry!\n"
+    fi
 
     docker run  --rm \
                 --network=host \
@@ -50,6 +66,8 @@ do
                 -e ACQ_TEST_STREAM=${ACQ_TEST_STREAM} \
                 -e ACQ_TOPIC_RAW=camera_node/image/compressed \
                 -e ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose \
+                -e ACQ_ODOMETRY_POST_VISUAL_ODOMETRY=$VO_FLAG \
+                -e ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES=SURF \
                 -v "${BAGS_PATH}":"/bags" \
                 -v "${OUTPUT_BAG_DIR}":"/outputbag" \
                 -v "${STATISTICS_DIR}":"/statistics" \
@@ -57,3 +75,25 @@ do
 
     printf "FINISHED PROCESSING ${devices[$index]}\n\n"
 done
+
+printf "##########################################################################\n"
+printf "WES ANDERSON TAKES THE SCENE\n\n"
+
+docker run  --rm \
+            --network=host \
+            -e OUTPUT_FRAMERATE=12 \
+            -e MIN_SHOT_LENGTH=12 \
+            -e ATMSGS_BAG=/bags/processed.bag \
+            -e VIDEO_BAGS=/bags \
+            -e POSES_TOPIC=/poses_acquisition/poses \
+            -e VIDEO_TOPIC=/camera_node/image/compressed \
+            -e OUTPUT_FILE=/bags/overheadVideo.mp4 \
+            -e TRACKED_AT_ID=410 \
+            -e CAMERA_RESOLUTION_HEIGHT=1296 \
+            -e CAMERA_RESOLUTION_WIDTH=972 \
+            -e TITLE_CARD=1 \
+            -v "${BAGS_PATH}":"/bags" \
+            duckietown/cslam-wes-quackerson
+
+printf "##########################################################################\n"
+printf "WES ANDERSON FINISHED HIS AWESOME MOVIE. Check it out! \n\n"
