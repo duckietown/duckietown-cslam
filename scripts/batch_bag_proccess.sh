@@ -1,11 +1,12 @@
-# PARAMETERS TO SETUP
-devices=(autobot04)
+devices=(autobot03 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
 
-BAGS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment"
-OUTPUT_BAG_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/processed.bag"
-STATISTICS_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/19-04-18-experiment/statistics.yaml"
+FOLDER_PATH="/home/amaury/AIDO2_experiment_data/submission_3219/attempt_01"
+
+BAGS_PATH="${FOLDER_PATH}/bags"
+OUTPUT_BAG_PATH="${FOLDER_PATH}/bags/processed.bag"
+STATISTICS_PATH="${FOLDER_PATH}/bags/statistics.yaml"
 ACQ_TEST_STREAM=0
-
+echo PATH
 printf "Setting up the acquisition batch bag processing. Sit back and enjoy.\n\n"
 
 OUTPUT_BAG_DIR=$(dirname "${OUTPUT_BAG_PATH}")
