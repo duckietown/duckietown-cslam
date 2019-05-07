@@ -18,7 +18,7 @@ class MockupPublisher():
         self.bag = bag
         self.topic = topic
     def publish(self, msg):
-        self.bag.write(self.topic, msg)
+        self.bag.write(self.topic, msg, msg.header.stamp)
 
 def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
     """
