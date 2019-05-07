@@ -97,7 +97,8 @@ def makeCut():
     if cutTimeline[0] == -1:
         for i in range(len(cutTimeline)):
             if not cutTimeline[i] == -1:
-                cutTimeline[:i] = cutTimeline[i]
+                for jj in range(i):
+                    cutTimeline[jj] = cutTimeline[i]
                 break
     # print("B1", np.array(np.unique(cutTimeline, return_counts=True)).T)
 
@@ -105,7 +106,8 @@ def makeCut():
     if reversed_cutTimeline[0] == -1:
         for i in range(len(reversed_cutTimeline)):
             if not reversed_cutTimeline[i] == -1:
-                reversed_cutTimeline[:i] = reversed_cutTimeline[i]
+                for jj in range(i):
+                    reversed_cutTimeline[jj] = reversed_cutTimeline[i]
                 break
 
 
@@ -128,15 +130,17 @@ def makeCut():
             # Otherwise, split approx. in half
             else:
                 midpoint = start_idx+int((end_idx-start_idx)/2)+1
-                cutTimeline[start_idx:midpoint] = [cutTimeline[start_idx-1]] * (midpoint-start_idx)
-                cutTimeline[midpoint:end_idx+1] = [cutTimeline[end_idx+1]] * (end_idx+1-midpoint)
+                for jj in range(start_idx, midpoint):
+                    cutTimeline[jj] = cutTimeline[start_idx-1]
+                for jj in range(midpoint, end_idx+1):
+                    cutTimeline[jj] = cutTimeline[end_idx+1]
 
 
     # Remove too quick shots
     groups = list()
     group_counts = list()
     # First find all consequitive groups of the same camera, as well as counts of how many frames each group has
-
+    # print(cutTimeline)
     last_cam = None
     for i in range(len(cutTimeline)):
         curr_cam = cutTimeline[i]
@@ -147,21 +151,42 @@ def makeCut():
             groups.append(curr_cam)
             group_counts.append(1)
 
+
+    for i in range(15):
+        print(groups[i], group_counts[i])
     # If the first one is too short, find the first long enough and use that camera
     if group_counts[0] < MIN_SHOT_LENGTH:
-        for j, count in enumerate(group_counts[1:]):
-            if group_counts >= MIN_SHOT_LENGTH:
-                groups[:j] = groups[j]
+        for j, count in enumerate(group_counts):
+            if count >= MIN_SHOT_LENGTH:
+                for jj in range(j):
+                    groups[jj] = groups[j]
                 break
+    for i in range(15):
+        print(groups[i], group_counts[i])
 
     # If the last one is too short, find the last long enough and use that camera
     reversed_group_counts = group_counts[::-1]
     reversed_groups = groups[::-1]
     if reversed_group_counts[0] < MIN_SHOT_LENGTH:
-        for j, count in enumerate(reversed_group_counts[1:]):
-            if reversed_group_counts >= MIN_SHOT_LENGTH:
-                reversed_groups[:j] = reversed_groups[j]
+        for j, count in enumerate(reversed_group_counts):
+            if count >= MIN_SHOT_LENGTH:
+                for jj in range(j):
+                    reversed_groups[jj] = reversed_groups[j]
                 break
+
+    #Combine consecutives with the same group
+    new_groups = list()
+    new_counts = list()
+    last_group = None
+    for group_idx, group in enumerate(groups):
+        if group == last_group:
+            new_counts[-1]+=group_counts[group_idx]
+        else:
+            new_groups.append(group)
+            new_counts.append(group_counts[group_idx])
+            last_group = group
+    groups = copy.deepcopy(new_groups)
+    group_counts = copy.deepcopy(new_counts)
 
     # If there is a short cut somewhere in the middle, split it and assign it to the closest long enough cut
     changed = True

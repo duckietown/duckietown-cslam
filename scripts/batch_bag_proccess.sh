@@ -1,11 +1,12 @@
-devices=(autobot03 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
-
-FOLDER_PATH="/home/amaury/AIDO2_experiment_data/submission_3219/attempt_01"
+devices=(autobot04 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
+# devices=(autobot04)
+FOLDER_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/other_experiement"
 
 BAGS_PATH="${FOLDER_PATH}/bags"
 OUTPUT_BAG_PATH="${FOLDER_PATH}/bags/processed.bag"
 STATISTICS_PATH="${FOLDER_PATH}/bags/statistics.yaml"
 ACQ_TEST_STREAM=0
+AUTOBOT_AT_TAGID=403
 
 printf "Setting up the acquisition batch bag processing. Sit back and enjoy.\n\n"
 
@@ -49,7 +50,6 @@ do
     fi
 
     docker run  --rm \
-                --network=host \
                 -e ACQ_DEVICE_MODE=postprocessing \
                 -e ACQ_DEVICE_THREADS=6 \
                 -e ACQ_DEVICE_NAME="${device}" \
@@ -71,10 +71,9 @@ do
 done
 
 printf "##########################################################################\n"
-printf "WES ANDERSON TAKES THE SCENE\n\n"
+printf "WES QUACKERSON TAKES THE SCENE\n\n"
 
 docker run  --rm \
-            --network=host \
             -e OUTPUT_FRAMERATE=12 \
             -e MIN_SHOT_LENGTH=12 \
             -e ATMSGS_BAG=/bags/processed.bag \
@@ -82,7 +81,7 @@ docker run  --rm \
             -e POSES_TOPIC=/poses_acquisition/poses \
             -e VIDEO_TOPIC=/camera_node/image/compressed \
             -e OUTPUT_FILE=/bags/overheadVideo.mp4 \
-            -e TRACKED_AT_ID=410 \
+            -e TRACKED_AT_ID=$AUTOBOT_AT_TAGID \
             -e CAMERA_RESOLUTION_HEIGHT=1296 \
             -e CAMERA_RESOLUTION_WIDTH=972 \
             -e TITLE_CARD=1 \
@@ -90,4 +89,4 @@ docker run  --rm \
             duckietown/cslam-wes-quackerson
 
 printf "##########################################################################\n"
-printf "WES ANDERSON FINISHED HIS AWESOME MOVIE. Check it out! \n\n"
+printf "WES QUACKERSON FINISHED HIS AWESOME MOVIE. Check it out! \n\n"
