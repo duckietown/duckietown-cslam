@@ -1,6 +1,6 @@
 devices=(autobot04 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
-# devices=(autobot04)
-FOLDER_PATH="/FILES/Documents/ETH_Zurich/Duckietown/SLAM/bags/other_experiement"
+
+FOLDER_PATH="/home/amaury/AIDO2_experiment_data/submission_3219/attempt_01"
 
 BAGS_PATH="${FOLDER_PATH}/bags"
 OUTPUT_BAG_PATH="${FOLDER_PATH}/bags/processed.bag"
