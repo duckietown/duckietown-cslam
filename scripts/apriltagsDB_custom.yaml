@@ -1,12 +1,6 @@
-- tag_id: 00
-  tag_type: Vehicle
-  street_name:
-  vehicle_name: if
-  traffic_sign_type: 
-
 - tag_id: 410
   tag_type: Vehicle
   street_name:
-  vehicle_name: amauryduckiebot
+  vehicle_name: autobot04
   traffic_sign_type: 
 

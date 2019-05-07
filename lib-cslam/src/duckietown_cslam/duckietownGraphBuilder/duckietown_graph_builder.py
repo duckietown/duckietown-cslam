@@ -43,12 +43,12 @@ class Prior(object):
 
     def create_info_matrix(self):
         m = np.eye(6)
-        for i in range(0,3):
+        for i in range(0, 3):
             if(not self.constraints[i]):
                 m[i, i] = 0
             else:
                 m[i, i] = 400
-        for i in range(3,6):
+        for i in range(3, 6):
             if(not self.constraints[i]):
                 m[i, i] = 0
             else:
@@ -245,6 +245,7 @@ class MovableNode(Node):
         self.cyclic_counter = CyclicCounter(100000, 1000, self.node_id)
         self.stocking_time = stocking_time
         self.result_folder = result_folder
+        self.last_time_stamp = -1
 
     def set_last_odometry_time_stamp(self, time_stamp):
         with self.node_lock:
@@ -474,8 +475,6 @@ class MovableNode(Node):
                     time_stamps_indices.append(
                         self.get_g2o_index(time_stamp))
                     self.time_stamps_to_indices.pop(time_stamp)
-                if(max_anterior != None):
-                    self.set_fixed(max_anterior)
             for index in time_stamps_indices:
                 self.duckietown_graph.remove_vertex_by_index(index)
 
@@ -517,7 +516,8 @@ class MovableNode(Node):
         with open(result_file, mode='a+') as trajectory_csv:
             trajectory_writer = csv.writer(
                 trajectory_csv, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            header = ["time_stamp", "x", "y", "z", "R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
+            header = ["time_stamp", "x", "y", "z", "R11", "R12",
+                      "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
             trajectory_writer.writerow(header)
 
             for pose in poses_stamped:
