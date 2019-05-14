@@ -19,6 +19,7 @@ from visualization_msgs.msg import *
 from nav_msgs.msg import Odometry, Path
 from duckietown_msgs.msg import AprilTagDetection
 
+
 class PointBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
         threading.Thread.__init__(self)
@@ -61,16 +62,21 @@ class PointBroadcaster(threading.Thread):
         #     print("after optim : det = %f" % det)
         #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
         e = rospy.get_time()
-        q = g.rotations.quaternion_from_rotation(node_pose.R)
-        f = rospy.get_time()
-        t.transform.rotation.w = q[0]
-        t.transform.rotation.x = q[1]
-        t.transform.rotation.y = q[2]
-        t.transform.rotation.z = q[3]
-        # Send the transform.
-        b = rospy.get_time()
-        self.br.sendTransform(t)
-        c = rospy.get_time()
+        R = node_pose.R
+
+        # R[np.where(np.abs(R) < 0.00001)] = 0
+        # q = [1, 0, 0, 0]
+        try:
+            q = g.rotations.quaternion_from_rotation(R)
+            f = rospy.get_time()
+            t.transform.rotation.w = q[0]
+            t.transform.rotation.x = q[1]
+            t.transform.rotation.y = q[2]
+            t.transform.rotation.z = q[3]
+            # Send the transform.
+            self.br.sendTransform(t)
+        except:
+            print("bad rotation %s" % str(R))
         # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
         # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
 
@@ -115,23 +121,30 @@ class PathBroadcaster(threading.Thread):
         for time_stamp in sorted(node_path.keys()):
             node_pose = self.path_dict[node_id][time_stamp]
             pose_stamped = geometry_msgs.msg.PoseStamped()
-            q = g.rotations.quaternion_from_rotation(node_pose.R)
+            R = node_pose.R
+            # R[np.where(np.sabs(R) < 0.00001)] = 0
+            # q = [1, 0, 0, 0]
 
-            pose = Pose()
-            pose.position.x = node_pose.t[0]
-            pose.position.y = node_pose.t[1]
-            pose.position.z = node_pose.t[2]
-            pose.orientation.w = q[0]
-            pose.orientation.x = q[1]
-            pose.orientation.y = q[2]
-            pose.orientation.z = q[3]
-            pose_stamped.pose = pose
-            pose_stamped.header.stamp.secs = int(time_stamp)
-            pose_stamped.header.stamp.nsecs = (
-                time_stamp - int(time_stamp)) * 10**9
+            try:
+                q = g.rotations.quaternion_from_rotation(R)
 
-            # point.z = 0.001
-            self.path.poses.append(pose_stamped)
+                pose = Pose()
+                pose.position.x = node_pose.t[0]
+                pose.position.y = node_pose.t[1]
+                pose.position.z = node_pose.t[2]
+                pose.orientation.w = q[0]
+                pose.orientation.x = q[1]
+                pose.orientation.y = q[2]
+                pose.orientation.z = q[3]
+                pose_stamped.pose = pose
+                pose_stamped.header.stamp.secs = int(time_stamp)
+                pose_stamped.header.stamp.nsecs = (
+                    time_stamp - int(time_stamp)) * 10**9
+
+                # point.z = 0.001
+                self.path.poses.append(pose_stamped)
+            except:
+                print("bad rotation %s" % str(R))
         # - Create rotation matrix.
         #   Verify that the rotation is a proper rotation.
         # det = np.linalg.det(node_pose.R)
@@ -319,6 +332,9 @@ class TransformListener():
             return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
         else:
             # Add edge to the graph.
+            april_tag_number = int(node_id1.split("_")[1])
+            if(april_tag_number < 300 or april_tag_number > 499):
+                return
             if node_id0 not in self.edge_counters:
                 self.edge_counters[node_id0] = dict()
             if node_id1 not in self.edge_counters[node_id0]:
@@ -371,7 +387,7 @@ class TransformListener():
             print("This should not be here! %s " % node_id0)
 
         # Add edge to the graph.
-        return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
+        # return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
 
     def filter_name(self, node_id):
         """ Converts the frame IDs of the objects in the ROS messages (e.g.,
@@ -403,12 +419,13 @@ class TransformListener():
         self.num_messages_received += 1
         # Get frame IDs of the objects to which the ROS messages are referred.
         node_id0 = data.header.frame_id
-        if msg_type=="AprilTagDetection":
+        if msg_type == "AprilTagDetection":
             node_id1 = str(data.tag_id)
-        elif msg_type=="TransformStamped":
+        elif msg_type == "TransformStamped":
             node_id1 = data.child_frame_id
         else:
-            raise Exception("Transform callback received unsupported msg_type %s" % msg_type)
+            raise Exception(
+                "Transform callback received unsupported msg_type %s" % msg_type)
 
         if(node_id1 == "407"):
             print("\t\t\t\t !!!!!!!!! %s should be seing donald" % node_id0)
@@ -498,7 +515,7 @@ class TransformListener():
         # name for our 'listener' node so that multiple listeners can
         # run simultaneously.
         initial_floor_april_tags = "%s/%s" % (rospy.get_param("config_folder"),
-                                              "robotarium1.yaml")
+                                              "robotarium2.yaml")
         priors_filename = "%s/%s" % (rospy.get_param("config_folder"),
                                      "priors.yaml")
         stocking_time = rospy.get_param("stocking_time")

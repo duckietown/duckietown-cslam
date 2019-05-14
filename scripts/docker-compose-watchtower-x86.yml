@@ -1,18 +1,18 @@
 version: '3'
 services:
-  acquisition_node_duckiebotHostname:
+  acquisition_node_watchtowerXX:
       image: duckietown/cslam-acquisition:x86
       environment:
         - ACQ_DEVICE_MODE=live
-        - ACQ_ROS_MASTER_URI_DEVICE=duckiebotHostname.local
+        - ACQ_ROS_MASTER_URI_DEVICE=watchtowerXX.local
         - ACQ_ROS_MASTER_URI_DEVICE_IP=XXX.XXX.XXX.XXX
         - ACQ_SERVER_MODE=live
-        - ACQ_ROS_MASTER_URI_SERVER=ROS_MASTER_HOSTNAME.local
+        - ACQ_ROS_MASTER_URI_SERVER=watchtowerXX.local
         - ACQ_ROS_MASTER_URI_SERVER_IP=XXX.XXX.XXX.XXX
-        - ACQ_DEVICE_NAME=duckiebotHostname
+        - ACQ_DEVICE_NAME=watchtowerXX
         - ACQ_BEAUTIFY=0
         - ACQ_STATIONARY_ODOMETRY=0
-        - ACQ_ODOMETRY_UPDATE_RATE=15
+        - ACQ_ODOMETRY_UPDATE_RATE=0
         - ACQ_POSES_UPDATE_RATE=15
         - ACQ_APRILTAG_QUAD_DECIMATE=2.0
         - ACQ_TEST_STREAM=0
