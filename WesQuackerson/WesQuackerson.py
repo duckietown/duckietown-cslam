@@ -26,14 +26,14 @@ POSES_TOPIC = os.getenv('POSES_TOPIC', "/poses_acquisition/poses")
 VIDEO_TOPIC = os.getenv('VIDEO_TOPIC', "/camera_node/image/compressed")
 OUTPUT_FILE = os.getenv('OUTPUT_FILE', "/bags/overheadVideo.mp4")
 
-TRACKED_AT_ID = int(os.getenv('TRACKED_AT_ID',410))
+TRACKED_AT_IDS = [int(id) for id in os.getenv('TRACKED_AT_IDS','410').replace(" ","").split(",")]
 CAMERA_RESOLUTION = (int(os.getenv('CAMERA_RESOLUTION_HEIGHT',1296)),int(os.getenv('CAMERA_RESOLUTION_WIDTH',972)))
 TITLE_CARD = int(os.getenv('TITLE_CARD',1))
 
 print("Starting the awesome WesQuackerson movie generation process.")
 print("We are reading the AT messages from %s and video bags from %s." % (ATMSGS_BAG, VIDEO_BAGS))
 print("The particular topics are: %s and %s." % (POSES_TOPIC, VIDEO_TOPIC))
-print("The final video of how we track AT %d with resolution %s will be saved at %s." % (TRACKED_AT_ID, str(CAMERA_RESOLUTION), OUTPUT_FILE))
+print("The final video of how we track AT %s with resolution %s will be saved at %s." % (str(TRACKED_AT_IDS), str(CAMERA_RESOLUTION), OUTPUT_FILE))
 print("We will make it with frame rate %d and the minimum shot length wil be %d.\n" % (OUTPUT_FRAMERATE, MIN_SHOT_LENGTH))
 
 def makeCut():
@@ -72,7 +72,7 @@ def makeCut():
     for topic, msg, t in bag.read_messages(topics=POSES_TOPIC):
 
         # Only if the observation is of the AT we are tracking
-        if int(msg.tag_id) == int(TRACKED_AT_ID):
+        if int(msg.tag_id) in TRACKED_AT_IDS:
             cam = msg.header.frame_id
             center = msg.center
             #THE ORDER HERE COULD BE WRONG!!!

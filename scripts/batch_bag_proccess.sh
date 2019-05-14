@@ -6,7 +6,7 @@ BAGS_PATH="${FOLDER_PATH}/bags"
 OUTPUT_BAG_PATH="${FOLDER_PATH}/bags/processed.bag"
 STATISTICS_PATH="${FOLDER_PATH}/bags/statistics.yaml"
 ACQ_TEST_STREAM=0
-AUTOBOT_AT_TAGID=403
+AUTOBOT_AT_TAGIDS="403,401"
 
 printf "Setting up the acquisition batch bag processing. Sit back and enjoy.\n\n"
 
@@ -81,11 +81,12 @@ docker run  --rm \
             -e POSES_TOPIC=/poses_acquisition/poses \
             -e VIDEO_TOPIC=/camera_node/image/compressed \
             -e OUTPUT_FILE=/bags/overheadVideo.mp4 \
-            -e TRACKED_AT_ID=$AUTOBOT_AT_TAGID \
+            -e TRACKED_AT_IDS=$AUTOBOT_AT_TAGIDS \
             -e CAMERA_RESOLUTION_HEIGHT=1296 \
             -e CAMERA_RESOLUTION_WIDTH=972 \
             -e TITLE_CARD=1 \
-            -v "${BAGS_PATH}":"/bags" \
+            -v "${BAGS_PATH}":"/bags", \
+            -v "${BAGS_PATH}":"/bags/processed.bag" \
             duckietown/cslam-wes-quackerson
 
 printf "##########################################################################\n"
