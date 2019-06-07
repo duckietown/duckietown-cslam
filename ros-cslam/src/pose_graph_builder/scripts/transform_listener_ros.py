@@ -20,6 +20,23 @@ from nav_msgs.msg import Odometry, Path
 from duckietown_msgs.msg import AprilTagDetection
 
 
+def create_info_matrix(standard_measure_deviation, standard_angle_deviation, constraints=[1, 1, 1, 1, 1, 1]):
+    m = np.eye(6)
+    for i in range(0, 3):
+        if(not constraints[i]):
+            m[i, i] = 0
+        else:
+            m[i, i] = 1 / (standard_measure_deviation**2)
+    for i in range(3, 6):
+        if(not constraints[i]):
+            m[i, i] = 0
+        else:
+            m[i, i] = 1.0 / \
+                (np.sin(np.deg2rad(standard_angle_deviation))**2)
+
+    return m
+
+
 class PointBroadcaster(threading.Thread):
     def __init__(self, dictionnary):
         threading.Thread.__init__(self)
@@ -214,6 +231,7 @@ class TransformListener():
         self.pose_graph = None
         self.old_odometry_stamps = {}
         self.id_map = {}
+        self.pose_errors = []
 
     def initialize_id_map(self):
         """ Loads April tags into the ID map, assigning each tag in the database
@@ -292,11 +310,11 @@ class TransformListener():
         if (node_id in self.old_odometry_stamps):
             old_time_stamp = self.old_odometry_stamps[node_id]
         self.old_odometry_stamps[node_id] = time_stamp
-
+        measure_information = create_info_matrix(0.05, 1)
         # Add edge to the graph.
-        return self.pose_graph.add_edge(node_id, node_id, transform, time_stamp, old_time_stamp)
+        return self.pose_graph.add_edge(node_id, node_id, transform, time_stamp, old_time_stamp, measure_information)
 
-    def handle_watchtower_message(self, node_id0, node_id1, transform, time_stamp):
+    def handle_watchtower_message(self, node_id0, node_id1, transform, time_stamp, pose_error=None):
         """Processes a message containing the pose of an object seen by a
            watchtower and adds an edge to the graph. If the object seen is a
            Duckiebot, adjusts the pose accordingly.
@@ -310,10 +328,15 @@ class TransformListener():
         """
         # Get type of the object seen.
         type_of_object_seen = node_id1.split("_")[0]
+        if(pose_error != None):
+            measure_information = create_info_matrix(
+                0.1 * pose_error, 15 * pose_error)
+        else:
+            measure_information = create_info_matrix(0.1, 15)
 
         if (type_of_object_seen == "duckiebot"):
-            print("watzchtower %s is seing duckiebot %s" %
-                  (node_id0, node_id1))
+            # print("watzchtower %s is seing duckiebot %s" %
+                #   (node_id0, node_id1))
             # In case of Duckiebot the pose needs to be adjusted to take into
             # account the pose of the April tag w.r.t. the base frame of the
             # Duckiebot.
@@ -327,9 +350,10 @@ class TransformListener():
             R = np.matmul(R_x, R_z)  # verified!
             H_apriltag_to_base = g2o.Isometry3d(R, t)
             transform = transform * H_apriltag_to_base.inverse()
+            measure_information = create_info_matrix(0.05, 15)
 
             # Add edge to the graph.
-            return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
+            return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp, measure_information)
         else:
             # Add edge to the graph.
             april_tag_number = int(node_id1.split("_")[1])
@@ -349,9 +373,9 @@ class TransformListener():
                 if(a == 0):
                     self.edge_counters[node_id0][node_id1] += 1
 
-                    return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
+                    return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp, measure_information)
 
-    def handle_duckiebot_message(self, node_id0, node_id1, transform, time_stamp):
+    def handle_duckiebot_message(self, node_id0, node_id1, transform, time_stamp, pose_error=None):
         """Processes a message containing the pose of an object seen by a
            Duckiebot and adds an edge to the graph. Note: we assume that a
            Duckiebot cannot see the April tag of another Duckiebot, so no
@@ -364,6 +388,13 @@ class TransformListener():
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
+
+        if(pose_error != None):
+            measure_information = create_info_matrix(
+                0.05 * pose_error, 15 * pose_error)
+        else:
+            measure_information = create_info_matrix(0.05, 15)
+
         # Get type of the object that sees the other object, for a sanity check.
         type_of_object_seeing = node_id0.split("_")[0]
         if (type_of_object_seeing == "duckiebot"):
@@ -383,11 +414,10 @@ class TransformListener():
             R = np.matmul(R_z, R_x)  # verified
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
+            # Add edge to the graph.
+            # return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp, measure_information)
         else:
             print("This should not be here! %s " % node_id0)
-
-        # Add edge to the graph.
-        # return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp)
 
     def filter_name(self, node_id):
         """ Converts the frame IDs of the objects in the ROS messages (e.g.,
@@ -421,6 +451,11 @@ class TransformListener():
         node_id0 = data.header.frame_id
         if msg_type == "AprilTagDetection":
             node_id1 = str(data.tag_id)
+            pose_error = float(data.pose_error) * 10**8 / 37.0
+            self.pose_errors.append(pose_error)
+            var = np.var(self.pose_errors)
+            mean = np.mean(self.pose_errors)
+            # print("pose error : mean %f, var %f" % (mean, var))
         elif msg_type == "TransformStamped":
             node_id1 = data.child_frame_id
         else:
@@ -475,11 +510,11 @@ class TransformListener():
         elif (is_from_watchtower):
             # Tag detected by a watchtower.
             self.handle_watchtower_message(
-                node_id0, node_id1, transform, time_stamp)
+                node_id0, node_id1, transform, time_stamp, pose_error)
         else:
             # Tag detected by a Duckiebot.
             self.handle_duckiebot_message(
-                node_id0, node_id1, transform, time_stamp)
+                node_id0, node_id1, transform, time_stamp, pose_error)
 
     def optimization_callback(self, timer_event):
         if (self.num_messages_received >= self.minimum_edge_number_for_optimization):

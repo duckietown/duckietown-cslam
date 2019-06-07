@@ -100,9 +100,9 @@ class g2oGraphBuilder():
                     edge.set_information(measure_information)
                 else:
                     m = np.eye(6)
-                    for i in range(0,3):
+                    for i in range(0, 3):
                         m[i, i] = 1000
-                    for i in range(3,6):
+                    for i in range(3, 6):
                         m[i, i] = 25
                     edge.set_information(m)
                 if robust_kernel_value is not None:

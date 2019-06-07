@@ -11,8 +11,25 @@ import geometry as g
 import numpy as np
 
 
+def create_info_matrix(standard_space_deviation, standard_angle_deviation, constraints=[1, 1, 1, 1, 1, 1]):
+    m = np.eye(6)
+    for i in range(0, 3):
+        if(not constraints[i]):
+            m[i, i] = 0
+        else:
+            m[i, i] = 1 / (standard_space_deviation**2)
+    for i in range(3, 6):
+        if(not constraints[i]):
+            m[i, i] = 0
+        else:
+            m[i, i] = 1.0 / \
+                (np.sin(np.deg2rad(standard_angle_deviation))**2)
+
+    return m
+
+
 class Prior(object):
-    def __init__(self, name, from_type, to_type, position, rotation, constraint_list):
+    def __init__(self, name, from_type, to_type, position, rotation, constraint_list, standard_space_deviation, standard_angle_deviation):
         self.name = name
         self.from_type = from_type
         self.to_type = to_type
@@ -20,8 +37,10 @@ class Prior(object):
         self.constraints = constraint_list
         self.rotation = rotation
         self.measure = None
-        self.measure_infomation = None
+        self.measure_information = None
         self.from_origin = False
+        self.standard_space_deviation = standard_space_deviation
+        self.standard_angle_deviation = standard_angle_deviation
         self.create_measure()
         self.create_info_matrix()
         if self.from_type == "origin":
@@ -42,18 +61,8 @@ class Prior(object):
         self.measure = g2o.Isometry3d(R, t)
 
     def create_info_matrix(self):
-        m = np.eye(6)
-        for i in range(0, 3):
-            if(not self.constraints[i]):
-                m[i, i] = 0
-            else:
-                m[i, i] = 400
-        for i in range(3, 6):
-            if(not self.constraints[i]):
-                m[i, i] = 0
-            else:
-                m[i, i] = 25
-        self.measure_information = m
+        self.measure_information = create_info_matrix(
+            self.standard_space_deviation, self.standard_angle_deviation, self.constraints)
 
     def is_from_origin(self):
         return self.from_origin
@@ -83,7 +92,7 @@ class Prior(object):
         return string
 
 
-class Priors_handler(object):
+class PriorHandler(object):
     def __init__(self, priors_filename=None):
         self.priors_filename = priors_filename
         self.prior_list = []
@@ -99,10 +108,12 @@ class Priors_handler(object):
                 position = prior['position']
                 rotation = prior['rotation']
                 constraints = prior['constraints']
+                standard_space_deviation = prior['standard_space_deviation']
+                standard_angle_deviation = prior['standard_angle_deviation']
                 constraint_list = [constraints['x'], constraints['y'], constraints['z'],
                                    constraints['qx'], constraints['qy'], constraints['qz']]
                 new_prior = Prior(prior_name, from_type, to_type,
-                                  position, rotation, constraint_list)
+                                  position, rotation, constraint_list, standard_space_deviation, standard_angle_deviation)
                 self.prior_list.append(new_prior)
                 print(str(new_prior))
 
@@ -302,7 +313,7 @@ class MovableNode(Node):
         return False
 
     def interpolate(self, old_time_stamp, new_time_stamp,
-                    measure):
+                    measure, measure_information=None):
         """Given a timestamp new_time_stamp at which an odometry message was
            received and the timestamp old_time_stamp of the last odometry
            message previously received, it might be the case that other
@@ -376,13 +387,18 @@ class MovableNode(Node):
             # following it and using the relative transform obtained by
             # interpolation.
             interpolation_list.append((vertex0_index, vertex1_index,
-                                       interpolated_measure, 0.1))
+                                       interpolated_measure, 0.1, measure_information))
         if (cumulative_alpha != 1.0):
             pass
         for args in interpolation_list:
             self.duckietown_graph.graph.add_edge(*args)
 
     def retrointerpolate(self, time_stamp):
+        # We cant have measure info for retro interpolation. We can create one that is strong, by assuming that all ready processed stuff is good.
+        # We make orientation strong, distance weak
+
+        retro_measure_information = create_info_matrix(0.10, 5.0)
+
         time_stamp_before = 0.0
         time_stamp_after = float('inf')
         with self.node_lock:
@@ -407,7 +423,7 @@ class MovableNode(Node):
             if (transform != 0):
                 # TODO : make a sanity check?
                 self.interpolate(time_stamp_before,
-                                 time_stamp_after, transform)
+                                 time_stamp_after, transform, measure_information=retro_measure_information)
             else:
                 print("will not perform retro_interpolation with %d and %d " %
                       (before, after))
@@ -639,7 +655,7 @@ class DuckietownGraphBuilder(object):
         self.last_cleaning = 0.0
         self.using_priors = using_priors
         if(priors_filename is not None):
-            self.priors = Priors_handler(priors_filename)
+            self.priors = PriorHandler(priors_filename)
 
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
@@ -774,14 +790,15 @@ class DuckietownGraphBuilder(object):
                 # For initial floor tags, add an edge between the reference
                 # vertex and the newly-added vertex for the pose of the tag.
                 self.graph.add_edge(
-                    vertex0_id=0, vertex1_id=vertex_index, measure=vertex_pose)
+                    vertex0_id=0, vertex1_id=vertex_index, measure=vertex_pose, measure_information=None)
 
     def add_edge(self,
                  node_id_0,
                  node_id_1,
                  measure,
                  time_stamp,
-                 old_time_stamp=0):
+                 old_time_stamp=0,
+                 measure_information=None):
         """Adds edge between two vertices to the graph.
 
            Args:
@@ -812,7 +829,7 @@ class DuckietownGraphBuilder(object):
             # Add edge between the two vertices (and automatically also add the
             # vertices if not there already).in the g2o graph.
             self.graph.add_edge(vertex0_index, vertex1_index,
-                                measure, robust_kernel_value=0.1)
+                                measure, robust_kernel_value=0.1, measure_information=measure_information)
             if self.using_priors:
                 self.add_priors(node_id_0, node_id_1, time_stamp)
 
@@ -850,7 +867,8 @@ class DuckietownGraphBuilder(object):
                     # Some other messages might have been received for that node
                     # (object), e.g. a Duckiebot might be seen by a watchtower
                     # before receiving an odometry message => Interpolate.
-                    node.interpolate(old_time_stamp, time_stamp, measure)
+                    node.interpolate(old_time_stamp, time_stamp,
+                                     measure, measure_information=measure_information)
 
                     return True
 
@@ -877,12 +895,13 @@ class DuckietownGraphBuilder(object):
             if(prior.is_from_origin()):
                 for node in [node0, node1]:
                     if(prior.unary_concerns(node.node_type)):
+                        print("adding prior from origin")
                         self.graph.add_edge(0, node.get_g2o_index(
-                            time_stamp), prior.measure, measure_information=prior.measure_information)
+                            time_stamp), prior.measure, robust_kernel_value=0.1, measure_information=prior.measure_information)
             else:
                 if prior.binary_concerns(node0.node_type, node1.node_type):
                     self.graph.add_edge(node0.get_g2o_index(time_stamp), node1.get_g2o_index(
-                        time_stamp), prior.measure, measure_information=prior.measure_information)
+                        time_stamp), prior.measure, robust_kernel_value=0.1, measure_information=prior.measure_information)
 
     ###################################
     #        OPTIM FUNCTIONS          #
@@ -1010,3 +1029,95 @@ class DuckietownGraphBuilder(object):
             for node in self.node_dict.itervalues():
                 if node.is_movable():
                     node.save_and_remove_everything()
+
+
+class OdometryResampler(object):
+    def __init__(self, duckiebot_id):
+        self.id = duckiebot_id
+
+
+class SingleDuckiebotTrajectory():
+    def __init__(self, duckiebot_id):
+        self.id = duckiebot_id
+        self.edges = {}
+        self.last_time_stamps = []
+
+    def add_edge(self, measure, time_stamp, measure_information):
+        self.edges[time_stamp] = (measure, measure_information)
+        min_last_time_stamps = min(self.last_time_stamps)
+        if time_stamp > min_last_time_stamps:
+            self.last_time_stamps.append(time_stamp)
+            self.last_time_stamps.sort()
+            if len(self.last_time_stamps) > 30:
+                self.last_time_stamps.remove(min_last_time_stamps)
+
+    def get_transform(self, time_stamp):
+        min_last_time_stamps = min(self.last_time_stamps)
+        max_last_time_stamps = max(self.last_time_stamps)
+
+        if time_stamp > max_last_time_stamps:
+            print("Can not interpolate since no next time stamp.")
+            return -1
+
+        if time_stamp > min_last_time_stamps:
+            previous_time_stamp = 0
+            next_time_stamp = 10**10
+            for t in self.last_time_stamps:
+                if t < time_stamp and t > previous_time_stamp:
+                    previous_time_stamp = t
+                if t > time_stamp and t < next_time_stamp:
+                    next_time_stamp = t
+        else:
+            previous_time_stamp = 0
+            next_time_stamp = 10**10
+            for t in self.edges.keys():
+                if t < time_stamp and t > previous_time_stamp:
+                    previous_time_stamp = t
+                if t > time_stamp and t < next_time_stamp:
+                    next_time_stamp = t
+
+        p0 = self.edges[previous_time_stamp][0]
+        p1 = self.edges[next_time_stamp][0]
+        delta_p = p0.inverse() * p1
+
+        R = delta_p.R
+        t = delta_p.t
+        q = g.SE3_from_rotation_translation(R, t)
+        vel = g.SE3.algebra_from_group(q)
+
+        total_delta_t = float(next_time_stamp - previous_time_stamp)
+        delta_t = float(time_stamp - previous_time_stamp)
+
+        alpha = delta_t / total_delta_t
+        rel = g.SE3.group_from_algebra(vel * alpha)
+        newR, newt = g.rotation_translation_from_SE3(rel)
+        interpolated_measure = g2o.Isometry3d(newR, newt)
+
+        final_transform = p0 * interpolated_measure
+        return final_transform
+
+
+class WatchtowerTrajectroyResampler(object):
+    def __init__(self, watchtower_id):
+        self.id = watchtower_id
+        self.duckiebot_trajectories = {}
+
+    def add_edge(self,
+                 duckiebot_id,
+                 measure,
+                 time_stamp,
+                 measure_information=None):
+
+        if duckiebot_id not in self.duckiebot_trajectories:
+            duckiebot_trajectory = SingleDuckiebotTrajectory(duckiebot_id)
+            self.duckiebot_trajectories[duckiebot_id] = duckiebot_trajectory
+        else:
+            duckiebot_trajectory = self.duckiebot_trajectories[duckiebot_id]
+
+        duckiebot_trajectory.add_edge(measure, time_stamp, measure_information)
+
+    def get_transform(self, duckiebot_id, time_stamp):
+        if duckiebot_id not in self.duckiebot_trajectories:
+            print("Error : no %s seen by %s" % (duckiebot_id, self.id))
+            return -1
+        return self.duckiebot_trajectories[duckiebot_id].get_transform(time_stamp)

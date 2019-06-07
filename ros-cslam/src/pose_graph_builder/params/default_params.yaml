@@ -12,5 +12,5 @@ optimization_frequency : 0.1
 minimum_edge_number_for_optimization : 100
 rejection_sampling_int : 20
 max_number_same_edge : 50
-using_priors : False
+using_priors : True
 result_folder : "/data"

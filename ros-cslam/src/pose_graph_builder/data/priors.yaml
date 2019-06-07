@@ -2,21 +2,41 @@
 prior1: 
   from_type: origin
   to_type: duckiebot
+  standard_space_deviation: 0.01
+  standard_angle_deviation: 5
   position: [0.0, 0.0, 0.08]
   rotation: [0.0, 0.0, 0.0]
   constraints:
     x: False
     y: False
     z: True
-    qx: False
-    qy: False
+    qx: True
+    qy: True
     qz: False
+
+
+prior1: 
+  from_type: duckiebot
+  to_type: duckiebot
+  standard_space_deviation: 0.05
+  standard_angle_deviation: 20
+  position: [0.0, 0.0, 0.0]
+  rotation: [0.0, 0.0, 0.0]
+  constraints:
+    x: False
+    y: False
+    z: False
+    qx: True
+    qy: True
+    qz: True
 
 onthefloor: 
   from_type: origin
   to_type: watchtower
   position: [0.0, 0.0, 0.0]
   rotation: [0.0, 0.0, 0.0]
+  standard_space_deviation: 0.01
+  standard_angle_deviation: 5
   constraints:
     x: False
     y: False
