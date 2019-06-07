@@ -221,7 +221,34 @@ class acquisitionProcessor():
 
                 if vo.update(img, img_id):
                     # The scaling is rather arbitrary, it seems that VO gives centimeters, but in general the scaling is fishy...
-                    odometry = self.odometry_process(0.01*vo.relative_pose_x, 0.01*vo.relative_pose_y, 0.01*vo.relative_pose_theta, res['header'])
+                    odometry = TransformStamped()
+                    odometry.header.seq = 0
+                    odometry.header = res['header']
+                    odometry.header.frame_id = self.ACQ_DEVICE_NAME
+                    odometry.child_frame_id = self.ACQ_DEVICE_NAME
+
+                    cy = math.cos(vo.relative_pose_theta * 0.5)
+                    sy = math.sin(vo.relative_pose_theta * 0.5)
+                    cp = 1.0
+                    sp = 0.0
+                    cr = 1.0
+                    sr = 0.0
+
+                    q_w = cy * cp * cr + sy * sp * sr
+                    q_x = cy * cp * sr - sy * sp * cr
+                    q_y = sy * cp * sr + cy * sp * cr
+                    q_z = sy * cp * cr - cy * sp * sr
+
+
+                    # Save the resuts to the new odometry relative pose message
+                    odometry.transform.translation.x = vo.relative_pose_x
+                    odometry.transform.translation.y = vo.relative_pose_y
+                    odometry.transform.translation.z = 0
+                    odometry.transform.rotation.x = q_x
+                    odometry.transform.rotation.y = q_y
+                    odometry.transform.rotation.z = q_z
+                    odometry.transform.rotation.w = q_w
+
                     outputDictQueue.put(obj=pickle.dumps({'odometry': odometry}, protocol=-1),
                                         block=True,
                                         timeout=None)

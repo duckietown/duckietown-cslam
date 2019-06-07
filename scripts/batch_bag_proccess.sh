@@ -6,6 +6,7 @@ BAGS_PATH="${FOLDER_PATH}/bags"
 OUTPUT_BAG_PATH="${FOLDER_PATH}/bags/processed.bag"
 STATISTICS_PATH="${FOLDER_PATH}/bags/statistics.yaml"
 ACQ_TEST_STREAM=0
+AUTOBOT_AT_TAGID=403
 
 printf "Setting up the acquisition batch bag processing. Sit back and enjoy.\n\n"
 
@@ -48,33 +49,31 @@ STATISTICS_FILE=$(basename "${STATISTICS_PATH}")
 #       printf "NOT AUTOBOT. Will process without visual odometry!\n"
 #     fi
 
-#     docker run  --rm \
-#                 --network=host \
-#                 -e ACQ_DEVICE_MODE=postprocessing \
-#                 -e ACQ_DEVICE_THREADS=6 \
-#                 -e ACQ_DEVICE_NAME="${device}" \
-#                 -e ACQ_DEVICE_BAG="/bags/${filename}" \
-#                 -e ACQ_SERVER_MODE=postprocessing \
-#                 -e ACQ_OUTPUT_BAG="/outputbag/${OUTPUT_BAG_FILE}" \
-#                 -e ACQ_OBSERVATIONS_STATISTICS_OUTPUT="/statistics/${STATISTICS_FILE}" \
-#                 -e ACQ_TEST_STREAM=${ACQ_TEST_STREAM} \
-#                 -e ACQ_TOPIC_RAW=camera_node/image/compressed \
-#                 -e ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose \
-#                 -e ACQ_ODOMETRY_POST_VISUAL_ODOMETRY=$VO_FLAG \
-#                 -e ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES=SURF \
-#                 -v "${BAGS_PATH}":"/bags" \
-#                 -v "${OUTPUT_BAG_DIR}":"/outputbag" \
-#                 -v "${STATISTICS_DIR}":"/statistics" \
-#                 duckietown/cslam-acquisition:x86-doubletrouble
+    docker run  --rm \
+                -e ACQ_DEVICE_MODE=postprocessing \
+                -e ACQ_DEVICE_THREADS=6 \
+                -e ACQ_DEVICE_NAME="${device}" \
+                -e ACQ_DEVICE_BAG="/bags/${filename}" \
+                -e ACQ_SERVER_MODE=postprocessing \
+                -e ACQ_OUTPUT_BAG="/outputbag/${OUTPUT_BAG_FILE}" \
+                -e ACQ_OBSERVATIONS_STATISTICS_OUTPUT="/statistics/${STATISTICS_FILE}" \
+                -e ACQ_TEST_STREAM=${ACQ_TEST_STREAM} \
+                -e ACQ_TOPIC_RAW=camera_node/image/compressed \
+                -e ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose \
+                -e ACQ_ODOMETRY_POST_VISUAL_ODOMETRY=$VO_FLAG \
+                -e ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES=SURF \
+                -v "${BAGS_PATH}":"/bags" \
+                -v "${OUTPUT_BAG_DIR}":"/outputbag" \
+                -v "${STATISTICS_DIR}":"/statistics" \
+                duckietown/cslam-acquisition:x86-doubletrouble
 
 #     printf "FINISHED PROCESSING ${devices[$index]}\n\n"
 # done
 
 printf "##########################################################################\n"
-printf "WES ANDERSON TAKES THE SCENE\n\n"
+printf "WES QUACKERSON TAKES THE SCENE\n\n"
 
 docker run  --rm \
-            --network=host \
             -e OUTPUT_FRAMERATE=12 \
             -e MIN_SHOT_LENGTH=12 \
             -e ATMSGS_BAG=/bags/processed.bag \
@@ -82,7 +81,7 @@ docker run  --rm \
             -e POSES_TOPIC=/poses_acquisition/poses \
             -e VIDEO_TOPIC=/camera_node/image/compressed \
             -e OUTPUT_FILE=/bags/overheadVideo.mp4 \
-            -e TRACKED_AT_ID=403 \
+            -e TRACKED_AT_ID=$AUTOBOT_AT_TAGID \
             -e CAMERA_RESOLUTION_HEIGHT=1296 \
             -e CAMERA_RESOLUTION_WIDTH=972 \
             -e TITLE_CARD=1 \
@@ -90,4 +89,4 @@ docker run  --rm \
             duckietown/cslam-wes-quackerson
 
 printf "##########################################################################\n"
-printf "WES ANDERSON FINISHED HIS AWESOME MOVIE. Check it out! \n\n"
+printf "WES QUACKERSON FINISHED HIS AWESOME MOVIE. Check it out! \n\n"
