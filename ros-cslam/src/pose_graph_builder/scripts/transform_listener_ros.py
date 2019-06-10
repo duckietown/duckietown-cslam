@@ -6,7 +6,6 @@ import signal
 import sys
 import yaml
 
-import duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder as dGB
 import duckietown_cslam.resampler.resampler as resampler
 
 import g2o
