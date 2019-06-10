@@ -3,12 +3,25 @@ import threading
 import csv
 import yaml
 import os
+import time
 
 import duckietown_cslam.g2oGraphBuilder.g2ograph_builder as g2oGB
 
 import g2o
 import geometry as g
 import numpy as np
+import pprint
+
+
+def interpolate_measure(measure, alpha):
+    R = measure.R
+    t = measure.t
+    q = g.SE3_from_rotation_translation(R, t)
+    vel = g.SE3.algebra_from_group(q)
+
+    rel = g.SE3.group_from_algebra(vel * alpha)
+    newR, newt = g.rotation_translation_from_SE3(rel)
+    return g2o.Isometry3d(newR, newt)
 
 
 def create_info_matrix(standard_space_deviation, standard_angle_deviation, constraints=[1, 1, 1, 1, 1, 1]):
@@ -242,6 +255,8 @@ class Node(object):
 
     def get_last_known_position(self):
         vertex_id = self.get_g2o_index(self.last_time_stamp)
+        if vertex_id == -1:
+            return -1
         vertex_pose = self.duckietown_graph.get_vertex_pose(vertex_id)
         return vertex_pose
 
@@ -257,6 +272,7 @@ class MovableNode(Node):
         self.stocking_time = stocking_time
         self.result_folder = result_folder
         self.last_time_stamp = -1
+        self.had_odometry_before = False
 
     def set_last_odometry_time_stamp(self, time_stamp):
         with self.node_lock:
@@ -265,9 +281,13 @@ class MovableNode(Node):
     def set_first_odometry_time_stamp(self, time_stamp):
         with self.node_lock:
             self.first_odometry_time_stamp = time_stamp
+            self.had_odometry_before = True
 
     def is_movable(self):
         return True
+
+    def has_had_odometry_before(self):
+        return self.had_odometry_before
 
     def get_g2o_index(self, time_stamp):
         """Given a timestamp associated to that node, outputs an integer that can be used as a
@@ -281,6 +301,8 @@ class MovableNode(Node):
               Input ID converted to an integer that can be used as an index by
               g2o.
         """
+        if time_stamp == -1:
+            return -1
         index = self.time_stamps_to_indices[time_stamp]
         return super(MovableNode, self).get_g2o_index(time_stamp) + index
 
@@ -360,13 +382,10 @@ class MovableNode(Node):
             print(to_interpolate)
             print("new_time_stamp is %f and old time stamp is %f" %
                   (old_time_stamp, new_time_stamp))
-            print(self.time_stamps_to_indices)
+            pprint.pprint(self.time_stamps_to_indices)
         # Perform a linear interpolation in the Lie algebra associated to SE3
         # group defined by the transform.
-        R = measure.R
-        t = measure.t
-        q = g.SE3_from_rotation_translation(R, t)
-        vel = g.SE3.algebra_from_group(q)
+
         cumulative_alpha = 0.0
         interpolation_list = []
         for i in range(0, len(sorted_time_stamps) - 1):
@@ -376,9 +395,7 @@ class MovableNode(Node):
                 sorted_time_stamps[i + 1] - sorted_time_stamps[i])
             alpha = partial_delta_t / total_delta_t
             cumulative_alpha += alpha
-            rel = g.SE3.group_from_algebra(vel * alpha)
-            newR, newt = g.rotation_translation_from_SE3(rel)
-            interpolated_measure = g2o.Isometry3d(newR, newt)
+            interpolated_measure = interpolate_measure(measure, alpha)
 
             vertex0_index = self.get_g2o_index(sorted_time_stamps[i])
             vertex1_index = self.get_g2o_index(sorted_time_stamps[i + 1])
@@ -568,7 +585,7 @@ class MovableNode(Node):
         if(self.first_odometry_time_stamp != 0):
             with self.node_lock:
                 anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
-                ) if time_stamp < self.first_odometry_time_stamp]
+                ) if time_stamp <= self.first_odometry_time_stamp]
                 for time_stamp in anterior_time_stamps:
                     self.cyclic_counter.remove_index(
                         self.time_stamps_to_indices[time_stamp])
@@ -841,7 +858,7 @@ class DuckietownGraphBuilder(object):
 
             if node.is_movable():
                 # Odometry edge: same vertices, movable object.
-                if (old_time_stamp == 0):
+                if not node.has_had_odometry_before():
                     # No previous odometry messages -> Update old timestamp for
                     # the node to be the oldest timestamp received..
 
@@ -895,7 +912,7 @@ class DuckietownGraphBuilder(object):
             if(prior.is_from_origin()):
                 for node in [node0, node1]:
                     if(prior.unary_concerns(node.node_type)):
-                        print("adding prior from origin")
+                        # print("adding prior from origin")
                         self.graph.add_edge(0, node.get_g2o_index(
                             time_stamp), prior.measure, robust_kernel_value=0.1, measure_information=prior.measure_information)
             else:
@@ -1029,95 +1046,4 @@ class DuckietownGraphBuilder(object):
             for node in self.node_dict.itervalues():
                 if node.is_movable():
                     node.save_and_remove_everything()
-
-
-class OdometryResampler(object):
-    def __init__(self, duckiebot_id):
-        self.id = duckiebot_id
-
-
-class SingleDuckiebotTrajectory():
-    def __init__(self, duckiebot_id):
-        self.id = duckiebot_id
-        self.edges = {}
-        self.last_time_stamps = []
-
-    def add_edge(self, measure, time_stamp, measure_information):
-        self.edges[time_stamp] = (measure, measure_information)
-        min_last_time_stamps = min(self.last_time_stamps)
-        if time_stamp > min_last_time_stamps:
-            self.last_time_stamps.append(time_stamp)
-            self.last_time_stamps.sort()
-            if len(self.last_time_stamps) > 30:
-                self.last_time_stamps.remove(min_last_time_stamps)
-
-    def get_transform(self, time_stamp):
-        min_last_time_stamps = min(self.last_time_stamps)
-        max_last_time_stamps = max(self.last_time_stamps)
-
-        if time_stamp > max_last_time_stamps:
-            print("Can not interpolate since no next time stamp.")
-            return -1
-
-        if time_stamp > min_last_time_stamps:
-            previous_time_stamp = 0
-            next_time_stamp = 10**10
-            for t in self.last_time_stamps:
-                if t < time_stamp and t > previous_time_stamp:
-                    previous_time_stamp = t
-                if t > time_stamp and t < next_time_stamp:
-                    next_time_stamp = t
-        else:
-            previous_time_stamp = 0
-            next_time_stamp = 10**10
-            for t in self.edges.keys():
-                if t < time_stamp and t > previous_time_stamp:
-                    previous_time_stamp = t
-                if t > time_stamp and t < next_time_stamp:
-                    next_time_stamp = t
-
-        p0 = self.edges[previous_time_stamp][0]
-        p1 = self.edges[next_time_stamp][0]
-        delta_p = p0.inverse() * p1
-
-        R = delta_p.R
-        t = delta_p.t
-        q = g.SE3_from_rotation_translation(R, t)
-        vel = g.SE3.algebra_from_group(q)
-
-        total_delta_t = float(next_time_stamp - previous_time_stamp)
-        delta_t = float(time_stamp - previous_time_stamp)
-
-        alpha = delta_t / total_delta_t
-        rel = g.SE3.group_from_algebra(vel * alpha)
-        newR, newt = g.rotation_translation_from_SE3(rel)
-        interpolated_measure = g2o.Isometry3d(newR, newt)
-
-        final_transform = p0 * interpolated_measure
-        return final_transform
-
-
-class WatchtowerTrajectroyResampler(object):
-    def __init__(self, watchtower_id):
-        self.id = watchtower_id
-        self.duckiebot_trajectories = {}
-
-    def add_edge(self,
-                 duckiebot_id,
-                 measure,
-                 time_stamp,
-                 measure_information=None):
-
-        if duckiebot_id not in self.duckiebot_trajectories:
-            duckiebot_trajectory = SingleDuckiebotTrajectory(duckiebot_id)
-            self.duckiebot_trajectories[duckiebot_id] = duckiebot_trajectory
-        else:
-            duckiebot_trajectory = self.duckiebot_trajectories[duckiebot_id]
-
-        duckiebot_trajectory.add_edge(measure, time_stamp, measure_information)
-
-    def get_transform(self, duckiebot_id, time_stamp):
-        if duckiebot_id not in self.duckiebot_trajectories:
-            print("Error : no %s seen by %s" % (duckiebot_id, self.id))
-            return -1
-        return self.duckiebot_trajectories[duckiebot_id].get_transform(time_stamp)
+        print("exited duckietown graph builder")

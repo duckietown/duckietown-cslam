@@ -7,6 +7,8 @@ import sys
 import yaml
 
 import duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder as dGB
+import duckietown_cslam.resampler.resampler as resampler
+
 import g2o
 import geometry as g
 import numpy as np
@@ -99,7 +101,8 @@ class PointBroadcaster(threading.Thread):
 
     def run(self):
         for node_id, node_pose in self.pose_dict.iteritems():
-            self.tfbroadcast(node_id, node_pose)
+            if node_pose != -1:
+                self.tfbroadcast(node_id, node_pose)
 
 
 class PathBroadcaster(threading.Thread):
@@ -193,7 +196,7 @@ class TransformListener():
        duckietown-visualization.
 
        Attributes:
-           pose_graph: Pose graph.
+           resampler: A resampler to send better data to the graph.
            old_odometry_stamps: Stores, for each ID, the time stamp of the last
                                 odometry message read for the object with that
                                 ID.
@@ -228,10 +231,10 @@ class TransformListener():
         self.num_messages_received = 0
         self.edge_counters = dict()
         self.optimization_period = 1.0/self.optimization_frequency
-        self.pose_graph = None
-        self.old_odometry_stamps = {}
+        self.resampler = None
         self.id_map = {}
         self.pose_errors = []
+        self.first_time_stamp = -1
 
     def initialize_id_map(self):
         """ Loads April tags into the ID map, assigning each tag in the database
@@ -300,19 +303,10 @@ class TransformListener():
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
-        # By default assign the time stamp of the last odometry message to be at
-        # time 0. This is needed when the actual first odometry message for a
-        # certain ID is read.
-        old_time_stamp = 0
 
-        # Get the time stamp of the previous odometry message and update the
-        # time stamp of the last odometry message with the current timestamp.
-        if (node_id in self.old_odometry_stamps):
-            old_time_stamp = self.old_odometry_stamps[node_id]
-        self.old_odometry_stamps[node_id] = time_stamp
         measure_information = create_info_matrix(0.05, 1)
         # Add edge to the graph.
-        return self.pose_graph.add_edge(node_id, node_id, transform, time_stamp, old_time_stamp, measure_information)
+        return self.resampler.handle_odometry_edge(node_id, transform, time_stamp, measure_information)
 
     def handle_watchtower_message(self, node_id0, node_id1, transform, time_stamp, pose_error=None):
         """Processes a message containing the pose of an object seen by a
@@ -353,7 +347,7 @@ class TransformListener():
             measure_information = create_info_matrix(0.05, 15)
 
             # Add edge to the graph.
-            return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp, measure_information)
+            return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information, is_duckiebot=True)
         else:
             # Add edge to the graph.
             april_tag_number = int(node_id1.split("_")[1])
@@ -365,7 +359,7 @@ class TransformListener():
                 self.edge_counters[node_id0][node_id1] = 0
 
             if(self.edge_counters[node_id0][node_id1] < self.max_number_same_edge):
-                self.pose_graph.add_edge(
+                self.resampler.handle_watchtower_edge(
                     node_id0, node_id1, transform, time_stamp)
                 self.edge_counters[node_id0][node_id1] += 1
             else:
@@ -373,7 +367,7 @@ class TransformListener():
                 if(a == 0):
                     self.edge_counters[node_id0][node_id1] += 1
 
-                    return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp, measure_information)
+                    return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information)
 
     def handle_duckiebot_message(self, node_id0, node_id1, transform, time_stamp, pose_error=None):
         """Processes a message containing the pose of an object seen by a
@@ -415,7 +409,7 @@ class TransformListener():
             H_base_to_camera = g2o.Isometry3d(R, t)
             transform = H_base_to_camera * transform
             # Add edge to the graph.
-            # return self.pose_graph.add_edge(node_id0, node_id1, transform, time_stamp, measure_information)
+            # return self.resampler.handle_duckiebot_edge(node_id0, node_id1, transform, time_stamp, measure_information)
         else:
             print("This should not be here! %s " % node_id0)
 
@@ -469,8 +463,7 @@ class TransformListener():
         node_id1 = self.filter_name(node_id1)
 
         # Ignore messages from one watchtower to another watchtower (i.e.,
-        # odometry messages between watchtowers). TODO: check if we can avoid
-        # sending these messages.
+        # odometry messages between watchtowers).
         is_from_watchtower = False
         if (node_id0.startswith("watchtower")):
             is_from_watchtower = True
@@ -502,6 +495,10 @@ class TransformListener():
         time = Time(data.header.stamp)
         time_stamp = time.data.secs + time.data.nsecs * 10**(-9)
 
+        if self.first_time_stamp == -1:
+            self.first_time_stamp = time_stamp
+            self.resampler.signal_reference_time_stamp(self.first_time_stamp)
+
         if (node_id1 == node_id0):
             # Same ID: odometry message, e.g. the same Duckiebot sending
             # odometry information at different instances in time.
@@ -519,7 +516,7 @@ class TransformListener():
     def optimization_callback(self, timer_event):
         if (self.num_messages_received >= self.minimum_edge_number_for_optimization):
             # a = rospy.get_time()
-            self.pose_graph.optimize(
+            self.resampler.optimize(
                 self.max_iteration,
                 save_result=self.save_output,
                 verbose=self.verbose,
@@ -528,13 +525,13 @@ class TransformListener():
             # b = rospy.get_time()
 
             # Broadcast tree of transforms with TF.
-            pose_dict = self.pose_graph.get_all_poses()
+            pose_dict = self.resampler.get_all_optimized_poses()
             # c = rospy.get_time()
 
             point_broadcaster = PointBroadcaster(pose_dict)
             point_broadcaster.start()
 
-            path_dict = self.pose_graph.get_movable_paths()
+            path_dict = self.resampler.get_optimized_movable_paths()
             # print(path_dict)
             path_broadcaster = PathBroadcaster(path_dict)
             path_broadcaster.start()
@@ -557,7 +554,7 @@ class TransformListener():
         using_priors = rospy.get_param("using_priors")
         result_folder = rospy.get_param("result_folder")
         # Build graph based on floor map.
-        self.pose_graph = dGB.DuckietownGraphBuilder(
+        self.resampler = resampler.Resampler(
             initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, using_priors=using_priors, result_folder=result_folder)
         # Initialize ID map.
         self.initialize_id_map()
@@ -575,11 +572,13 @@ class TransformListener():
         rospy.spin()
 
     # def on_shutdown(self):
-    #     self.pose_graph.on_shutdown()
+    #     self.resampler.on_shutdown()
 
     def signal_handler(self, sig, frame):
         print('You pressed Ctrl+C! Experiment will be saved and ended')
-        self.pose_graph.on_shutdown()
+
+        self.resampler.on_shutdown()
+        print("Exiting transform listener")
         rospy.signal_shutdown(
             "Shutting down after cleaning and recording data")
         print("Every thing should be down")
