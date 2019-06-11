@@ -1,14 +1,14 @@
  
 # G2O PARAMS
 optim_verbose : False
-online_optimization : False
-maximum_g2o_iterations : 20
+online_optimization : False # Leave to false, with True doesn't work 
+maximum_g2o_iterations : 30
 save_g2o_output : False
 
 
 # DUCKIETOWN_GRAPH PARAMS
 stocking_time : 300
-optimization_frequency : 0.1
+optimization_frequency : 0.2
 minimum_edge_number_for_optimization : 100
 rejection_sampling_int : 20
 max_number_same_edge : 50

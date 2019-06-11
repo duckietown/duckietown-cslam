@@ -545,26 +545,29 @@ class MovableNode(Node):
             return True is success, False otherwise
         """
         result_file = "%s/%s.csv" % (self.result_folder, self.node_id)
+        if os.path.isdir(self.result_folder):
+            with open(result_file, mode='a+') as trajectory_csv:
+                trajectory_writer = csv.writer(
+                    trajectory_csv, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                header = ["time_stamp", "x", "y", "z", "R11", "R12",
+                          "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
+                trajectory_writer.writerow(header)
 
-        with open(result_file, mode='a+') as trajectory_csv:
-            trajectory_writer = csv.writer(
-                trajectory_csv, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            header = ["time_stamp", "x", "y", "z", "R11", "R12",
-                      "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
-            trajectory_writer.writerow(header)
+                for pose in poses_stamped:
+                    row = [pose[0]]
+                    row.extend(pose[1].t)
+                    row.extend(pose[1].R[0])
+                    row.extend(pose[1].R[1])
+                    row.extend(pose[1].R[2])
+                    print(row)
+                    # row = ["coucou", 4, "les cococs"]
+                    trajectory_writer.writerow(row)
 
-            for pose in poses_stamped:
-                row = [pose[0]]
-                row.extend(pose[1].t)
-                row.extend(pose[1].R[0])
-                row.extend(pose[1].R[1])
-                row.extend(pose[1].R[2])
-                print(row)
-                # row = ["coucou", 4, "les cococs"]
-                trajectory_writer.writerow(row)
-
-        # TODO : Code this function
-        print("Trying to save for %s" % self.node_id)
+            # TODO : Code this function
+            print("Trying to save for %s" % self.node_id)
+        else:
+            print("Couldnt save data for %s as result folder %s does not exist" % (
+                self.node_id, self.result_folder))
 
     def get_trajectory(self):
         result_dict = dict()

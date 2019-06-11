@@ -133,7 +133,7 @@ class g2oGraphBuilder():
                     if (measure_information):
                         edge.set_information(measure_information)
                     # edge.set_information(np.eye(6) * 2)
-                    finished = self.optimizer.add_edge(edge)
+                    self.optimizer.add_edge(edge)
                     # self.set_of_new_edges.add(edge)
 
             else:
