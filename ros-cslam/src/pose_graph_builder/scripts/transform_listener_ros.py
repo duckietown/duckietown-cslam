@@ -20,6 +20,7 @@ from visualization_msgs.msg import *
 from nav_msgs.msg import Odometry, Path
 from duckietown_msgs.msg import AprilTagDetection
 import inspect
+import rosbag
 
 
 def get_transform_from_data(data):
@@ -251,9 +252,10 @@ class TransformListener():
         self.pose_errors = []
         self.first_time_stamp = -1
         self.lastbeat = -1
-        self.timeout = 10
+        self.timeout = 25
         self.callback_times = []
         self.threads = []
+        self.bag_reader = None
 
     def initialize_id_map(self):
         """ Loads April tags into the ID map, assigning each tag in the database
@@ -551,6 +553,12 @@ class TransformListener():
         if self.lastbeat == -1:
             return
         if current_time - self.lastbeat > self.timeout:
+            self.resampler.optimize(
+                self.max_iteration,
+                save_result=self.save_output,
+                verbose=self.verbose,
+                output_name="/tmp/output.g2o",
+                online=self.online_optimization)
             self.signal_handler(signal.SIGINT, inspect.currentframe())
 
     def listen(self):
@@ -570,6 +578,15 @@ class TransformListener():
         stocking_time = rospy.get_param("stocking_time")
         using_priors = rospy.get_param("using_priors")
         result_folder = rospy.get_param("result_folder")
+
+        bag_present = False
+        bag_env = "ATMSGS_BAG"
+        if not bag_env in os.environ:
+            print('I expect environment variable %s' % bag_env)
+        else:
+            bag_path = os.environ[bag_env]
+            bag_is_present = True
+
         # Build graph based on floor map.
         self.resampler = resampler.Resampler(
             initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, using_priors=using_priors, result_folder=result_folder)
@@ -588,12 +605,21 @@ class TransformListener():
         self.heartbeat = rospy.Timer(rospy.Duration(self.optimization_period),
                                      self.heartbeat_callback)
         # spin() simply keeps python from exiting until this node is stopped
+        if bag_is_present:
+            self.bag_reader = Process(target=self.read_bag, args=[bag_path])
+            self.bag_reader.start()
         rospy.spin()
 
-    # def on_shutdown(self):
-    #     self.resampler.on_shutdown()
+    def read_bag(self, bag_path):
+        if os.path.isfile(bag_path):
+            rospy.sleep(10)
+            os.system("rosbag play %s" % bag_path)
+        else:
+            print("No bag to process. Will wait for it.")
 
     def signal_handler(self, sig, frame):
+        if self.bag_reader != None:
+            self.bag_reader.join()
         print('You pressed Ctrl+C! Experiment will be saved and ended')
         self.resampler.on_shutdown()
         print("Exiting transform listener")
@@ -614,7 +640,6 @@ def main():
 
     tflistener.listen()
     # rospy.signal_shutdown(reason)
-    print("Hello")
 
 
 if __name__ == '__main__':
