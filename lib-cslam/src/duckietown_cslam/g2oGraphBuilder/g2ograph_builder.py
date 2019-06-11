@@ -100,9 +100,9 @@ class g2oGraphBuilder():
                     edge.set_information(measure_information)
                 else:
                     m = np.eye(6)
-                    for i in range(0,3):
+                    for i in range(0, 3):
                         m[i, i] = 1000
-                    for i in range(3,6):
+                    for i in range(3, 6):
                         m[i, i] = 25
                     edge.set_information(m)
                 if robust_kernel_value is not None:
@@ -133,7 +133,7 @@ class g2oGraphBuilder():
                     if (measure_information):
                         edge.set_information(measure_information)
                     # edge.set_information(np.eye(6) * 2)
-                    finished = self.optimizer.add_edge(edge)
+                    self.optimizer.add_edge(edge)
                     # self.set_of_new_edges.add(edge)
 
             else:

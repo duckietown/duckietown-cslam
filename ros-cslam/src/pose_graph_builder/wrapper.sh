@@ -8,5 +8,4 @@ echo ROS_MASTER_URI
 
 cd /graph_optimizer/catkin_ws
 source /graph_optimizer/catkin_ws/devel/setup.bash
-roslaunch pose_graph_builder graph_builder.launch &
-rosrun cslam_visualization publish_markers.py
+roslaunch pose_graph_builder graph_builder.launch 
