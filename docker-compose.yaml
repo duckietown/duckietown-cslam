@@ -6,7 +6,7 @@ services:
             dockerfile: Dockerfile-graph-optimizer
         network_mode: "host"
         environment:
-            ATMSGS_BAG: /data/processed_19-04-18.bag
+            ATMSGS_BAG: /data/processed.bag
             OUTPUT_DIR: /challenges/challenge-evaluation-output
             ROS_MASTER: duckietown3
             ROS_MASTER_IP: 192.168.1.139

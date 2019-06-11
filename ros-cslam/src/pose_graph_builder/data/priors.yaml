@@ -1,9 +1,9 @@
 
-prior1: 
+onthefloor: 
   from_type: origin
   to_type: duckiebot
-  standard_space_deviation: 0.01
-  standard_angle_deviation: 5
+  standard_space_deviation: 0.005
+  standard_angle_deviation: 1
   position: [0.0, 0.0, 0.08]
   rotation: [0.0, 0.0, 0.0]
   constraints:
@@ -15,11 +15,11 @@ prior1:
     qz: False
 
 
-prior1: 
+straightgoing: 
   from_type: duckiebot
   to_type: duckiebot
   standard_space_deviation: 0.05
-  standard_angle_deviation: 20
+  standard_angle_deviation: 1
   position: [0.0, 0.0, 0.0]
   rotation: [0.0, 0.0, 0.0]
   constraints:
@@ -30,7 +30,7 @@ prior1:
     qy: True
     qz: True
 
-onthefloor: 
+old: 
   from_type: origin
   to_type: watchtower
   position: [0.0, 0.0, 0.0]

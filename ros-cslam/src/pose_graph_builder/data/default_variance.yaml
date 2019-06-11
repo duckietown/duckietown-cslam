@@ -1,0 +1,21 @@
+
+watchtower: 
+  type: watchtower
+  standard_space_deviation: 0.005
+  standard_angle_deviation: 1
+
+
+duckiebot: 
+  type: duckiebot
+  standard_space_deviation: 0.005
+  standard_angle_deviation: 1
+
+odometry: 
+  type: odometry
+  standard_space_deviation: 0.005
+  standard_angle_deviation: 1
+
+retrointerpolation: 
+  type: retrointerpolation
+  standard_space_deviation: 0.005
+  standard_angle_deviation: 1

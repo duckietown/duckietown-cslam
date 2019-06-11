@@ -1,4 +1,5 @@
 import duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder as dGB
+
 import random
 import threading
 import csv
@@ -9,6 +10,19 @@ import time
 import g2o
 import geometry as g
 import numpy as np
+
+
+def merge_measure_information(list_measure):
+    result = np.eye(6)
+
+    if len(list_measure) == 0:
+        return None
+    for measure_info in list_measure:
+        result += np.linalg.inv(measure_info)
+    result /= len(list_measure)
+    result = np.linalg.inv(result)
+    print(result)
+    return result
 
 
 def get_closest_rounded(seed, time_stamp, interval):
@@ -76,11 +90,11 @@ class OdometryResampler(object):
     def resampler_callback(self):
         while self.last_received_time_stamp - self.last_sent_time_stamp > self.time_interval:
             self.last_sent_time_stamp += self.time_interval
-            transform, old_time_stamp = self.get_transform(
+            transform, old_time_stamp, measure_information = self.get_transform(
                 self.last_sent_time_stamp)
             if transform != -1:
                 self.pose_graph.add_edge(
-                    self.id, self.id, transform, self.last_sent_time_stamp, old_time_stamp=old_time_stamp)
+                    self.id, self.id, transform, self.last_sent_time_stamp, old_time_stamp=old_time_stamp, measure_information=measure_information)
 
     def get_transform(self, time_stamp):
         if self.last_odometry_time_stamp == 0:
@@ -88,10 +102,11 @@ class OdometryResampler(object):
             self.last_time_stamps = filter(
                 lambda x: x >= time_stamp - self.max_time_diff, self.last_time_stamps)
             print("First odometry message")
-            return -1, -1
+            return -1, -1, -1
         previous_time_stamp = 0
         next_time_stamp = 10**10
         time_stamp_to_use = []
+        list_measure_info = []
         if len(self.last_time_stamps) > 0 and self.last_odometry_time_stamp > min(self.last_time_stamps):
             min_last_time_stamps = min(self.last_time_stamps)
             max_last_time_stamps = max(self.last_time_stamps)
@@ -100,7 +115,7 @@ class OdometryResampler(object):
                 print("asking for too recent time stamp : %f is bigger than last %f" % (
                     time_stamp, max_last_time_stamps))
                 self.last_odometry_time_stamp = time_stamp
-                return -1, -1
+                return -1, -1, -1
 
             if self.last_odometry_time_stamp >= min_last_time_stamps:
 
@@ -111,7 +126,8 @@ class OdometryResampler(object):
                         next_time_stamp = t
                     if t <= time_stamp and t >= self.last_odometry_time_stamp:
                         time_stamp_to_use.append(t)
-
+                        list_measure_info.append(
+                            self.edges[t][1])
         else:
             for t in self.edges.keys():
                 if t < self.last_odometry_time_stamp and t > previous_time_stamp:
@@ -120,6 +136,8 @@ class OdometryResampler(object):
                     next_time_stamp = t
                 if t <= time_stamp and t >= self.last_odometry_time_stamp:
                     time_stamp_to_use.append(t)
+                    list_measure_info.append(
+                        self.edges[t][1])
 
         # if next_time_stamp - previous_time_stamp > 2 * self.max_time_diff:
         #     print("too much time difference")
@@ -159,18 +177,27 @@ class OdometryResampler(object):
             last_transform_part = interpolate_measure(last_transform, alpha)
 
             transform = first_transform_part * middle_transform * last_transform_part
-
+            list_measure_info.append(
+                self.edges[max_time_stamp][1])
+            list_measure_info.append(
+                self.edges[previous_time_stamp][1])
         else:
             alpha = (time_stamp - self.last_odometry_time_stamp) / \
                 (next_time_stamp - previous_time_stamp)
             previous_transform = self.edges[previous_time_stamp][0]
             transform = interpolate_measure(previous_transform, alpha)
             max_time_stamp = previous_time_stamp
+            list_measure_info.append(
+                self.edges[previous_time_stamp][1])
+
         old_time_stamp = self.last_odometry_time_stamp
         self.last_odometry_time_stamp = time_stamp
         self.last_time_stamps = filter(
             lambda x: x >= max_time_stamp, self.last_time_stamps)
-        return (transform, old_time_stamp)
+
+        measure_information = merge_measure_information(list_measure_info)
+
+        return (transform, old_time_stamp, measure_information)
 
 
 class SingleDuckiebotTrajectory():
@@ -218,11 +245,11 @@ class SingleDuckiebotTrajectory():
     def resampler_callback(self):
         while self.last_received_time_stamp - self.last_sent_time_stamp > self.time_interval:
             self.last_sent_time_stamp += self.time_interval
-            transform = self.get_transform(
+            transform, measure_information = self.get_transform(
                 self.last_sent_time_stamp)
             if transform != -1:
                 self.pose_graph.add_edge(
-                    self.watchtower_id, self.id, transform, self.last_sent_time_stamp)
+                    self.watchtower_id, self.id, transform, self.last_sent_time_stamp, measure_information=measure_information)
 
     def get_transform(self, time_stamp):
         previous_time_stamp = 0
@@ -233,7 +260,7 @@ class SingleDuckiebotTrajectory():
 
             if time_stamp > max_last_time_stamps:
                 # print("Can not interpolate since no next time stamp.")
-                return -1
+                return -1, -1
 
             if time_stamp > min_last_time_stamps:
 
@@ -251,10 +278,10 @@ class SingleDuckiebotTrajectory():
 
         if next_time_stamp - previous_time_stamp > self.max_time_diff:
             # We wont interpolate between far away points.
-            return -1
+            return -1, -1
 
-        p0 = self.edges[previous_time_stamp][0]
-        p1 = self.edges[next_time_stamp][0]
+        p0, p0_info = self.edges[previous_time_stamp]
+        p1, p1_info = self.edges[next_time_stamp]
         delta_p = p0.inverse() * p1
 
         total_delta_t = float(next_time_stamp - previous_time_stamp)
@@ -265,7 +292,11 @@ class SingleDuckiebotTrajectory():
         interpolated_measure = interpolate_measure(delta_p, alpha)
 
         final_transform = p0 * interpolated_measure
-        return final_transform
+
+        list_measure = [p0_info, p1_info]
+        measure_information = merge_measure_information(list_measure)
+
+        return final_transform, measure_information
 
 
 class WatchtowerTrajectroyResampler(object):
@@ -290,11 +321,11 @@ class WatchtowerTrajectroyResampler(object):
 
         duckiebot_trajectory.add_edge(measure, time_stamp, measure_information)
 
-    def get_transform(self, duckiebot_id, time_stamp):
-        if duckiebot_id not in self.duckiebot_trajectories:
-            print("Error : no %s seen by %s" % (duckiebot_id, self.id))
-            return -1
-        return self.duckiebot_trajectories[duckiebot_id].get_transform(time_stamp)
+    # def get_transform(self, duckiebot_id, time_stamp):
+    #     if duckiebot_id not in self.duckiebot_trajectories:
+    #         print("Error : no %s seen by %s" % (duckiebot_id, self.id))
+    #         return -1, -1
+    #     return self.duckiebot_trajectories[duckiebot_id].get_transform(time_stamp)
 
     def get_all_transforms(self, time_stamp):
         returnlist = []
@@ -310,7 +341,7 @@ class WatchtowerTrajectroyResampler(object):
 class Resampler():
     def __init__(self, initial_floor_april_tags, stocking_time, priors_filename, using_priors, result_folder):
         self.pose_graph = dGB.DuckietownGraphBuilder(
-            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, using_priors=using_priors, result_folder=result_folder)
+            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance_filename=default_variance_filename, using_priors=using_priors, result_folder=result_folder)
         self.reference_time_stamp = -1
         self.watchtower_samplers = {}
         self.odometry_samplers = {}

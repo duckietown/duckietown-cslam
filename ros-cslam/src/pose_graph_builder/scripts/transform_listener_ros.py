@@ -7,6 +7,8 @@ import sys
 import yaml
 from multiprocessing import Process
 import duckietown_cslam.resampler.resampler as resampler
+from duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder import create_info_matrix
+
 import time
 import g2o
 import geometry as g
@@ -40,21 +42,21 @@ def get_transform_from_data(data):
     return g2o.Isometry3d(M, t)
 
 
-def create_info_matrix(standard_measure_deviation, standard_angle_deviation, constraints=[1, 1, 1, 1, 1, 1]):
-    m = np.eye(6)
-    for i in range(0, 3):
-        if(not constraints[i]):
-            m[i, i] = 0
-        else:
-            m[i, i] = 1 / (standard_measure_deviation**2)
-    for i in range(3, 6):
-        if(not constraints[i]):
-            m[i, i] = 0
-        else:
-            m[i, i] = 1.0 / \
-                (np.sin(np.deg2rad(standard_angle_deviation))**2)
+# def create_info_matrix(standard_measure_deviation, standard_angle_deviation, constraints=[1, 1, 1, 1, 1, 1]):
+#     m = np.eye(6)
+#     for i in range(0, 3):
+#         if(not constraints[i]):
+#             m[i, i] = 0
+#         else:
+#             m[i, i] = 1 / (standard_measure_deviation**2)
+#     for i in range(3, 6):
+#         if(not constraints[i]):
+#             m[i, i] = 0
+#         else:
+#             m[i, i] = 1.0 / \
+#                 (np.sin(np.deg2rad(standard_angle_deviation))**2)
 
-    return m
+#     return m
 
 
 class PointBroadcaster(threading.Thread):
@@ -371,7 +373,7 @@ class TransformListener():
             measure_information = create_info_matrix(0.05, 15)
 
             # Add edge to the graph.
-            return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information, is_duckiebot=True)
+            return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information=measure_information, is_duckiebot=True)
         else:
             # Add edge to the graph.
             april_tag_number = int(node_id1.split("_")[1])
@@ -391,7 +393,7 @@ class TransformListener():
                 if(a == 0):
                     self.edge_counters[node_id0][node_id1] += 1
 
-                    return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information)
+                    return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information=measure_information)
 
     def handle_duckiebot_message(self, node_id0, node_id1, data, time_stamp, pose_error=None):
         """Processes a message containing the pose of an object seen by a
@@ -587,6 +589,8 @@ class TransformListener():
                                               "robotarium2.yaml")
         priors_filename = "%s/%s" % (rospy.get_param("config_folder"),
                                      "priors.yaml")
+        default_variance_filename = "%s/%s" % (rospy.get_param("config_folder"),
+                                               "default_variance.yaml")
         stocking_time = rospy.get_param("stocking_time")
         using_priors = rospy.get_param("using_priors")
         result_folder = rospy.get_param("result_folder")
@@ -601,7 +605,7 @@ class TransformListener():
 
         # Build graph based on floor map.
         self.resampler = resampler.Resampler(
-            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, using_priors=using_priors, result_folder=result_folder)
+            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance_filename=default_variance_filename, using_priors=using_priors, result_folder=result_folder)
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
@@ -624,7 +628,7 @@ class TransformListener():
 
     def read_bag(self, bag_path):
         if os.path.isfile(bag_path):
-            rospy.sleep(10)
+            rospy.sleep(4)
             os.system("rosbag play %s" % bag_path)
         else:
             print("No bag to process. Will wait for it.")

@@ -35,9 +35,7 @@ def create_info_matrix(standard_space_deviation, standard_angle_deviation, const
         if(not constraints[i]):
             m[i, i] = 0
         else:
-            m[i, i] = 1.0 / \
-                (np.sin(np.deg2rad(standard_angle_deviation))**2)
-
+            m[i, i] = 1.0 / (standard_angle_deviation**2)
     return m
 
 
@@ -262,7 +260,7 @@ class Node(object):
 
 
 class MovableNode(Node):
-    def __init__(self, node_id, types, duckietown_graph, retro_interpolate=True, stocking_time=None, result_folder="/tmp"):
+    def __init__(self, node_id, types, duckietown_graph, retro_interpolate=False, stocking_time=None, result_folder="/tmp"):
         super(MovableNode, self).__init__(
             node_id, types, duckietown_graph, movable=True)
         self.retro_interpolate = retro_interpolate
@@ -414,7 +412,7 @@ class MovableNode(Node):
         # We cant have measure info for retro interpolation. We can create one that is strong, by assuming that all ready processed stuff is good.
         # We make orientation strong, distance weak
 
-        retro_measure_information = create_info_matrix(0.10, 5.0)
+        retro_measure_information = create_info_matrix(0.20, 5.0)
 
         time_stamp_before = 0.0
         time_stamp_after = float('inf')
@@ -652,6 +650,7 @@ class DuckietownGraphBuilder(object):
                  using_priors=True,
                  stocking_time=None,
                  priors_filename=None,
+                 default_variance_filename=None,
                  result_folder="/tmp"):
         # Initialize pose graph.
         self.graph = g2oGB.g2oGraphBuilder()
