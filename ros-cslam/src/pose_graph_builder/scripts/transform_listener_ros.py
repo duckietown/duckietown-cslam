@@ -554,7 +554,7 @@ class TransformListener():
             return
         if current_time - self.lastbeat > self.timeout:
             self.resampler.optimize(
-                self.max_iteration,
+                self.max_iteration * 100,
                 save_result=self.save_output,
                 verbose=self.verbose,
                 output_name="/tmp/output.g2o",
