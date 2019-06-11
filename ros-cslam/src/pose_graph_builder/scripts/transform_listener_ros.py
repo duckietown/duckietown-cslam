@@ -559,6 +559,18 @@ class TransformListener():
                 verbose=self.verbose,
                 output_name="/tmp/output.g2o",
                 online=self.online_optimization)
+            pose_dict = self.resampler.get_all_optimized_poses()
+            # c = rospy.get_time()
+
+            point_broadcaster = PointBroadcaster(pose_dict)
+            point_broadcaster.start()
+
+            path_dict = self.resampler.get_optimized_movable_paths()
+            # print(path_dict)
+            path_broadcaster = PathBroadcaster(path_dict)
+            path_broadcaster.start()
+            point_broadcaster.join()
+            path_broadcaster.join()
             self.signal_handler(signal.SIGINT, inspect.currentframe())
 
     def listen(self):
