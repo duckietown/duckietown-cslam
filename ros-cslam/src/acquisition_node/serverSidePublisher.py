@@ -13,19 +13,23 @@ import collections
 import yaml
 
 # A mockup class that behaves as rospy.Publish but instead saves to a rosbag
+
+
 class MockupPublisher():
     def __init__(self, bag, topic):
         self.bag = bag
         self.topic = topic
+
     def publish(self, msg):
         self.bag.write(self.topic, msg, msg.header.stamp)
+
 
 def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
     """
     Publishes the processed data on the ROS Master that the graph optimizer uses.
     """
 
-    assert(mode=='live' or mode=='postprocessing')
+    assert(mode == 'live' or mode == 'postprocessing')
 
     logger.info("Setting up the server side process")
 
@@ -34,53 +38,69 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
     ACQ_ODOMETRY_TOPIC = os.getenv('ACQ_ODOMETRY_TOPIC', "odometry")
     ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', "watchtower10")
     ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
-    ACQ_OBSERVATIONS_STATISTICS_OUTPUT = os.getenv('ACQ_OBSERVATIONS_STATISTICS_OUTPUT', None)
+    ACQ_OBSERVATIONS_STATISTICS_OUTPUT = os.getenv(
+        'ACQ_OBSERVATIONS_STATISTICS_OUTPUT', None)
 
     seq_stamper = 0
     counts = collections.Counter()
 
     # Different initialization of the topics for live and postprocessing modes
-    if mode=='live':
+    if mode == 'live':
         # Setup the topics
-        publisherPoses = rospy.Publisher("/poses_acquisition/"+ACQ_POSES_TOPIC, AprilTagDetection, queue_size=1)
-        publisherOdometry = rospy.Publisher("/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
+        publisherPoses = rospy.Publisher(
+            "/poses_acquisition/"+ACQ_POSES_TOPIC, AprilTagDetection, queue_size=1)
+        publisherOdometry = rospy.Publisher(
+            "/poses_acquisition/"+ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
 
         # If the test stream is requested
         if ACQ_TEST_STREAM:
-            publisherTestImages = rospy.Publisher("/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-            publisherRawImages = rospy.Publisher("/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-            publisherRectifiedImages = rospy.Publisher("/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-            publisherCameraInfoRaw = rospy.Publisher("/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
-            publisherCameraInfoRectified = rospy.Publisher("/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
+            publisherTestImages = rospy.Publisher(
+                "/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
+            publisherRawImages = rospy.Publisher(
+                "/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
+            publisherRectifiedImages = rospy.Publisher(
+                "/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
+            publisherCameraInfoRaw = rospy.Publisher(
+                "/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
+            publisherCameraInfoRectified = rospy.Publisher(
+                "/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
 
         # Init the node (live mode only)
         rospy.init_node('acquisition_node_'+ACQ_DEVICE_NAME)
 
-    elif mode=='postprocessing':
+    elif mode == 'postprocessing':
 
         # Open the bag (postprocessing mode only)
         ACQ_OUTPUT_BAG = os.getenv('ACQ_OUTPUT_BAG', None)
         if ACQ_OUTPUT_BAG == None:
-            raise Exception("ACQ_OUTPUT_BAG must be set if the server processor is in postprocessing mode!")
+            raise Exception(
+                "ACQ_OUTPUT_BAG must be set if the server processor is in postprocessing mode!")
         if os.path.exists(ACQ_OUTPUT_BAG):
             bag = rosbag.Bag(ACQ_OUTPUT_BAG, 'a')
         else:
             bag = rosbag.Bag(ACQ_OUTPUT_BAG, 'w')
 
-
         # Setup the topics
-        publisherPoses = MockupPublisher(bag, "/poses_acquisition/"+ACQ_POSES_TOPIC)
-        publisherOdometry = MockupPublisher(bag, "/poses_acquisition/"+ACQ_ODOMETRY_TOPIC)
+        publisherPoses = MockupPublisher(
+            bag, "/poses_acquisition/"+ACQ_POSES_TOPIC)
+        publisherOdometry = MockupPublisher(
+            bag, "/poses_acquisition/"+ACQ_ODOMETRY_TOPIC)
 
         # If the test stream is requested
         if ACQ_TEST_STREAM:
-            publisherTestImages = MockupPublisher(bag, "/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed")
-            publisherRawImages = MockupPublisher(bag, "/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed")
-            publisherRectifiedImages = MockupPublisher(bag, "/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME+"/compressed")
-            publisherCameraInfoRaw = MockupPublisher(bag, "/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME)
-            publisherCameraInfoRectified = MockupPublisher(bag, "/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME)
+            publisherTestImages = MockupPublisher(
+                bag, "/poses_acquisition/test_video/"+ACQ_DEVICE_NAME+"/compressed")
+            publisherRawImages = MockupPublisher(
+                bag, "/poses_acquisition/raw_video/"+ACQ_DEVICE_NAME+"/compressed")
+            publisherRectifiedImages = MockupPublisher(
+                bag, "/poses_acquisition/rectified_video/"+ACQ_DEVICE_NAME+"/compressed")
+            publisherCameraInfoRaw = MockupPublisher(
+                bag, "/poses_acquisition/camera_info_raw/"+ACQ_DEVICE_NAME)
+            publisherCameraInfoRectified = MockupPublisher(
+                bag, "/poses_acquisition/camera_info_rectified/"+ACQ_DEVICE_NAME)
 
-    logger.info("Setting up the server side process completed. Waiting for messages...")
+    logger.info(
+        "Setting up the server side process completed. Waiting for messages...")
 
     # Run continuously, check for new data arriving from the acquisitionProcessor and processed it when it arrives
     while not quitEvent.is_set():
@@ -94,28 +114,41 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
                     # Publish the relative pose
                     newApriltagDetectionMsg = AprilTagDetection()
                     newApriltagDetectionMsg.header.seq = seq_stamper
-                    newApriltagDetectionMsg.header.stamp.secs = int(tag["timestamp_secs"])
-                    newApriltagDetectionMsg.header.stamp.nsecs = int(tag["timestamp_nsecs"])
-                    newApriltagDetectionMsg.header.frame_id = str(tag["source"])
-                    newApriltagDetectionMsg.transform.translation.x = float(tag["tvec"][0])
-                    newApriltagDetectionMsg.transform.translation.y = float(tag["tvec"][1])
-                    newApriltagDetectionMsg.transform.translation.z = float(tag["tvec"][2])
-                    newApriltagDetectionMsg.transform.rotation.x = float(tag["qvec"][0])
-                    newApriltagDetectionMsg.transform.rotation.y = float(tag["qvec"][1])
-                    newApriltagDetectionMsg.transform.rotation.z = float(tag["qvec"][2])
-                    newApriltagDetectionMsg.transform.rotation.w = float(tag["qvec"][3])
+                    newApriltagDetectionMsg.header.stamp.secs = int(
+                        tag["timestamp_secs"])
+                    newApriltagDetectionMsg.header.stamp.nsecs = int(
+                        tag["timestamp_nsecs"])
+                    newApriltagDetectionMsg.header.frame_id = str(
+                        tag["source"])
+                    newApriltagDetectionMsg.transform.translation.x = float(
+                        tag["tvec"][0])
+                    newApriltagDetectionMsg.transform.translation.y = float(
+                        tag["tvec"][1])
+                    newApriltagDetectionMsg.transform.translation.z = float(
+                        tag["tvec"][2])
+                    newApriltagDetectionMsg.transform.rotation.x = float(
+                        tag["qvec"][0])
+                    newApriltagDetectionMsg.transform.rotation.y = float(
+                        tag["qvec"][1])
+                    newApriltagDetectionMsg.transform.rotation.z = float(
+                        tag["qvec"][2])
+                    newApriltagDetectionMsg.transform.rotation.w = float(
+                        tag["qvec"][3])
                     newApriltagDetectionMsg.tag_id = int(tag["tag_id"])
                     newApriltagDetectionMsg.tag_family = tag["tag_family"]
                     newApriltagDetectionMsg.hamming = int(tag["hamming"])
-                    newApriltagDetectionMsg.decision_margin = float(tag["decision_margin"])
-                    newApriltagDetectionMsg.homography = tag["homography"].flatten()
+                    newApriltagDetectionMsg.decision_margin = float(
+                        tag["decision_margin"])
+                    newApriltagDetectionMsg.homography = tag["homography"].flatten(
+                    )
                     newApriltagDetectionMsg.center = tag["center"]
                     newApriltagDetectionMsg.corners = tag["corners"].flatten()
                     newApriltagDetectionMsg.pose_error = tag["pose_error"]
 
                     publisherPoses.publish(newApriltagDetectionMsg)
-                    if mode=="live":
-                        logger.info("Published pose for tag %d in sequence %d" % (tag["tag_id"], seq_stamper))
+                    if mode == "live":
+                        logger.info("Published pose for tag %d in sequence %d" % (
+                            tag["tag_id"], seq_stamper))
 
                     counts[newApriltagDetectionMsg.tag_id] += 1
 
@@ -141,7 +174,8 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
                     publisherRectifiedImages.publish(imgMsg)
 
                 if "raw_camera_info" in incomingData:
-                    publisherCameraInfoRaw.publish(incomingData["raw_camera_info"])
+                    publisherCameraInfoRaw.publish(
+                        incomingData["raw_camera_info"])
 
                 if "new_camera_matrix" in incomingData:
                     new_camera_info = CameraInfo()
@@ -153,13 +187,14 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
                         new_camera_info.D = [0.0, 0.0, 0.0, 0.0, 0.0]
                     except:
                         pass
-                    new_camera_info.K = incomingData["new_camera_matrix"].flatten()
+                    new_camera_info.K = incomingData["new_camera_matrix"].flatten(
+                    )
                     publisherCameraInfoRectified.publish(new_camera_info)
 
-            seq_stamper+=1
+            seq_stamper += 1
 
         except KeyboardInterrupt:
-            raise( Exception("Exiting") )
+            raise(Exception("Exiting"))
         except Queue.Empty:
             if os.getenv('ACQ_DEVICE_MODE', 'live') == 'live':
                 logger.warning("No messages received in the last 5 seconds!")
@@ -168,17 +203,19 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
             pass
 
     # Close the bag (postprocessing mode only)
-    if mode=='postprocessing':
+    if mode == 'postprocessing':
         bag.close()
 
     # Save or append to an existing file:
     if ACQ_OBSERVATIONS_STATISTICS_OUTPUT:
-        logger.info("Saving statistics to %s", ACQ_OBSERVATIONS_STATISTICS_OUTPUT)
+        logger.info("Saving statistics to %s",
+                    ACQ_OBSERVATIONS_STATISTICS_OUTPUT)
         new_stats = dict()
         for id, count in counts.iteritems():
             new_stats[id] = count
 
-        yaml.dump({ACQ_DEVICE_NAME: new_stats}, open(ACQ_OBSERVATIONS_STATISTICS_OUTPUT,'a'))
+        yaml.dump({ACQ_DEVICE_NAME: new_stats}, open(
+            ACQ_OBSERVATIONS_STATISTICS_OUTPUT, 'a'))
 
     # print the observation statistics in the terminal
     logger.info("\n\n")

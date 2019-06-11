@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from py_MVO import VisualOdometry
+from Common_Modules import *
+import apriltags3
 import rospy
 import rosbag
 from std_msgs.msg import Header
@@ -23,60 +26,73 @@ from image_rectifier import ImageRectifier
 ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
 ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
 sys.path.append(ACQ_APRILTAG_LIB)
-import apriltags3
 
 ACQ_VISUAL_ODOMETRY_LIB = os.getenv('ACQ_VISUAL_ODOMETRY_LIB')
 sys.path.append(ACQ_VISUAL_ODOMETRY_LIB)
-from Common_Modules import *
-from py_MVO import VisualOdometry
 
 dsp = None
+
 
 class acquisitionProcessor():
     """
     Processes the data coming from a remote device (Duckiebot or watchtower).
     """
+
     def __init__(self, logger, mode='live'):
 
         self.mode = mode
         if self.mode != 'live' and self.mode != 'postprocessing':
-            raise Exception("The argument mode should be 'live' or 'postprocessing'. Received %s instead." % self.mode)
+            raise Exception(
+                "The argument mode should be 'live' or 'postprocessing'. Received %s instead." % self.mode)
 
         # Get the environment variables
         self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
-        self.ACQ_TOPIC_RAW = os.getenv('ACQ_TOPIC_RAW', 'camera_node/image/compressed')
-        self.ACQ_TOPIC_CAMERAINFO = os.getenv('ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
-        self.ACQ_TOPIC_VELOCITY_TO_POSE = os.getenv('ACQ_TOPIC_VELOCITY_TO_POSE', None)
+        self.ACQ_TOPIC_RAW = os.getenv(
+            'ACQ_TOPIC_RAW', 'camera_node/image/compressed')
+        self.ACQ_TOPIC_CAMERAINFO = os.getenv(
+            'ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
+        self.ACQ_TOPIC_VELOCITY_TO_POSE = os.getenv(
+            'ACQ_TOPIC_VELOCITY_TO_POSE', None)
         self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
         self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
         self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
-        self.ACQ_STATIONARY_ODOMETRY = bool(int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
-        self.ACQ_APRILTAG_QUAD_DECIMATE  = float(os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
-        self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY = bool(int(os.getenv('ACQ_ODOMETRY_POST_VISUAL_ODOMETRY', 0)))
-        self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES = os.getenv('ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES', 'SURF')
+        self.ACQ_STATIONARY_ODOMETRY = bool(
+            int(os.getenv('ACQ_STATIONARY_ODOMETRY', 0)))
+        self.ACQ_APRILTAG_QUAD_DECIMATE = float(
+            os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
+        self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY = bool(
+            int(os.getenv('ACQ_ODOMETRY_POST_VISUAL_ODOMETRY', 0)))
+        self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES = os.getenv(
+            'ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES', 'SURF')
 
         if self.mode == 'live':
-            self.ACQ_POSES_UPDATE_RATE = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10)) #Hz
-            self.ACQ_ODOMETRY_UPDATE_RATE = float(os.getenv('ACQ_ODOMETRY_UPDATE_RATE', 30)) #Hz
+            self.ACQ_POSES_UPDATE_RATE = float(
+                os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
+            self.ACQ_ODOMETRY_UPDATE_RATE = float(
+                os.getenv('ACQ_ODOMETRY_UPDATE_RATE', 30))  # Hz
         elif self.mode == 'postprocessing':
             pass
 
         # Initialize ROS nodes and subscribe to topics
         if self.mode == 'live':
-            rospy.init_node('acquisition_processor', anonymous=True, disable_signals=True)
+            rospy.init_node('acquisition_processor',
+                            anonymous=True, disable_signals=True)
             self.subscriberRawImage = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW, CompressedImage,
-                                                        self.camera_image_callback,  queue_size = 1)
+                                                       self.camera_image_callback,  queue_size=1)
             self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO, CameraInfo,
-                                                        self.camera_info_callback,  queue_size = 1)
+                                                         self.camera_info_callback,  queue_size=1)
 
-            if self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE>0: #Only if set (probably not for watchtowers)
+            # Only if set (probably not for watchtowers)
+            if self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_ODOMETRY_UPDATE_RATE > 0:
                 self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
-                                                            self.odometry_callback,  queue_size = 1)
+                                                             self.odometry_callback,  queue_size=1)
         elif self.mode == 'postprocessing':
             self.bag_topics = {'raw_image': '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW,
                                'camera_info': '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO}
-            if self.ACQ_TOPIC_VELOCITY_TO_POSE: #Only if set (probably not for watchtowers)
-                self.bag_topics['odometry'] = '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_VELOCITY_TO_POSE
+            # Only if set (probably not for watchtowers)
+            if self.ACQ_TOPIC_VELOCITY_TO_POSE:
+                self.bag_topics['odometry'] = '/'+self.ACQ_DEVICE_NAME + \
+                    '/'+self.ACQ_TOPIC_VELOCITY_TO_POSE
 
         # CvBridge is neccessary for the image processing
         self.bridge = CvBridge()
@@ -97,7 +113,8 @@ class acquisitionProcessor():
         self.logger = logger
 
         # Initialize the device side processor
-        self.dsp_options={'beautify': self.ACQ_BEAUTIFY, 'tag_size': self.ACQ_TAG_SIZE}
+        self.dsp_options = {'beautify': self.ACQ_BEAUTIFY,
+                            'tag_size': self.ACQ_TAG_SIZE}
         self.dsp = None
 
         self.logger.info('Acquisition processor is set up.')
@@ -107,16 +124,17 @@ class acquisitionProcessor():
         Runs constantly and processes new data as it comes.
         """
 
-        assert(self.mode=='live')
+        assert(self.mode == 'live')
 
         while not quitEvent.is_set():
-            #check if we want odometry:
+            # check if we want odometry:
             if self.ACQ_TOPIC_VELOCITY_TO_POSE and self.ACQ_POSES_UPDATE_RATE > 0 and rospy.get_time() - self.timeLastPub_poses >= 1.0/self.ACQ_POSES_UPDATE_RATE:
                 odometry = None
                 # If we have a new actual message, use it
                 if not self.lastOdometryProcessed:
 
-                    odometry = self.odometry_process(self.lastOdometry.x, self.lastOdometry.y, self.lastOdometry.theta, self.lastOdometry.header)
+                    odometry = self.odometry_process(
+                        self.lastOdometry.x, self.lastOdometry.y, self.lastOdometry.theta, self.lastOdometry.header)
                     self.lastOdometryProcessed = True
 
                 # Else send a dummy message if requested and if live (only if no other message has been sent for the last 0.2 secs)
@@ -152,22 +170,22 @@ class acquisitionProcessor():
                     # Collect latest ros_data
                     currRawImage = self.lastCameraImage
                     currCameraInfo = self.lastCameraInfo
-                    outputDict = self.camera_image_process(currRawImage, currCameraInfo)
+                    outputDict = self.camera_image_process(
+                        currRawImage, currCameraInfo)
                     if outputDict is not None:
                         outputDictQueue.put(obj=pickle.dumps(outputDict, protocol=-1),
                                             block=True,
                                             timeout=None)
                         self.lastImageProcessed = True
 
-
-    def postprocess(self, outputDictQueue, bag, n_threads = 8):
+    def postprocess(self, outputDictQueue, bag, n_threads=8):
         """
         Processes the data from a ROS bag.
         IMPORTANT: This will load all the bag contents in RAM! Make sure that
         the bag size is not too big and that you have sufficient RAM memory.
         """
 
-        assert(self.mode=='postprocessing')
+        assert(self.mode == 'postprocessing')
 
         self.logger.info('Postprocessing started')
 
@@ -191,7 +209,8 @@ class acquisitionProcessor():
             return self.camera_image_process(msg, cameraInfo)
 
         self.logger.info('Loading the camera images')
-        msgs_to_process = [self.debagify_msg(msg) for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['raw_image'])]
+        msgs_to_process = [self.debagify_msg(msg) for (
+            topic, msg, t) in bag.read_messages(topics=self.bag_topics['raw_image'])]
 
         self.logger.info('Processing the camera images')
         results = p.map(full_process, msgs_to_process)
@@ -203,14 +222,16 @@ class acquisitionProcessor():
         self.logger.info('Finished processing the camera images')
 
         # [ODOMETRY]  Odometry needs to be processed sequentially as it has to subtract the poses of subsequent messages
-        if self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY: # If visual odometry was requested
-            self.logger.info('Odometry processing starting. Using Visual Odometry (VO). This will be slow.')
+        if self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY:  # If visual odometry was requested
+            self.logger.info(
+                'Odometry processing starting. Using Visual Odometry (VO). This will be slow.')
 
             # We reuse the rectified images and the new camera matrix from results
-            K = results[0]['new_camera_matrix'].reshape((3,3))
+            K = results[0]['new_camera_matrix'].reshape((3, 3))
 
             # Setting up the visual odometry
-            vo = VisualOdometry(K, self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES, pitch_adjust=np.deg2rad(10.0))
+            vo = VisualOdometry(
+                K, self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES, pitch_adjust=np.deg2rad(10.0))
             clahe = cv2.createCLAHE(clipLimit=5.0)
 
             # Iterating through the images one by one
@@ -239,7 +260,6 @@ class acquisitionProcessor():
                     q_y = sy * cp * sr + cy * sp * cr
                     q_z = sy * cp * cr - cy * sp * sr
 
-
                     # Save the resuts to the new odometry relative pose message
                     odometry.transform.translation.x = vo.relative_pose_x
                     odometry.transform.translation.y = vo.relative_pose_y
@@ -253,22 +273,25 @@ class acquisitionProcessor():
                                         block=True,
                                         timeout=None)
 
-                if img_id%100 == 0:
-                    self.logger.info('VO: %d/%d frames processed.' % (img_id+1, len(results)))
+                if img_id % 100 == 0:
+                    self.logger.info('VO: %d/%d frames processed.' %
+                                     (img_id+1, len(results)))
 
             self.logger.info('Odometry processing finished')
 
-        elif self.ACQ_TOPIC_VELOCITY_TO_POSE: # If VO was not requested and only if set (probably not for watchtowers)
-            self.logger.info('Odometry processing starting. Using topic %s' % self.ACQ_TOPIC_VELOCITY_TO_POSE)
+        # If VO was not requested and only if set (probably not for watchtowers)
+        elif self.ACQ_TOPIC_VELOCITY_TO_POSE:
+            self.logger.info(
+                'Odometry processing starting. Using topic %s' % self.ACQ_TOPIC_VELOCITY_TO_POSE)
             for (topic, msg, t) in bag.read_messages(topics=self.bag_topics['odometry']):
-                odometry = self.odometry_process(msg.x, msg.y, msg.theta, msg.header)
+                odometry = self.odometry_process(
+                    msg.x, msg.y, msg.theta, msg.header)
                 outputDictQueue.put(obj=pickle.dumps({'odometry': odometry}, protocol=-1),
                                     block=True,
                                     timeout=None)
             self.logger.info('Odometry processing finished')
 
         bag.close()
-
 
     def odometry_process(self, x, y, theta, header):
         """
@@ -288,21 +311,22 @@ class acquisitionProcessor():
                                       [0.0, 0.0, 1.0]])
 
         transform_previous = np.array([[math.cos(self.previousOdometry["theta"]), -1.0 * math.sin(self.previousOdometry["theta"]), self.previousOdometry["x"]],
-                                           [math.sin(self.previousOdometry["theta"]), math.cos(self.previousOdometry["theta"]), self.previousOdometry["y"]],
-                                           [0.0, 0.0, 1.0]])
+                                       [math.sin(self.previousOdometry["theta"]), math.cos(
+                                           self.previousOdometry["theta"]), self.previousOdometry["y"]],
+                                       [0.0, 0.0, 1.0]])
 
         transform_previous_inv = np.linalg.inv(transform_previous)
 
         self.previousOdometry = {'x': x, 'y': y, 'theta': theta}
 
-        transform_relative = np.matmul(transform_previous_inv, transform_current)
+        transform_relative = np.matmul(
+            transform_previous_inv, transform_current)
 
         angle = math.atan2(transform_relative[1][0], transform_relative[0][0])
 
         x = transform_relative[0][2]
 
         y = transform_relative[1][2]
-
 
         cy = math.cos(angle * 0.5)
         sy = math.sin(angle * 0.5)
@@ -315,7 +339,6 @@ class acquisitionProcessor():
         q_x = cy * cp * sr - sy * sp * cr
         q_y = sy * cp * sr + cy * sp * cr
         q_z = sy * cp * cr - cy * sp * sr
-
 
         # Save the resuts to the new odometry relative pose message
         odometry.transform.translation.x = x
@@ -347,7 +370,8 @@ class acquisitionProcessor():
         assert(dsp is not None)
 
         # Convert from ROS image message to numpy array
-        cv_image = self.bridge.compressed_imgmsg_to_cv2(currRawImage, desired_encoding='mono8')
+        cv_image = self.bridge.compressed_imgmsg_to_cv2(
+            currRawImage, desired_encoding='mono8')
 
         # Scale the K matrix if the image resolution is not the same as in the calibration
         currRawImage_height = cv_image.shape[0]
@@ -363,11 +387,11 @@ class acquisitionProcessor():
             scale_matrix[4] *= scale_height
             scale_matrix[5] *= scale_height
 
-
         outputDict = dict()
 
         # Process the image and extract the apriltags
-        outputDict = dsp.process(cv_image,  (np.array(currCameraInfo.K)*scale_matrix).reshape((3,3)), currCameraInfo.D)
+        outputDict = dsp.process(cv_image,  (np.array(
+            currCameraInfo.K)*scale_matrix).reshape((3, 3)), currCameraInfo.D)
         outputDict['header'] = currRawImage.header
 
         # Add the time stamp and source of the input image to the output
@@ -377,31 +401,34 @@ class acquisitionProcessor():
             outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
 
         # Generate a diagnostic image
-        if self.ACQ_TEST_STREAM==1:
+        if self.ACQ_TEST_STREAM == 1:
             image = np.copy(outputDict['rect_image'])
 
             # Put the AprilTag bound boxes and numbers to the image
             for tag in outputDict['apriltags']:
                 for idx in range(len(tag['corners'])):
-                    cv2.line(image, tuple(tag['corners'][idx-1, :].astype(int)), tuple(tag['corners'][idx, :].astype(int)), (0, 255, 0))
+                    cv2.line(image, tuple(tag['corners'][idx-1, :].astype(int)),
+                             tuple(tag['corners'][idx, :].astype(int)), (0, 255, 0))
                     # cv2.rectangle(image, (tag['corners'][0, 0].astype(int)-10,tag['corners'][0, 1].astype(int)-10), (tag['corners'][0, 0].astype(int)+15,tag['corners'][0, 1].astype(int)+15), (0, 0, 255), cv2.FILLED)
-                cv2.putText(image,str(tag['tag_id']),
-                            org=(tag['corners'][0, 0].astype(int)+10,tag['corners'][0, 1].astype(int)+10),
+                cv2.putText(image, str(tag['tag_id']),
+                            org=(tag['corners'][0, 0].astype(int)+10,
+                                 tag['corners'][0, 1].astype(int)+10),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                             fontScale=1.0,
                             thickness=2,
                             color=(255, 0, 0))
 
             # Put device and timestamp to the image
-            cv2.putText(image,'device: '+ self.ACQ_DEVICE_NAME +', timestamp: '+str(currRawImage.header.stamp.secs)+'+'+str(currRawImage.header.stamp.nsecs),
-                        org=(30,30),
+            cv2.putText(image, 'device: ' + self.ACQ_DEVICE_NAME + ', timestamp: '+str(currRawImage.header.stamp.secs)+'+'+str(currRawImage.header.stamp.nsecs),
+                        org=(30, 30),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=1.0,
                         thickness=2,
                         color=(255, 0, 0))
 
             # Add the original and diagnostic info to the outputDict
-            outputDict['test_stream_image'] = self.bridge.cv2_to_compressed_imgmsg(image, dst_format='png')
+            outputDict['test_stream_image'] = self.bridge.cv2_to_compressed_imgmsg(
+                image, dst_format='png')
             outputDict['test_stream_image'].header.stamp.secs = currRawImage.header.stamp.secs
             outputDict['test_stream_image'].header.stamp.nsecs = currRawImage.header.stamp.nsecs
             outputDict['test_stream_image'].header.frame_id = self.ACQ_DEVICE_NAME
@@ -409,7 +436,8 @@ class acquisitionProcessor():
             outputDict['raw_image'] = currRawImage
             outputDict['raw_camera_info'] = currCameraInfo
 
-            outputDict['rectified_image'] = self.bridge.cv2_to_compressed_imgmsg(outputDict['rect_image'], dst_format='png')
+            outputDict['rectified_image'] = self.bridge.cv2_to_compressed_imgmsg(
+                outputDict['rect_image'], dst_format='png')
             outputDict['rectified_image'].header.stamp.secs = currRawImage.header.stamp.secs
             outputDict['rectified_image'].header.stamp.nsecs = currRawImage.header.stamp.nsecs
             outputDict['rectified_image'].header.frame_id = self.ACQ_DEVICE_NAME
@@ -464,7 +492,7 @@ class acquisitionProcessor():
             newMsg = CameraInfo()
             newMsg.header = self.debagify_msg(msg.header)
             newMsg.height = msg.height
-            newMsg.width  = msg.width
+            newMsg.width = msg.width
             newMsg.distortion_model = msg.distortion_model
             newMsg.D = msg.D
             newMsg.P = msg.P
@@ -474,26 +502,28 @@ class acquisitionProcessor():
             newMsg.binning_y = msg.binning_y
             newMsg.roi = self.debagify_msg(msg.roi)
             return newMsg
-        raise Exception("Message type %s could not be debagified" % str(type(msg)))
+        raise Exception("Message type %s could not be debagified" %
+                        str(type(msg)))
 
 
 class deviceSideProcessor():
     """
     Packages the image rectification and AprilTag detection for images.
     """
+
     def __init__(self, options, logger):
         self.logger = logger
         self.ImageRectifier = None
         self.opt_beautify = options.get('beautify', False)
         self.tag_size = options.get('tag_size', 0.065)
         self.aprilTagProcessor = apriltags3.Detector(searchpath=[ACQ_APRILTAG_SO],
-                               families='tag36h11',
-                               nthreads=4,
-                               quad_decimate=1.0,
-                               quad_sigma=0.0,
-                               refine_edges=1,
-                               decode_sharpening=0.25,
-                               debug=0)
+                                                     families='tag36h11',
+                                                     nthreads=4,
+                                                     quad_decimate=1.0,
+                                                     quad_sigma=0.0,
+                                                     refine_edges=1,
+                                                     decode_sharpening=0.25,
+                                                     debug=0)
 
     def process(self, raw_image, cameraMatrix, distCoeffs):
         """
@@ -503,10 +533,12 @@ class deviceSideProcessor():
         try:
             # 0. Initialize the image rectifier if it hasn't been already (that's done so that we don't recompute the remapping)
             if self.ImageRectifier is None:
-                self.ImageRectifier = ImageRectifier(raw_image, cameraMatrix, distCoeffs)
+                self.ImageRectifier = ImageRectifier(
+                    raw_image, cameraMatrix, distCoeffs)
 
             # 1. Rectify the raw image and get the new camera cameraMatrix
-            rect_image, newCameraMatrix = self.ImageRectifier.rectify(raw_image)
+            rect_image, newCameraMatrix = self.ImageRectifier.rectify(
+                raw_image)
 
             # 2. Extract april tags data
             if len(rect_image.shape) == 3:
@@ -519,8 +551,10 @@ class deviceSideProcessor():
                 raw_image = self.ImageRectifier.beautify(raw_image)
 
             # 3. Extract poses from april tags data
-            camera_params = ( newCameraMatrix[0,0], newCameraMatrix[1,1], newCameraMatrix[0,2], newCameraMatrix[1,2] )
-            tags = self.aprilTagProcessor.detect(rect_image_gray, True, camera_params, self.tag_size)
+            camera_params = (
+                newCameraMatrix[0, 0], newCameraMatrix[1, 1], newCameraMatrix[0, 2], newCameraMatrix[1, 2])
+            tags = self.aprilTagProcessor.detect(
+                rect_image_gray, True, camera_params, self.tag_size)
 
             # 4. Package output
             outputDict = dict()
@@ -541,7 +575,8 @@ class deviceSideProcessor():
             return outputDict
 
         except Exception as e:
-            self.logger.warning('deviceSideProcessor process failed: : %s' % str(e))
+            self.logger.warning(
+                'deviceSideProcessor process failed: : %s' % str(e))
             pass
 
     def mat2quat(self, M):
@@ -564,5 +599,6 @@ class deviceSideProcessor():
                 q *= -1
             return q
         except:
-            self.logger.warning('deviceSideProcessor process failed: : %s' % str(e))
+            self.logger.warning(
+                'deviceSideProcessor process failed: : %s' % str(e))
             pass

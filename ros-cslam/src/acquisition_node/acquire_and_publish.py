@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+from serverSidePublisher import publishOnServer
+from acquisitionProcessor import acquisitionProcessor
+import math
+import numpy as np
 import rospy
 import rosbag
 from sensor_msgs.msg import CompressedImage, Image, CameraInfo
@@ -20,23 +24,21 @@ logger = multiprocessing.log_to_stderr()
 logger.setLevel(logging.INFO)
 # logger=None
 
-import numpy as np
-import math
-
-from acquisitionProcessor import acquisitionProcessor
-from serverSidePublisher import publishOnServer
 
 # IMPORT THE ENVIRONMENT VARIABLES (DEPENDING ON THE MODE)
 ACQ_DEVICE_MODE = os.getenv('ACQ_DEVICE_MODE', 'live')
 if ACQ_DEVICE_MODE != 'live' and ACQ_DEVICE_MODE != 'postprocessing':
-    raise Exception("The environment variable ACQ_DEVICE_MODE should be 'live' or 'postprocessing'. Received %s instead." % ACQ_MODE)
+    raise Exception(
+        "The environment variable ACQ_DEVICE_MODE should be 'live' or 'postprocessing'. Received %s instead." % ACQ_MODE)
 ACQ_SERVER_MODE = os.getenv('ACQ_SERVER_MODE', 'live')
 if ACQ_SERVER_MODE != 'live' and ACQ_SERVER_MODE != 'postprocessing':
-    raise Exception("The environment variable ACQ_SERVER_MODE should be 'live' or 'postprocessing'. Received %s instead." % ACQ_MODE)
+    raise Exception(
+        "The environment variable ACQ_SERVER_MODE should be 'live' or 'postprocessing'. Received %s instead." % ACQ_MODE)
 
 if ACQ_DEVICE_MODE == 'live':
     ACQ_ROS_MASTER_URI_DEVICE = os.getenv('ACQ_ROS_MASTER_URI_DEVICE', "")
-    ACQ_ROS_MASTER_URI_DEVICE_PORT = os.getenv('ACQ_ROS_MASTER_URI_DEVICE_PORT', "")
+    ACQ_ROS_MASTER_URI_DEVICE_PORT = os.getenv(
+        'ACQ_ROS_MASTER_URI_DEVICE_PORT', "")
 elif ACQ_DEVICE_MODE == 'postprocessing':
     ACQ_DEVICE_THREADS = int(os.getenv('ACQ_DEVICE_THREADS', 8))
     ACQ_DEVICE_BAG = os.getenv('ACQ_DEVICE_BAG', None)
@@ -45,11 +47,14 @@ elif ACQ_DEVICE_MODE == 'postprocessing':
 
 if ACQ_SERVER_MODE == 'live':
     ACQ_ROS_MASTER_URI_SERVER = os.getenv('ACQ_ROS_MASTER_URI_SERVER', "")
-    ACQ_ROS_MASTER_URI_SERVER_PORT = os.getenv('ACQ_ROS_MASTER_URI_SERVER_PORT', "")
+    ACQ_ROS_MASTER_URI_SERVER_PORT = os.getenv(
+        'ACQ_ROS_MASTER_URI_SERVER_PORT', "")
 elif ACQ_SERVER_MODE == 'postprocessing':
     pass
 
 # Define the two concurrent processes:
+
+
 def runDeviceSideProcess(ROS_MASTER_URI, outputDictQueue, quitEvent):
     """
     Receive and process data from the remote device (Duckiebot or watchtower).
@@ -62,11 +67,13 @@ def runDeviceSideProcess(ROS_MASTER_URI, outputDictQueue, quitEvent):
     elif ACQ_DEVICE_MODE == 'postprocessing':
         logger.info('Device side processor starting in POSTPROCESSING mode')
         ap = acquisitionProcessor(logger, mode="postprocessing")
-        ap.postprocess(outputDictQueue, bag=rosbag.Bag(ACQ_DEVICE_BAG), n_threads = ACQ_DEVICE_THREADS)
+        ap.postprocess(outputDictQueue, bag=rosbag.Bag(
+            ACQ_DEVICE_BAG), n_threads=ACQ_DEVICE_THREADS)
+
 
 def runServerSideProcess(ROS_MASTER_URI, outpuDictQueue, quitEvent):
     """
-    Publush the processed data to the ROS Master that the graph optimizer uses.
+    Publish the processed data to the ROS Master that the graph optimizer uses.
     """
     if ACQ_SERVER_MODE == 'live':
         logger.info('Server side processor starting in LIVE mode')
@@ -74,7 +81,9 @@ def runServerSideProcess(ROS_MASTER_URI, outpuDictQueue, quitEvent):
         publishOnServer(outputDictQueue, quitEvent, logger, mode='live')
     elif ACQ_SERVER_MODE == 'postprocessing':
         logger.info('Server side processor starting in POSTPROCESSING mode')
-        publishOnServer(outputDictQueue, quitEvent, logger, mode='postprocessing')
+        publishOnServer(outputDictQueue, quitEvent,
+                        logger, mode='postprocessing')
+
 
 if __name__ == '__main__':
     """
@@ -87,11 +96,13 @@ if __name__ == '__main__':
     quitEvent = multiprocessing.Event()
 
     if ACQ_SERVER_MODE == 'live':
-        ros_master_uri_server = "http://"+ACQ_ROS_MASTER_URI_SERVER+":"+ACQ_ROS_MASTER_URI_SERVER_PORT
+        ros_master_uri_server = "http://"+ACQ_ROS_MASTER_URI_SERVER + \
+            ":"+ACQ_ROS_MASTER_URI_SERVER_PORT
     else:
         ros_master_uri_server = None
     if ACQ_DEVICE_MODE == 'live':
-        ros_master_uri_device = "http://"+ACQ_ROS_MASTER_URI_DEVICE+":"+ACQ_ROS_MASTER_URI_DEVICE_PORT
+        ros_master_uri_device = "http://"+ACQ_ROS_MASTER_URI_DEVICE + \
+            ":"+ACQ_ROS_MASTER_URI_DEVICE_PORT
     else:
         ros_master_uri_device = None
 
@@ -104,17 +115,18 @@ if __name__ == '__main__':
     # Start the processes
 
     deviceSideProcess = multiprocessing.Process(target=runDeviceSideProcess,
-                                                args=(ros_master_uri_device,outputDictQueue,quitEvent),
+                                                args=(ros_master_uri_device,
+                                                      outputDictQueue, quitEvent),
                                                 name="deviceSideProcess")
 
     deviceSideProcess.start()
     # publishOnServer(outputDictQueue, quitEvent, logger)
 
-
     # ap = acquisitionProcessor(outputDictQueue, logger, mode="postprocessing")
 
     serverSideProcess = multiprocessing.Process(target=runServerSideProcess,
-                                                args=(ros_master_uri_server,outputDictQueue,quitEvent),
+                                                args=(ros_master_uri_server,
+                                                      outputDictQueue, quitEvent),
                                                 name="serverSideProcess")
 
     serverSideProcess.start()
@@ -126,7 +138,7 @@ if __name__ == '__main__':
         if not deviceSideProcess.is_alive():
             quitEvent.set()
             deviceSideProcess.terminate()
-            #Wait until the queue is processed
+            # Wait until the queue is processed
             while not outputDictQueue.empty():
                 time.sleep(0.1)
             outputDictQueue.close()
