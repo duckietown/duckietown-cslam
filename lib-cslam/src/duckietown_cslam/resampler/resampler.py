@@ -138,10 +138,10 @@ class OdometryResampler(object):
                     list_measure_info.append(
                         self.edges[t][1])
 
-        # if next_time_stamp - previous_time_stamp > 2 * self.max_time_diff:
-        #     print("too much time difference")
-        #     self.last_odometry_time_stamp = time_stamp
-        #     return -1, -1
+        if next_time_stamp - previous_time_stamp > 2 * self.max_time_diff:
+            print("too much time difference")
+            self.last_odometry_time_stamp = time_stamp
+            return -1, -1, -1
 
         time_stamp_to_use.sort()
 

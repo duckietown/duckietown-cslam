@@ -1,13 +1,13 @@
 watchtower: 
   type: watchtower
-  position_deviation: 0.3
+  position_deviation: 0.5
   angle_deviation: 15.0
 
 
 odometry: 
   type: odometry
   position_deviation: 0.05
-  angle_deviation: 5.0
+  angle_deviation: 1.0
 
 retrointerpolation: 
   type: retrointerpolation

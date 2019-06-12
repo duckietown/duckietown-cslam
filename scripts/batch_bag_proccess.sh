@@ -1,6 +1,6 @@
-devices=(autobot03 watchtower01 watchtower02 watchtower03 watchtower04 watchtower05 watchtower06 watchtower07 watchtower08 watchtower09 watchtower10 watchtower11 watchtower12 watchtower13 watchtower14 watchtower15 watchtower16)
+devices=(autobot07 watchtower21 watchtower22 watchtower23 watchtower24 watchtower25 watchtower26 watchtower27 watchtower28 watchtower29 watchtower30 watchtower31 watchtower32 watchtower33 watchtower34 watchtower35)
 
-FOLDER_PATH="/home/amaury/AIDO2_experiment_data/submission_3219/attempt_01"
+FOLDER_PATH="/home/amaury/Desktop/submission_3774/attempt_01"
 
 BAGS_PATH="${FOLDER_PATH}/bags"
 OUTPUT_BAG_PATH="${FOLDER_PATH}/bags/processed.bag"
@@ -31,23 +31,23 @@ STATISTICS_FILE=$(basename "${STATISTICS_PATH}")
 
 # printf "\n\n"
 
-# for index in ${!devices[*]}
-# do
-#     device=${devices[$index]}
-#     file=$(find "${BAGS_PATH}" -name "*$device*")
-#     filename=$(basename "${file}")
+for index in ${!devices[*]}
+do
+    device=${devices[$index]}
+    file=$(find "${BAGS_PATH}" -name "*$device*")
+    filename=$(basename "${file}")
 
-#     printf "##########################################################################\n"
-#     printf "STARTING PROCESSING ${devices[$index]}\n\n"
+    printf "##########################################################################\n"
+    printf "STARTING PROCESSING ${devices[$index]}\n\n"
 
-#     # If it is an autobot, toggle visual odometry
-#     if [[ $device == *"autobot"* ]]; then
-#       VO_FLAG=1
-#       printf "AUTOBOT DETECTED. WILL PROCESS WITH VISUAL ODOMETRY!\n"
-#     else
-#       VO_FLAG=0
-#       printf "NOT AUTOBOT. Will process without visual odometry!\n"
-#     fi
+    # If it is an autobot, toggle visual odometry
+    if [[ $device == *"autobot"* ]]; then
+      VO_FLAG=1
+      printf "AUTOBOT DETECTED. WILL PROCESS WITH VISUAL ODOMETRY!\n"
+    else
+      VO_FLAG=0
+      printf "NOT AUTOBOT. Will process without visual odometry!\n"
+    fi
 
     docker run  --rm \
                 -e ACQ_DEVICE_MODE=postprocessing \
@@ -68,7 +68,7 @@ STATISTICS_FILE=$(basename "${STATISTICS_PATH}")
                 duckietown/cslam-acquisition:x86-doubletrouble
 
 #     printf "FINISHED PROCESSING ${devices[$index]}\n\n"
-# done
+done
 
 printf "##########################################################################\n"
 printf "WES QUACKERSON TAKES THE SCENE\n\n"
