@@ -411,8 +411,9 @@ class MovableNode(Node):
     def retrointerpolate(self, time_stamp):
         # We cant have measure info for retro interpolation. We can create one that is strong, by assuming that all ready processed stuff is good.
         # We make orientation strong, distance weak
-
-        retro_measure_information = create_info_matrix(0.20, 5.0)
+        space_dev = self.duckietown_graph.default_variance["retrointerpolation"]["position_deviation"]
+        angle_dev = self.duckietown_graph.default_variance["retrointerpolation"]["angle_deviation"]
+        retro_measure_information = create_info_matrix(space_dev, angle_dev)
 
         time_stamp_before = 0.0
         time_stamp_after = float('inf')
@@ -557,7 +558,7 @@ class MovableNode(Node):
                     row.extend(pose[1].R[0])
                     row.extend(pose[1].R[1])
                     row.extend(pose[1].R[2])
-                    print(row)
+                    # print(row)
                     # row = ["coucou", 4, "les cococs"]
                     trajectory_writer.writerow(row)
 
@@ -650,7 +651,7 @@ class DuckietownGraphBuilder(object):
                  using_priors=True,
                  stocking_time=None,
                  priors_filename=None,
-                 default_variance_filename=None,
+                 default_variance=None,
                  result_folder="/tmp"):
         # Initialize pose graph.
         self.graph = g2oGB.g2oGraphBuilder()
@@ -673,6 +674,7 @@ class DuckietownGraphBuilder(object):
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
         self.using_priors = using_priors
+        self.default_variance = default_variance
         if(priors_filename is not None):
             self.priors = PriorHandler(priors_filename)
 

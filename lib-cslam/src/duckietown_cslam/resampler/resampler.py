@@ -21,7 +21,6 @@ def merge_measure_information(list_measure):
         result += np.linalg.inv(measure_info)
     result /= len(list_measure)
     result = np.linalg.inv(result)
-    print(result)
     return result
 
 
@@ -339,9 +338,9 @@ class WatchtowerTrajectroyResampler(object):
 
 
 class Resampler():
-    def __init__(self, initial_floor_april_tags, stocking_time, priors_filename, using_priors, result_folder):
+    def __init__(self, initial_floor_april_tags, stocking_time, priors_filename, default_variance, using_priors, result_folder):
         self.pose_graph = dGB.DuckietownGraphBuilder(
-            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance_filename=default_variance_filename, using_priors=using_priors, result_folder=result_folder)
+            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance=default_variance, using_priors=using_priors, result_folder=result_folder)
         self.reference_time_stamp = -1
         self.watchtower_samplers = {}
         self.odometry_samplers = {}

@@ -22,7 +22,13 @@ from visualization_msgs.msg import *
 from nav_msgs.msg import Odometry, Path
 from duckietown_msgs.msg import AprilTagDetection
 import inspect
-import rosbag
+import yaml
+
+
+def load_yaml_file(fn):
+    with open(fn) as f:
+        data = f.read()
+    return yaml.load(data, Loader=yaml.SafeLoader)
 
 
 def get_transform_from_data(data):
@@ -327,8 +333,9 @@ class TransformListener():
                time_stamp: Timestamp associated to the ROS message.
         """
         transform = get_transform_from_data(data)
-
-        measure_information = create_info_matrix(0.05, 1)
+        space_dev = self.default_variance["odometry"]["position_deviation"]
+        angle_dev = self.default_variance["odometry"]["angle_deviation"]
+        measure_information = create_info_matrix(space_dev, angle_dev)
         # Add edge to the graph.
         return self.resampler.handle_odometry_edge(node_id, transform, time_stamp, measure_information)
 
@@ -348,11 +355,13 @@ class TransformListener():
         # Get type of the object seen.
 
         type_of_object_seen = node_id1.split("_")[0]
+        space_dev = self.default_variance["watchtower"]["position_deviation"]
+        angle_dev = self.default_variance["watchtower"]["angle_deviation"]
         if(pose_error != None):
             measure_information = create_info_matrix(
-                0.1 * pose_error, 15 * pose_error)
+                space_dev * pose_error, angle_dev * pose_error)
         else:
-            measure_information = create_info_matrix(0.1, 15)
+            measure_information = create_info_matrix(space_dev, angle_dev)
 
         if (type_of_object_seen == "duckiebot"):
             # print("watzchtower %s is seing duckiebot %s" %
@@ -370,7 +379,6 @@ class TransformListener():
             R = np.matmul(R_x, R_z)  # verified!
             H_apriltag_to_base = g2o.Isometry3d(R, t)
             transform = transform * H_apriltag_to_base.inverse()
-            measure_information = create_info_matrix(0.05, 15)
 
             # Add edge to the graph.
             return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information=measure_information, is_duckiebot=True)
@@ -409,12 +417,13 @@ class TransformListener():
                time_stamp: Timestamp associated to the ROS message.
         """
         transform = get_transform_from_data(data)
-
+        space_dev = self.default_variance["duckiebot"]["position_deviation"]
+        angle_dev = self.default_variance["duckiebot"]["angle_deviation"]
         if(pose_error != None):
             measure_information = create_info_matrix(
-                0.05 * pose_error, 15 * pose_error)
+                space_dev * pose_error, angle_dev * pose_error)
         else:
-            measure_information = create_info_matrix(0.05, 15)
+            measure_information = create_info_matrix(space_dev, angle_dev)
 
         # Get type of the object that sees the other object, for a sanity check.
         type_of_object_seeing = node_id0.split("_")[0]
@@ -591,6 +600,8 @@ class TransformListener():
                                      "priors.yaml")
         default_variance_filename = "%s/%s" % (rospy.get_param("config_folder"),
                                                "default_variance.yaml")
+
+        self.default_variance = load_yaml_file(default_variance_filename)
         stocking_time = rospy.get_param("stocking_time")
         using_priors = rospy.get_param("using_priors")
         result_folder = rospy.get_param("result_folder")
@@ -605,7 +616,7 @@ class TransformListener():
 
         # Build graph based on floor map.
         self.resampler = resampler.Resampler(
-            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance_filename=default_variance_filename, using_priors=using_priors, result_folder=result_folder)
+            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance=self.default_variance, using_priors=using_priors, result_folder=result_folder)
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
