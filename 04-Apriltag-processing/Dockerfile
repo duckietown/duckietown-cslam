@@ -1,6 +1,6 @@
 FROM ros:kinetic-ros-core
 
-MAINTAINER Aleksandar Petrov <alpetrov@ethz.ch>
+MAINTAINER Amaury Camus <camusam@ethz.ch>
 
 # Install OpenCV and CvBridge
 
@@ -20,60 +20,44 @@ RUN pip install pathos multiprocessing-logging
 ENV ACQ_ROS_MASTER_URI_DEVICE_PORT 11311
 ENV ACQ_ROS_MASTER_URI_SERVER_PORT 11311
 ENV ACQ_POSES_UPDATE_RATE 10
-ENV ACQ_ODOMETRY_UPDATE_RATE 30
-ENV ACQ_STATIONARY_ODOMETRY 0
 ENV ACQ_TOPIC_RAW camera_node/image/compressed
 ENV ACQ_TOPIC_CAMERAINFO camera_node/camera_info
-# ENV ACQ_TOPIC_VELOCITY_TO_POSE velocity_to_pose_node/pose
 ENV ACQ_TAG_SIZE 0.065
 ENV ACQ_POSES_TOPIC poses
-ENV ACQ_ODOMETRY_TOPIC odometry
-ENV ACQ_TEST_STREAM 1
-ENV ACQ_BEAUTIFY 1
+ENV ACQ_TEST_STREAM 0
+ENV ACQ_BEAUTIFY 0
 ENV ACQ_APRILTAG_QUAD_DECIMATE 1.0
-ENV ACQ_ODOMETRY_POST_VISUAL_ODOMETRY 0
-ENV ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES SURF
 
 
 # Argumens for where the different places from which we will get files from are
 ARG apriltag_dir=lib/src/apriltags3-py
-ARG visual_odometry_dir=lib/src/visual_odometry
-ARG acquisition_src_dir=ros/src
+ARG apriltag_processor_src_dir=ros/src
 ARG algo_dir=lib/src/duckietown_cslam/algo
 
 # Create a directory to store the Python files and the April tag library
-RUN mkdir /acquisition_node
-
-
+RUN mkdir /apriltag_processor_node
 
 
 # Copy and install the April tag library and configure the environment variables for it
-RUN mkdir /acquisition_node/apriltag
-COPY ${apriltag_dir}/apriltags /acquisition_node/apriltag
-RUN  /bin/bash -c "mkdir /acquisition_node/apriltag/build; cd /acquisition_node/apriltag/build; cmake ..; make install"
-COPY ${apriltag_dir}/apriltags3.py /acquisition_node/apriltag/apriltags3.py
-ENV ACQ_APRILTAG_LIB /acquisition_node/apriltag/
-ENV ACQ_APRILTAG_SO /acquisition_node/apriltag/build/lib
-
-# Copy the Visual Odometry library
-RUN mkdir /acquisition_node/visual_odometry
-COPY ${visual_odometry_dir} /acquisition_node/visual_odometry
-ENV ACQ_VISUAL_ODOMETRY_LIB /acquisition_node/visual_odometry/src/
+RUN mkdir /apriltag_processor_node/apriltag
+COPY ${apriltag_dir}/apriltags /apriltag_processor_node/apriltag
+RUN  /bin/bash -c "mkdir /apriltag_processor_node/apriltag/build; cd /apriltag_processor_node/apriltag/build; cmake ..; make install"
+COPY ${apriltag_dir}/apriltags3.py /apriltag_processor_node/apriltags3.py
+ENV ACQ_APRILTAG_LIB /apriltag_processor_node/apriltag/
+ENV ACQ_APRILTAG_SO /apriltag_processor_node/apriltag/build/lib
 
 # Setup the duckietown_msgs
 RUN mkdir -p /catkin-ws/src
-COPY ${acquisition_src_dir}/duckietown_msgs /catkin-ws/src/duckietown_msgs
+COPY ${apriltag_processor_src_dir}/duckietown_msgs /catkin-ws/src/duckietown_msgs
 RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
 
 # Copy the Python files
-COPY ${acquisition_src_dir}/acquisition_node/acquisitionProcessor.py /acquisition_node
-COPY ${algo_dir}/image_rectifier.py /acquisition_node
-COPY ${acquisition_src_dir}/acquisition_node/serverSidePublisher.py /acquisition_node
-COPY ${acquisition_src_dir}/acquisition_node/acquire_and_publish.py /acquisition_node
+COPY ${apriltag_processor_src_dir}/processing_node/apriltag_processor_node.py /apriltag_processor_node
+COPY ${algo_dir}/image_rectifier.py /apriltag_processor_node
 
 # Copy the bash wrapper
-COPY ${acquisition_src_dir}/acquisition_node/wrapper.sh /acquisition_node
-RUN chmod +x /acquisition_node/*.sh
+COPY ${apriltag_processor_src_dir}/processing_node/wrapper.sh /apriltag_processor_node
+RUN chmod +x /apriltag_processor_node/*.sh
 
 # Start the processes
-CMD /bin/bash -c "cd /acquisition_node; source /catkin-ws/devel/setup.bash; /acquisition_node/wrapper.sh"
+CMD /bin/bash -c "cd /apriltag_processor_node; source /catkin-ws/devel/setup.bash; /apriltag_processor_node/wrapper.sh"

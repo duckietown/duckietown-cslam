@@ -39,8 +39,6 @@ class ApriltagProcessorNode():
             'ACQ_TOPIC_RAW', 'camera_node/image/compressed')
         self.ACQ_TOPIC_CAMERAINFO = os.getenv(
             'ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
-        self.ACQ_TOPIC_VELOCITY_TO_POSE = os.getenv(
-            'ACQ_TOPIC_VELOCITY_TO_POSE', None)
         self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
         self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
         self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
