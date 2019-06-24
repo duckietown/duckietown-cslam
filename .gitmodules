@@ -4,3 +4,6 @@
 [submodule "03-acquisition/lib/src/apriltags3-py"]
 	path = 03-acquisition/lib/src/apriltags3-py
 	url = https://github.com/duckietown/apriltags3-py
+[submodule "04-Apriltag-processing/lib/src/apriltags3-py"]
+	path = 04-Apriltag-processing/lib/src/apriltags3-py
+	url = https://github.com/duckietown/apriltags3-py
