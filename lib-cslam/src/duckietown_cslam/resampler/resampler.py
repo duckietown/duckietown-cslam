@@ -56,14 +56,14 @@ class OdometryResampler(object):
                 # print("my thread")
                 self.function()
 
-    def __init__(self, duckiebot_id, pose_graph, first_time_stamp, reference_time_stamp):
+    def __init__(self, duckiebot_id, pose_graph, first_time_stamp, reference_time_stamp, frequency):
         self.id = duckiebot_id
         self.edges = {}
         self.last_time_stamps = []
         self.max_time_diff = 0.1
         self.last_odometry_time_stamp = 0
         self.pose_graph = pose_graph
-        self.frequency = 20.0
+        self.frequency = frequency
         self.time_interval = 1.0 / self.frequency
         self.first_time_stamp = get_closest_rounded(
             reference_time_stamp, first_time_stamp, self.time_interval)
@@ -212,14 +212,14 @@ class SingleDuckiebotTrajectory():
                 # print("my thread")
                 self.function()
 
-    def __init__(self, duckiebot_id, first_time_stamp, watchtower_id, pose_graph, reference_time_stamp):
+    def __init__(self, duckiebot_id, first_time_stamp, watchtower_id, pose_graph, reference_time_stamp, frequency):
         self.id = duckiebot_id
         self.edges = {}
         self.last_time_stamps = []
         self.max_time_diff = 0.2
         self.watchtower_id = watchtower_id
         self.pose_graph = pose_graph
-        self.frequency = 20.0
+        self.frequency = frequency
         self.time_interval = 1.0 / self.frequency
         self.first_time_stamp = get_closest_rounded(
             reference_time_stamp, first_time_stamp, self.time_interval)
@@ -299,11 +299,12 @@ class SingleDuckiebotTrajectory():
 
 
 class WatchtowerTrajectroyResampler(object):
-    def __init__(self, watchtower_id, pose_graph, reference_time_stamp):
+    def __init__(self, watchtower_id, pose_graph, reference_time_stamp, frequency):
         self.id = watchtower_id
         self.duckiebot_trajectories = {}
         self.pose_graph = pose_graph
         self.reference_time_stamp = reference_time_stamp
+        self.frequency = frequency
 
     def add_edge(self,
                  duckiebot_id,
@@ -313,7 +314,7 @@ class WatchtowerTrajectroyResampler(object):
 
         if duckiebot_id not in self.duckiebot_trajectories:
             duckiebot_trajectory = SingleDuckiebotTrajectory(
-                duckiebot_id, time_stamp, self.id, self.pose_graph, self.reference_time_stamp)
+                duckiebot_id, time_stamp, self.id, self.pose_graph, self.reference_time_stamp, self.frequency)
             self.duckiebot_trajectories[duckiebot_id] = duckiebot_trajectory
         else:
             duckiebot_trajectory = self.duckiebot_trajectories[duckiebot_id]
@@ -338,20 +339,20 @@ class WatchtowerTrajectroyResampler(object):
 
 
 class Resampler():
-    def __init__(self, initial_floor_april_tags, stocking_time, priors_filename, default_variance, using_priors, result_folder):
+    def __init__(self, initial_floor_april_tags, stocking_time, priors_filename, default_variance, using_priors, result_folder, resampling_frequency=20.0):
         self.pose_graph = dGB.DuckietownGraphBuilder(
             initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance=default_variance, using_priors=using_priors, result_folder=result_folder)
         self.reference_time_stamp = -1
         self.watchtower_samplers = {}
         self.odometry_samplers = {}
         self.stopFlag = threading.Event()
-        self.frequency = 20.0
+        self.frequency = resampling_frequency
         self.time_interval = 1.0 / self.frequency
 
     def handle_odometry_edge(self, duckiebot_id, measure, time_stamp, measure_information=None):
         if duckiebot_id not in self.odometry_samplers:
             self.odometry_samplers[duckiebot_id] = OdometryResampler(
-                duckiebot_id, self.pose_graph, time_stamp, self.reference_time_stamp)
+                duckiebot_id, self.pose_graph, time_stamp, self.reference_time_stamp, self.frequency)
         odometry_sampler = self.odometry_samplers[duckiebot_id]
         odometry_sampler.add_edge(measure, time_stamp, measure_information)
 
@@ -359,7 +360,7 @@ class Resampler():
         if is_duckiebot:
             if watchtower_id not in self.watchtower_samplers:
                 self.watchtower_samplers[watchtower_id] = WatchtowerTrajectroyResampler(
-                    watchtower_id, self.pose_graph, self.reference_time_stamp)
+                    watchtower_id, self.pose_graph, self.reference_time_stamp, self.frequency)
             watchtower_trajectroy_resampler = self.watchtower_samplers[watchtower_id]
             watchtower_trajectroy_resampler.add_edge(
                 node_id1, measure, time_stamp, measure_information)

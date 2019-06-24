@@ -605,7 +605,7 @@ class TransformListener():
         stocking_time = rospy.get_param("stocking_time")
         using_priors = rospy.get_param("using_priors")
         result_folder = rospy.get_param("result_folder")
-
+        resampling_frequency = rospy.get_param("resampling_frequency", 20.0)
         bag_present = False
         bag_env = "ATMSGS_BAG"
         if not bag_env in os.environ:
@@ -615,8 +615,8 @@ class TransformListener():
             bag_is_present = True
 
         # Build graph based on floor map.
-        self.resampler = resampler.Resampler(
-            initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename, default_variance=self.default_variance, using_priors=using_priors, result_folder=result_folder)
+        self.resampler = resampler.Resampler(initial_floor_april_tags=initial_floor_april_tags, stocking_time=stocking_time, priors_filename=priors_filename,
+                                             default_variance=self.default_variance, using_priors=using_priors, result_folder=result_folder, resampling_frequency=resampling_frequency)
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
