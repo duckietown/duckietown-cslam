@@ -1,6 +1,0 @@
-[submodule "ros-cslam/src/duckietown-visualization"]
-	path = ros-cslam/src/duckietown-visualization
-	url = https://github.com/duckietown/duckietown-visualization.git
-[submodule "lib-cslam/src/apriltags3-py"]
-	path = lib-cslam/src/apriltags3-py
-	url = https://github.com/duckietown/apriltags3-py
