@@ -23,13 +23,12 @@ ENV TITLE_CARD 1
 
 # Setup the duckietown_msgs
 RUN mkdir -p /catkin-ws/src
+COPY ros/src/duckietown_msgs /catkin-ws/src/duckietown_msgs
 RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
-COPY ros-cslam/src/duckietown_msgs /catkin-ws/src/duckietown_msgs
-RUN /bin/bash -c "source /catkin-ws/devel/setup.bash; cd /catkin-ws/; catkin_make"
 
 # Get the actual script in
-COPY WesQuackerson/WesQuackerson.py /WesQuackerson.py
-COPY WesQuackerson/titlecard.png /titlecard.png
+COPY WesQuackerson.py /WesQuackerson.py
+COPY titlecard.png /titlecard.png
 
 # Start the processes
 CMD /bin/bash -c "cd / ; source /catkin-ws/devel/setup.bash; python WesQuackerson.py"
