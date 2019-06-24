@@ -12,3 +12,6 @@ lib-cslam/out-comptests
 
 dts
 scripts/docker-compose-amauryduckiebot-x86.yml
+*/ros/devel
+*/ros/build
+*/ros/install
