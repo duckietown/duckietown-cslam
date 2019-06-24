@@ -1,0 +1,6 @@
+[submodule "01-graph-optimizer/ros/src/duckietown-visualization"]
+	path = 01-graph-optimizer/ros/src/duckietown-visualization
+	url = https://github.com/duckietown/duckietown-visualization.git
+[submodule "03-acquisition/lib/src/apriltags3-py"]
+	path = 03-acquisition/lib/src/apriltags3-py
+	url = https://github.com/duckietown/apriltags3-py

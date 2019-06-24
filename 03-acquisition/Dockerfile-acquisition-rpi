@@ -1,6 +1,14 @@
-FROM ros:kinetic-ros-core
+FROM duckietown/rpi-ros-kinetic-roscore:master18
 
 MAINTAINER Aleksandar Petrov <alpetrov@ethz.ch>
+
+RUN [ "cross-build-start" ]
+
+# Install OpenCV and CvBridge
+
+RUN apt-get update && apt-get install -f -y --allow-unauthenticated python-opencv ros-kinetic-cv-bridge ros-kinetic-rospy python-pip && apt-get clean
+
+RUN pip install pathos multiprocessing-logging
 
 # YOU ALWAYS NEED TO SPECIFY:
 # ACQ_ROS_MASTER_URI_DEVICE
@@ -29,20 +37,15 @@ ENV ACQ_ODOMETRY_POST_VISUAL_ODOMETRY 0
 ENV ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES SURF
 
 # Argumens for where the different places from which we will get files from are
-ARG apriltag_dir=lib-cslam/src/apriltags3-py
-ARG visual_odometry_dir=lib-cslam/src/visual_odometry
-ARG acquisition_src_dir=ros-cslam/src
-ARG algo_dir=lib-cslam/src/duckietown_cslam/algo
+ARG apriltag_dir=lib/src/apriltags3-py
+ARG visual_odometry_dir=lib/src/visual_odometry
+ARG acquisition_src_dir=ros/src
+ARG algo_dir=lib/src/duckietown_cslam/algo
 
 # Create a directory to store the Python files and the April tag library
 RUN mkdir /acquisition_node
 
-# Install OpenCV and CvBridge
-RUN apt-get update
-RUN apt-get install -f -y python-opencv
-RUN apt-get install -y ros-kinetic-cv-bridge
-RUN apt-get install -y ros-kinetic-rospy
-RUN apt-get install -y python-pip; pip install pathos multiprocessing-logging
+
 
 # Copy and install the April tag library and configure the environment variables for it
 RUN mkdir /acquisition_node/apriltag
@@ -72,6 +75,8 @@ COPY ${acquisition_src_dir}/acquisition_node/acquire_and_publish.py /acquisition
 # Copy the bash wrapper
 COPY ${acquisition_src_dir}/acquisition_node/wrapper.sh /acquisition_node
 RUN chmod +x /acquisition_node/*.sh
+
+RUN [ "cross-build-end" ]
 
 # Start the processes
 CMD /bin/bash -c "cd /acquisition_node; source /catkin-ws/devel/setup.bash; /acquisition_node/wrapper.sh"

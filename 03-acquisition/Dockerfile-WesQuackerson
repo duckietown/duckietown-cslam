@@ -2,6 +2,11 @@ FROM ros:kinetic-ros-core
 
 MAINTAINER Aleksandar Petrov <alpetrov@ethz.ch>
 
+# Install OpenCV and CvBridge
+RUN apt-get update && apt-get install -f -y --allow-unauthenticated python-opencv ros-kinetic-cv-bridge ros-kinetic-rospy python-pip && apt-get clean
+RUN pip install pathos multiprocessing-logging
+
+
 # OPTIONALLY YOU CAN ALSO SPECIFY + DEFAULT VALUES
 ENV OUTPUT_FRAMERATE 12
 ENV MIN_SHOT_LENGTH 12
@@ -15,12 +20,6 @@ ENV CAMERA_RESOLUTION_HEIGHT 1296
 ENV CAMERA_RESOLUTION_WIDTH 972
 ENV TITLE_CARD 1
 
-# Install OpenCV and CvBridge
-RUN apt-get update
-RUN apt-get install -f -y python-opencv
-RUN apt-get install -y ros-kinetic-cv-bridge
-RUN apt-get install -y ros-kinetic-rospy
-RUN apt-get install -y python-pip; pip install pathos multiprocessing-logging
 
 # Setup the duckietown_msgs
 RUN mkdir -p /catkin-ws/src

@@ -3,7 +3,6 @@ services:
     localization:
         build:
             context: .
-            dockerfile: Dockerfile-graph-optimizer
         network_mode: "host"
         environment:
             ATMSGS_BAG: /data/processed.bag

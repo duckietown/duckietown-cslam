@@ -3,13 +3,12 @@ FROM ros:kinetic-ros-core
 MAINTAINER Amaury Camus <camusam@ethz.ch>
 
 # Install rospy
-RUN apt-get update
-RUN apt-get install -y ros-kinetic-rospy
-RUN apt-get install -y python-qt4
+RUN apt-get update && apt-get install -y --allow-unauthenticated --no-install-recommends ros-kinetic-rospy python-qt4 && apt-get clean
+
 
 # Setup the ros-cslam
 RUN mkdir -p /catkin_ws/src/cslam_diagnostics
-COPY ros-cslam/src/cslam_diagnostics /catkin_ws/src/cslam_diagnostics
+COPY ros/src/cslam_diagnostics /catkin_ws/src/cslam_diagnostics
 RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin_ws/; catkin_make"
 RUN chmod +x /catkin_ws/src/cslam_diagnostics/*.sh
 ENV DISPLAY $DISPLAY
