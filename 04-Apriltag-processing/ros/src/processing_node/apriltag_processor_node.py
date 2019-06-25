@@ -64,7 +64,7 @@ class ApriltagProcessorNode():
                                                    self.camera_image_callback,  queue_size=50)
         self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO, CameraInfo,
                                                      self.camera_info_callback,  queue_size=50)
-
+        self.publish_queue = multiprocessing.Queue()
         self.publishers = {}
         self.publishers["apriltags"] = rospy.Publisher(
             "/poses_acquisition/" + self.ACQ_POSES_TOPIC, AprilTagDetection, queue_size=20)
@@ -98,6 +98,17 @@ class ApriltagProcessorNode():
 
         self.logger.info('Apriltag processor node is set up.')
 
+        self.publish_loop()
+
+    def publish_loop(self):
+        while True:
+            try:
+                message_dict = self.publish_queue.get(block=True)
+                self.publishers[message_dict["topic"]
+                                ].publish(message_dict["message"])
+            except Exception as e:
+                self.logger.warning("publish loop : %s" % str(e))
+
     def camera_info_callback(self, ros_data):
         """
         Callback function that is executed upon reception of new camera info data.
@@ -112,31 +123,33 @@ class ApriltagProcessorNode():
         if self.lastCameraInfo is not None:
             # Collect latest ros_data
             new_image_processor = ImageProcessor(
-                self.imageprocessor_options, self.logger, ros_data, self.lastCameraInfo, self.publishers, self.seq_stamper, self.aprilTagProcessor)
+                self.imageprocessor_options, self.logger, ros_data, self.lastCameraInfo, self.publishers, self.seq_stamper, self.aprilTagProcessor, self.publish_queue)
             self.seq_stamper += 1
-            # self.image_processor_list.append(
-            #     new_image_processor)
-            new_image_processor.run()
-
+            self.image_processor_list.append(
+                new_image_processor)
+            new_image_processor.start()
+            self.logger.warning(str(len(multiprocessing.active_children())))
         else:
             self.logger.warning("No camera info")
 
     def on_shutdown(self):
+
         self.logger.info("Waiting for all apriltag image processors to end")
         for process in self.image_processor_list:
             process.join()
         self.logger.info("apriltag processor node shutting down now")
 
 
-class ImageProcessor():
+class ImageProcessor(multiprocessing.Process):
     """
     Packages the image rectification and AprilTag detection for images.
     """
 
-    def __init__(self, options, logger, raw_image, camera_info, publishers, seq_stamper, aprilTagProcessor):
-        # super(ImageProcessor, self).__init__()
+    def __init__(self,  options, logger, raw_image, camera_info, publishers, seq_stamper, aprilTagProcessor, publish_queue):
+        super(ImageProcessor, self).__init__()
         self.logger = logger
         self.ImageRectifier = None
+        self.publish_queue = publish_queue
         self.bridge = CvBridge()
         self.aprilTagProcessor = aprilTagProcessor
         self.seq_stamper = seq_stamper
@@ -338,7 +351,9 @@ class ImageProcessor():
                 newApriltagDetectionMsg.corners = tag["corners"].flatten()
                 newApriltagDetectionMsg.pose_error = tag["pose_error"]
 
-                self.publishers["apriltags"].publish(newApriltagDetectionMsg)
+                self.publish_queue.put(
+                    {"topic": "apriltags", "message": newApriltagDetectionMsg})
+                # self.publishers["apriltags"].publish(newApriltagDetectionMsg)
                 self.logger.info("Published pose for tag %d in sequence %d" % (
                     tag["tag_id"], self.seq_stamper))
 
@@ -347,21 +362,30 @@ class ImageProcessor():
             if "test_stream_image" in incomingData:
                 imgMsg = incomingData["test_stream_image"]
                 imgMsg.header.seq = self.seq_stamper
-                self.publishers["test_stream_image"].publish(imgMsg)
+                self.publish_queue.put(
+                    {"topic": "test_stream_image", "message": imgMsg})
+                # self.publishers["test_stream_image"].publish(imgMsg)
 
             if "raw_image" in incomingData:
                 imgMsg = incomingData["raw_image"]
                 imgMsg.header.seq = self.seq_stamper
-                self.publishers["raw_image"].publish(imgMsg)
+                self.publish_queue.put(
+                    {"topic": "raw_image", "message": imgMsg})
+                # self.publishers["raw_image"].publish(imgMsg)
 
             if "rectified_image" in incomingData:
                 imgMsg = incomingData["rectified_image"]
                 imgMsg.header.seq = self.seq_stamper
-                self.publishers["rectified_image"].publish(imgMsg)
+                self.publish_queue.put(
+                    {"topic": "rectified_image", "message": imgMsg})
+                # self.publishers["rectified_image"].publish(imgMsg)
 
             if "raw_camera_info" in incomingData:
-                self.publishers["raw_camera_info"].publish(
-                    incomingData["raw_camera_info"])
+                self.publish_queue.put(
+                    {"topic": "raw_camera_info", "message": incomingData["raw_camera_info"]})
+
+                # self.publishers["raw_camera_info"].publish(
+                #     incomingData["raw_camera_info"])
 
             if "new_camera_matrix" in incomingData:
                 new_camera_info = CameraInfo()
@@ -375,11 +399,14 @@ class ImageProcessor():
                     pass
                 new_camera_info.K = incomingData["new_camera_matrix"].flatten(
                 )
-                self.publishers["new_camera_matrix"].publish(new_camera_info)
+                self.publish_queue.put(
+                    {"topic": "new_camera_matrix", "message": new_camera_info})
+
+                # self.publishers["new_camera_matrix"].publish(new_camera_info)
 
 
 def main():
-    logger = multiprocessing.log_to_stderr()
+    logger = multiprocessing.log_to_stderr(level=logging.INFO)
     logger.setLevel(logging.INFO)
     logger.info('Device side processor starting in LIVE mode')
     ap = ApriltagProcessorNode(logger)
