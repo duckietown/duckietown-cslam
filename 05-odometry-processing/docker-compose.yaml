@@ -1,0 +1,9 @@
+version: '3'
+services:
+    apriltag-processor:
+        image: duckietown/odometry-processor:master19
+        network_mode: "host"
+        environment:
+            ACQ_ROS_MASTER_URI_SERVER_IP: 172.31.168.115
+            ACQ_DEVICE_NAME: autobot02
+

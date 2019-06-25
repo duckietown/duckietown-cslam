@@ -406,7 +406,7 @@ class ImageProcessor(multiprocessing.Process):
 
 
 def main():
-    logger = multiprocessing.log_to_stderr(level=logging.INFO)
+    logger = multiprocessing.log_to_stderr()
     logger.setLevel(logging.INFO)
     logger.info('Device side processor starting in LIVE mode')
     ap = ApriltagProcessorNode(logger)
