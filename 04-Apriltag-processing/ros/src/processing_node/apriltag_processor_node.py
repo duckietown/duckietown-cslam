@@ -19,7 +19,6 @@ import apriltags3
 import cv2
 from duckietown_msgs.msg import AprilTagDetection, Pose2DStamped
 from image_rectifier import ImageRectifier
-from pathos.multiprocessing import ProcessingPool
 
 ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
 ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
@@ -47,6 +46,14 @@ class ApriltagProcessorNode():
         self.ACQ_APRILTAG_QUAD_DECIMATE = float(
             os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
 
+        self.aprilTagProcessor = apriltags3.Detector(searchpath=[ACQ_APRILTAG_SO],
+                                                     families='tag36h11',
+                                                     nthreads=4,
+                                                     quad_decimate=1.0,
+                                                     quad_sigma=0.0,
+                                                     refine_edges=1,
+                                                     decode_sharpening=0.25,
+                                                     debug=0)
         self.ACQ_POSES_UPDATE_RATE = float(
             os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
 
@@ -79,6 +86,7 @@ class ApriltagProcessorNode():
         self.lastCameraInfo = None
 
         self.logger = logger
+        self.logger.info('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW)
 
         self.seq_stamper = 0
         self.image_processor_list = []
@@ -100,14 +108,18 @@ class ApriltagProcessorNode():
         """
         Callback function that is executed upon reception of a new camera image.
         """
+        self.logger.info("Got image")
         if self.lastCameraInfo is not None:
             # Collect latest ros_data
             new_image_processor = ImageProcessor(
-                self.imageprocessor_options, self.logger, ros_data, self.lastCameraInfo, self.publishers, self.seq_stamper)
+                self.imageprocessor_options, self.logger, ros_data, self.lastCameraInfo, self.publishers, self.seq_stamper, self.aprilTagProcessor)
             self.seq_stamper += 1
-            new_image_processor.start()
-            self.image_processor_list.append(
-                new_image_processor)
+            # self.image_processor_list.append(
+            #     new_image_processor)
+            new_image_processor.run()
+
+        else:
+            self.logger.warning("No camera info")
 
     def on_shutdown(self):
         self.logger.info("Waiting for all apriltag image processors to end")
@@ -116,15 +128,17 @@ class ApriltagProcessorNode():
         self.logger.info("apriltag processor node shutting down now")
 
 
-class ImageProcessor(multiprocessing.Process):
+class ImageProcessor():
     """
     Packages the image rectification and AprilTag detection for images.
     """
 
-    def __init__(self, options, logger, raw_image, camera_info, publishers, seq_stamper):
+    def __init__(self, options, logger, raw_image, camera_info, publishers, seq_stamper, aprilTagProcessor):
+        # super(ImageProcessor, self).__init__()
         self.logger = logger
         self.ImageRectifier = None
         self.bridge = CvBridge()
+        self.aprilTagProcessor = aprilTagProcessor
         self.seq_stamper = seq_stamper
         self.publishers = publishers
         self.opt_beautify = options.get('beautify', False)
@@ -133,15 +147,6 @@ class ImageProcessor(multiprocessing.Process):
         self.camera_info = camera_info
         self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
         self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
-
-        self.aprilTagProcessor = apriltags3.Detector(searchpath=[ACQ_APRILTAG_SO],
-                                                     families='tag36h11',
-                                                     nthreads=4,
-                                                     quad_decimate=1.0,
-                                                     quad_sigma=0.0,
-                                                     refine_edges=1,
-                                                     decode_sharpening=0.25,
-                                                     debug=0)
 
     def run(self):
         cv_image = self.bridge.compressed_imgmsg_to_cv2(

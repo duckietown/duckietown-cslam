@@ -16,17 +16,7 @@ RUN pip install pathos multiprocessing-logging
 # ACQ_DEVICE_NAME # should match the topic, e.g. watchtower10
 
 
-# OPTIONALLY YOU CAN ALSO SPECIFY + DEFAULT VALUES
-ENV ACQ_ROS_MASTER_URI_DEVICE_PORT 11311
-ENV ACQ_ROS_MASTER_URI_SERVER_PORT 11311
-ENV ACQ_POSES_UPDATE_RATE 10
-ENV ACQ_TOPIC_RAW camera_node/image/compressed
-ENV ACQ_TOPIC_CAMERAINFO camera_node/camera_info
-ENV ACQ_TAG_SIZE 0.065
-ENV ACQ_POSES_TOPIC poses
-ENV ACQ_TEST_STREAM 0
-ENV ACQ_BEAUTIFY 0
-ENV ACQ_APRILTAG_QUAD_DECIMATE 1.0
+
 
 
 # Argumens for where the different places from which we will get files from are
@@ -58,6 +48,18 @@ COPY ${algo_dir}/image_rectifier.py /apriltag_processor_node
 # Copy the bash wrapper
 COPY ${apriltag_processor_src_dir}/processing_node/wrapper.sh /apriltag_processor_node
 RUN chmod +x /apriltag_processor_node/*.sh
+
+# OPTIONALLY YOU CAN ALSO SPECIFY + DEFAULT VALUES
+ENV ACQ_ROS_MASTER_URI_DEVICE_PORT 11311
+ENV ACQ_ROS_MASTER_URI_SERVER_PORT 11311
+ENV ACQ_POSES_UPDATE_RATE 10
+ENV ACQ_TOPIC_RAW imageSparse/compressed
+ENV ACQ_TOPIC_CAMERAINFO camera_node/camera_info
+ENV ACQ_TAG_SIZE 0.065
+ENV ACQ_POSES_TOPIC poses
+ENV ACQ_TEST_STREAM 0
+ENV ACQ_BEAUTIFY 0
+ENV ACQ_APRILTAG_QUAD_DECIMATE 1.0
 
 # Start the processes
 CMD /bin/bash -c "cd /apriltag_processor_node; source /catkin-ws/devel/setup.bash; /apriltag_processor_node/wrapper.sh"

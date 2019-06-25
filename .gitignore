@@ -15,3 +15,6 @@ scripts/docker-compose-amauryduckiebot-x86.yml
 */ros/devel
 */ros/build
 */ros/install
+*/.catkin_workspace
+01-graph-optimizer/ros/.catkin_workspace
+01-graph-optimizer/ros/src/CMakeLists.txt
