@@ -4,5 +4,6 @@ services:
         image: duckietown/apriltag-processor:master19
         network_mode: "host"
         environment:
+            ROS_MASTER_URI: http://duckietown3.local:11311
             ACQ_DEVICE_NAME: watchtower10
 
