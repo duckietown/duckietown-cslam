@@ -16,7 +16,6 @@ from sensor_msgs.msg import (CameraInfo, CompressedImage, Image,
                              RegionOfInterest)
 from std_msgs.msg import Header
 
-import apriltags3
 import cv2
 from Common_Modules import *
 from duckietown_msgs.msg import Pose2DStamped
@@ -24,14 +23,9 @@ from image_rectifier import ImageRectifier
 from pathos.multiprocessing import ProcessingPool
 from py_MVO import VisualOdometry
 
-ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
-ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
-sys.path.append(ACQ_APRILTAG_LIB)
 
 ACQ_VISUAL_ODOMETRY_LIB = os.getenv('ACQ_VISUAL_ODOMETRY_LIB')
 sys.path.append(ACQ_VISUAL_ODOMETRY_LIB)
-
-dsp = None
 
 
 class OdometryProcessor():
@@ -54,10 +48,14 @@ class OdometryProcessor():
         self.ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES = os.getenv(
             'ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES', 'SURF')
         self.ACQ_ODOMETRY_TOPIC = os.getenv('ACQ_ODOMETRY_TOPIC', "odometry")
+        self.logger = logger
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('acquisition_processor',
                         anonymous=True, disable_signals=True)
+
+        self.logger.info(str('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW))
+
         self.subscriberCompressedImage = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW, CompressedImage,
                                                           self.camera_image_callback,  queue_size=1)
         self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO, CameraInfo,
@@ -77,7 +75,6 @@ class OdometryProcessor():
         self.lastCameraInfo = None
 
         self.ImageRectifier = None
-        self.logger = logger
 
         # Initialize the device side processor
 
@@ -98,7 +95,11 @@ class OdometryProcessor():
         img = self.clahe.apply(img)
 
         img_id = 3
+        self.logger.info("Inside visual odometry")
+
         if self.vo.update(img, img_id):
+            self.logger.info("inside if update")
+
             # The scaling is rather arbitrary, it seems that VO gives centimeters, but in general the scaling is fishy...
             odometry = TransformStamped()
             odometry.header.seq = 0
@@ -126,6 +127,7 @@ class OdometryProcessor():
             odometry.transform.rotation.y = q_y
             odometry.transform.rotation.z = q_z
             odometry.transform.rotation.w = q_w
+            self.logger.info("publishing odometry")
 
             self.odometry_publisher.publish(odometry)
 
@@ -171,6 +173,7 @@ class OdometryProcessor():
         outputDict['rect_image'] = rect_image
         outputDict['new_camera_matrix'] = newCameraMatrix
         outputDict['header'] = currRawImage.header
+        self.logger.info("end of camera process")
 
         return outputDict
 
@@ -184,9 +187,11 @@ class OdometryProcessor():
         """
         Callback function that is executed upon reception of a new camera image.
         """
+        self.logger.info("received image")
         if self.lastCameraInfo is not None:
             self.visual_odometry(self.camera_image_process(
                 ros_data, self.lastCameraInfo))
+            self.logger.info("processed image")
 
 
 def main():

@@ -20,7 +20,7 @@ RUN pip install pathos multiprocessing-logging
 
 
 # Argumens for where the different places from which we will get files from are
-ARG visual_odometry_dir=lib/src/visual_odometry
+ARG visual_odometry_dir=lib/src/visual_odometry/src/
 ARG ros_src_dir=ros/src
 ARG algo_dir=lib/src/duckietown_cslam/algo
 
@@ -31,7 +31,7 @@ RUN mkdir /processing_node
 
 # Copy the Visual Odometry library
 RUN mkdir /processing_node/visual_odometry
-COPY ${visual_odometry_dir} /processing_node/visual_odometry
+COPY ${visual_odometry_dir} /processing_node
 ENV ACQ_VISUAL_ODOMETRY_LIB /processing_node/visual_odometry/src/
 
 # Setup the duckietown_msgs
@@ -47,16 +47,19 @@ COPY ${algo_dir}/image_rectifier.py /processing_node
 # Copy the bash wrapper
 COPY ${ros_src_dir}/processing_node/wrapper.sh /processing_node
 RUN chmod +x /processing_node/*.sh
+RUN chmod +x /processing_node/*.py
 
 # OPTIONALLY YOU CAN ALSO SPECIFY + DEFAULT VALUES
 ENV ACQ_ROS_MASTER_URI_DEVICE_PORT 11311
 ENV ACQ_ROS_MASTER_URI_SERVER_PORT 11311
-ENV ACQ_TOPIC_RAW camera_node/image/compressed
+ENV ACQ_TOPIC_RAW imageSparse/compressed
 ENV ACQ_TOPIC_CAMERAINFO camera_node/camera_info
 # ENV ACQ_TOPIC_VELOCITY_TO_POSE velocity_to_pose_node/pose
 ENV ACQ_POSES_TOPIC poses
 ENV ACQ_ODOMETRY_TOPIC odometry
 ENV ACQ_ODOMETRY_POST_VISUAL_ODOMETRY_FEATURES SURF
+
+
 
 # Start the processes
 CMD /bin/bash -c "cd /processing_node; source /catkin-ws/devel/setup.bash; /processing_node/wrapper.sh"
