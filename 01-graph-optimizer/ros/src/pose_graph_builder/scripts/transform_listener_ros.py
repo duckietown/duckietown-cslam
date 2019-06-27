@@ -70,6 +70,8 @@ class PointBroadcaster(threading.Thread):
         threading.Thread.__init__(self)
         self.pose_dict = dictionnary
         self.br = tf2_ros.TransformBroadcaster()
+        self.second_broadcaster = rospy.Publisher(
+            "/agent_poses", geometry_msgs.msg.TransformStamped, queue_size=1)
 
     def tfbroadcast(self, node_id, node_pose):
         """ Brodcasts a node in the tree of transforms with TF.
@@ -118,6 +120,8 @@ class PointBroadcaster(threading.Thread):
             t.transform.rotation.z = q[3]
             # Send the transform.
             self.br.sendTransform(t)
+            if not t.child_frame_id.startswith("apriltag"):
+                self.second_broadcaster.publish(t)
         except:
             print("bad rotation %s" % str(R))
         # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
@@ -264,6 +268,7 @@ class TransformListener():
         self.callback_times = []
         self.threads = []
         self.bag_reader = None
+        self.got_bag = False
 
     def initialize_id_map(self):
         """ Loads April tags into the ID map, assigning each tag in the database
@@ -556,6 +561,8 @@ class TransformListener():
             path_broadcaster.start()
 
     def heartbeat_callback(self, timer_event):
+        if not self.got_bag:
+            return
         if(self.callback_times != []):
             mean = np.mean(self.callback_times)
             var = np.var(self.callback_times)
@@ -641,7 +648,11 @@ class TransformListener():
         if os.path.isfile(bag_path):
             rospy.sleep(4)
             os.system("rosbag play %s" % bag_path)
+            self.got_bag = True
+
         else:
+            self.got_bag = False
+
             print("No bag to process. Will wait for it.")
 
     def signal_handler(self, sig, frame):

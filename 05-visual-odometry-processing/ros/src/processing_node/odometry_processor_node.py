@@ -76,6 +76,7 @@ class OdometryProcessor():
 
         self.ImageRectifier = None
 
+        self.img_id = 0
         # Initialize the device side processor
 
         self.vo = None
@@ -94,10 +95,10 @@ class OdometryProcessor():
         img = outputdict['rect_image']
         img = self.clahe.apply(img)
 
-        img_id = 3
+        self.img_id += 1
         self.logger.info("Inside visual odometry")
 
-        if self.vo.update(img, img_id):
+        if self.vo.update(img, self.img_id):
             self.logger.info("inside if update")
 
             # The scaling is rather arbitrary, it seems that VO gives centimeters, but in general the scaling is fishy...

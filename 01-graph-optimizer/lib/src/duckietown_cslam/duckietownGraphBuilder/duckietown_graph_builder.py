@@ -543,6 +543,7 @@ class MovableNode(Node):
         """ Saves the trajectory to a file corresponding to node_type, node_id
             return True is success, False otherwise
         """
+        return
         result_file = "%s/%s.csv" % (self.result_folder, self.node_id)
         if os.path.isdir(self.result_folder):
             with open(result_file, mode='a+') as trajectory_csv:
