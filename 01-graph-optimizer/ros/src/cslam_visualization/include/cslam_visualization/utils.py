@@ -15,6 +15,7 @@ def get_trafficsign_marker(marker_id, trans, q, marker_type):
     marker = Marker()
 
     marker.header.frame_id = "/map"
+    marker.header.stamp = rospy.Time.now()
     marker.id = marker_id
     marker.ns = "traffic_signs"
 
@@ -47,6 +48,7 @@ def get_apriltag_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
+    marker.header.stamp = rospy.Time.now()
     marker.id = marker_id
     marker.ns = "ground_tags"
 
@@ -76,6 +78,7 @@ def get_watchtower_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
+    marker.header.stamp = rospy.Time.now()
     marker.id = marker_id
     marker.ns = "watchtowers"
 
@@ -105,6 +108,7 @@ def get_duckiebot_marker(marker_id, trans, q):
     marker = Marker()
 
     marker.header.frame_id = "/map"
+    marker.header.stamp = rospy.Time.now()
     marker.id = marker_id
     marker.ns = "duckiebots"
 
