@@ -30,21 +30,18 @@ class ApriltagProcessorNode():
     Processes the data coming from a remote device (Duckiebot or watchtower).
     """
 
-    def __init__(self, logger):
+    def __init__(self, logger, config):
 
-        # Get the environment variables
-        self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
-        self.ACQ_TOPIC_RAW = os.getenv(
-            'ACQ_TOPIC_RAW', 'camera_node/image/compressed')
-        self.ACQ_TOPIC_CAMERAINFO = os.getenv(
-            'ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
-        self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
-        self.ACQ_BEAUTIFY = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
-        self.ACQ_TAG_SIZE = float(os.getenv('ACQ_TAG_SIZE', 0.065))
-        self.ACQ_POSES_TOPIC = os.getenv('ACQ_POSES_TOPIC', "poses")
-
-        self.ACQ_APRILTAG_QUAD_DECIMATE = float(
-            os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
+        self.config = config
+        self.ACQ_DEVICE_NAME = self.config['ACQ_DEVICE_NAME']
+        self.ACQ_TOPIC_RAW = self.config['ACQ_TOPIC_RAW']
+        self.ACQ_TOPIC_CAMERAINFO = self.config['ACQ_TOPIC_CAMERAINFO']
+        self.ACQ_TEST_STREAM = self.config['ACQ_TEST_STREAM']
+        self.ACQ_BEAUTIFY = self.config['ACQ_BEAUTIFY']
+        self.ACQ_TAG_SIZE = self.config['ACQ_TAG_SIZE']
+        self.ACQ_POSES_TOPIC = self.config['ACQ_POSES_TOPIC']
+        self.ACQ_APRILTAG_QUAD_DECIMATE = self.config['ACQ_APRILTAG_QUAD_DECIMATE']
+        self.ACQ_POSES_UPDATE_RATE = self.config['ACQ_POSES_UPDATE_RATE']
 
         self.aprilTagProcessor = apriltags3.Detector(searchpath=[ACQ_APRILTAG_SO],
                                                      families='tag36h11',
@@ -54,8 +51,6 @@ class ApriltagProcessorNode():
                                                      refine_edges=1,
                                                      decode_sharpening=0.25,
                                                      debug=0)
-        self.ACQ_POSES_UPDATE_RATE = float(
-            os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('apriltag_processor_node',
@@ -123,7 +118,7 @@ class ApriltagProcessorNode():
         if self.lastCameraInfo is not None:
             # Collect latest ros_data
             new_image_processor = ImageProcessor(
-                self.imageprocessor_options, self.logger, ros_data, self.lastCameraInfo, self.publishers, self.seq_stamper, self.aprilTagProcessor, self.publish_queue)
+                self.imageprocessor_options, self.logger, ros_data, self.lastCameraInfo, self.publishers, self.seq_stamper, self.aprilTagProcessor, self.publish_queue, self.config)
             self.seq_stamper += 1
             self.image_processor_list.append(
                 new_image_processor)
@@ -145,7 +140,7 @@ class ImageProcessor(multiprocessing.Process):
     Packages the image rectification and AprilTag detection for images.
     """
 
-    def __init__(self,  options, logger, raw_image, camera_info, publishers, seq_stamper, aprilTagProcessor, publish_queue):
+    def __init__(self,  options, logger, raw_image, camera_info, publishers, seq_stamper, aprilTagProcessor, publish_queue, config):
         super(ImageProcessor, self).__init__()
         self.logger = logger
         self.ImageRectifier = None
@@ -158,8 +153,8 @@ class ImageProcessor(multiprocessing.Process):
         self.tag_size = options.get('tag_size', 0.065)
         self.raw_image = raw_image
         self.camera_info = camera_info
-        self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
-        self.ACQ_TEST_STREAM = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
+        self.ACQ_DEVICE_NAME = config['ACQ_DEVICE_NAME']
+        self.ACQ_TEST_STREAM = config['ACQ_TEST_STREAM']
 
     def run(self):
         cv_image = self.bridge.compressed_imgmsg_to_cv2(
@@ -405,11 +400,36 @@ class ImageProcessor(multiprocessing.Process):
                 # self.publishers["new_camera_matrix"].publish(new_camera_info)
 
 
+def get_environment_variables():
+    config = dict()
+
+    config['ACQ_DEVICE_NAME'] = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
+    config['ACQ_TOPIC_RAW'] = os.getenv(
+        'ACQ_TOPIC_RAW', 'camera_node/image/compressed')
+    config['ACQ_TOPIC_CAMERAINFO'] = os.getenv(
+        'ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
+    config['ACQ_TEST_STREAM'] = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
+    config['ACQ_BEAUTIFY'] = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
+    config['ACQ_TAG_SIZE'] = float(os.getenv('ACQ_TAG_SIZE', 0.065))
+    config['ACQ_POSES_TOPIC'] = os.getenv('ACQ_POSES_TOPIC', "poses")
+
+    config['ACQ_APRILTAG_QUAD_DECIMATE'] = float(
+        os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
+
+    config['ACQ_POSES_UPDATE_RATE'] = float(
+        os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
+   
+    return config
+
 def main():
     logger = multiprocessing.log_to_stderr()
     logger.setLevel(logging.INFO)
     logger.info('Device side processor starting in LIVE mode')
-    ap = ApriltagProcessorNode(logger)
+
+    config = get_environment_variables()
+    
+    ap = ApriltagProcessorNode(logger, config)
+     
     rospy.spin()
 
 
