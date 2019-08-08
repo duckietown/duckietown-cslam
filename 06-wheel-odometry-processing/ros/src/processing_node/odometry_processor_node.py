@@ -35,7 +35,7 @@ class OdometryProcessor():
         self.ACQ_ODOMETRY_TOPIC = os.getenv('ACQ_ODOMETRY_TOPIC', "odometry")
 
         self.subscriber = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_WHEEL_COMMAND, WheelsCmdStamped,
-                                           self.wheels_cmd_callback,  queue_size=1)
+                                           self.wheels_cmd_callback,  queue_size=150)
 
         # Only if set (probably not for watchtowers)
         # self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
@@ -60,7 +60,7 @@ class OdometryProcessor():
         wheel_radius = 0.065
         duckiebot_width = 0.10
         speed_factor = 0.65  # full speed is one, that is 0.65m/s
-
+        turn_factor = 0.5
         current_time = float(wheels_msg.header.stamp.secs) + \
             10**(-9) * float(wheels_msg.header.stamp.nsecs)
         if self.last_message_time != -1.0:
@@ -71,7 +71,7 @@ class OdometryProcessor():
 
         self.last_linear_velocity = speed_factor * \
             (wheels_msg.vel_left + wheels_msg.vel_right)/2.0
-        self.last_angular_velocity = speed_factor * \
+        self.last_angular_velocity = turn_factor * speed_factor * \
             (wheels_msg.vel_right - wheels_msg.vel_left)/(duckiebot_width)
 
         self.last_message_time = current_time
