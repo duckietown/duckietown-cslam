@@ -60,6 +60,7 @@ class ApriltagProcessorNode():
         self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO, CameraInfo,
                                                      self.camera_info_callback,  queue_size=50)
         self.publish_queue = multiprocessing.Queue()
+        self.image_queue = multiprocessing.Queue()
         self.publishers = {}
         self.publishers["apriltags"] = rospy.Publisher(
             "/poses_acquisition/" + self.ACQ_POSES_TOPIC, AprilTagDetection, queue_size=20)
@@ -90,6 +91,12 @@ class ApriltagProcessorNode():
         self.imageprocessor_options = {'beautify': self.ACQ_BEAUTIFY,
                                        'tag_size': self.ACQ_TAG_SIZE}
         rospy.on_shutdown(self.on_shutdown)
+        for i in range(8):
+            new_image_processor = ImageProcessor(
+                self.imageprocessor_options, self.logger, self.publishers, self.aprilTagProcessor, self.publish_queue, self.config, self.image_queue)
+            self.image_processor_list.append(
+                new_image_processor)
+            new_image_processor.start()
 
         self.logger.info('Apriltag processor node is set up.')
 
@@ -117,12 +124,10 @@ class ApriltagProcessorNode():
         self.logger.info("Got image")
         if self.lastCameraInfo is not None:
             # Collect latest ros_data
-            new_image_processor = ImageProcessor(
-                self.imageprocessor_options, self.logger, ros_data, self.lastCameraInfo, self.publishers, self.seq_stamper, self.aprilTagProcessor, self.publish_queue, self.config)
+            self.image_queue.put(
+                (ros_data, self.lastCameraInfo, self.seq_stamper))
             self.seq_stamper += 1
-            self.image_processor_list.append(
-                new_image_processor)
-            new_image_processor.start()
+
             self.logger.warning(str(len(multiprocessing.active_children())))
         else:
             self.logger.warning("No camera info")
@@ -131,7 +136,7 @@ class ApriltagProcessorNode():
 
         self.logger.info("Waiting for all apriltag image processors to end")
         for process in self.image_processor_list:
-            process.join()
+            process.kill()
         self.logger.info("apriltag processor node shutting down now")
 
 
@@ -140,97 +145,107 @@ class ImageProcessor(multiprocessing.Process):
     Packages the image rectification and AprilTag detection for images.
     """
 
-    def __init__(self,  options, logger, raw_image, camera_info, publishers, seq_stamper, aprilTagProcessor, publish_queue, config):
+    def __init__(self,  options, logger, publishers, aprilTagProcessor, publish_queue, config, image_queue):
         super(ImageProcessor, self).__init__()
         self.logger = logger
         self.ImageRectifier = None
         self.publish_queue = publish_queue
+        self.image_queue = image_queue
         self.bridge = CvBridge()
         self.aprilTagProcessor = aprilTagProcessor
-        self.seq_stamper = seq_stamper
         self.publishers = publishers
         self.opt_beautify = options.get('beautify', False)
         self.tag_size = options.get('tag_size', 0.065)
-        self.raw_image = raw_image
-        self.camera_info = camera_info
+
         self.ACQ_DEVICE_NAME = config['ACQ_DEVICE_NAME']
         self.ACQ_TEST_STREAM = config['ACQ_TEST_STREAM']
 
+        self.raw_image = None
+        self.camera_info = None
+        self.seq_stamper = None
+
     def run(self):
-        cv_image = self.bridge.compressed_imgmsg_to_cv2(
-            self.raw_image, desired_encoding='mono8')
+        while True:
 
-        # Scale the K matrix if the image resolution is not the same as in the calibration
-        currRawImage_height = cv_image.shape[0]
-        currRawImage_width = cv_image.shape[1]
+            (self.raw_image, self.camera_info,
+             self.seq_stamper) = self.image_queue.get(block=True)
 
-        scale_matrix = np.ones(9)
-        if self.camera_info.height != currRawImage_height or self.camera_info.width != currRawImage_width:
-            scale_width = float(currRawImage_width) / self.camera_info.width
-            scale_height = float(currRawImage_height) / self.camera_info.height
+            cv_image = self.bridge.compressed_imgmsg_to_cv2(
+                self.raw_image, desired_encoding='mono8')
 
-            scale_matrix[0] *= scale_width
-            scale_matrix[2] *= scale_width
-            scale_matrix[4] *= scale_height
-            scale_matrix[5] *= scale_height
+            # Scale the K matrix if the image resolution is not the same as in the calibration
+            currRawImage_height = cv_image.shape[0]
+            currRawImage_width = cv_image.shape[1]
 
-        outputDict = dict()
+            scale_matrix = np.ones(9)
+            if self.camera_info.height != currRawImage_height or self.camera_info.width != currRawImage_width:
+                scale_width = float(currRawImage_width) / \
+                    self.camera_info.width
+                scale_height = float(currRawImage_height) / \
+                    self.camera_info.height
 
-        # Process the image and extract the apriltags
-        outputDict = self.process(cv_image,  (np.array(
-            self.camera_info.K)*scale_matrix).reshape((3, 3)), self.camera_info.D)
-        outputDict['header'] = self.raw_image.header
+                scale_matrix[0] *= scale_width
+                scale_matrix[2] *= scale_width
+                scale_matrix[4] *= scale_height
+                scale_matrix[5] *= scale_height
 
-        # Add the time stamp and source of the input image to the output
-        for idx in range(len(outputDict['apriltags'])):
-            outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
-            outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
-            outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
+            outputDict = dict()
 
-        # Generate a diagnostic image
-        if self.ACQ_TEST_STREAM == 1:
-            image = np.copy(outputDict['rect_image'])
+            # Process the image and extract the apriltags
+            outputDict = self.process(cv_image,  (np.array(
+                self.camera_info.K)*scale_matrix).reshape((3, 3)), self.camera_info.D)
+            outputDict['header'] = self.raw_image.header
 
-            # Put the AprilTag bound boxes and numbers to the image
-            for tag in outputDict['apriltags']:
-                for idx in range(len(tag['corners'])):
-                    cv2.line(image, tuple(tag['corners'][idx-1, :].astype(int)),
-                             tuple(tag['corners'][idx, :].astype(int)), (0, 255, 0))
-                    # cv2.rectangle(image, (tag['corners'][0, 0].astype(int)-10,tag['corners'][0, 1].astype(int)-10), (tag['corners'][0, 0].astype(int)+15,tag['corners'][0, 1].astype(int)+15), (0, 0, 255), cv2.FILLED)
-                cv2.putText(image, str(tag['tag_id']),
-                            org=(tag['corners'][0, 0].astype(int)+10,
-                                 tag['corners'][0, 1].astype(int)+10),
+            # Add the time stamp and source of the input image to the output
+            for idx in range(len(outputDict['apriltags'])):
+                outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
+                outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
+                outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
+
+            # Generate a diagnostic image
+            if self.ACQ_TEST_STREAM == 1:
+                image = np.copy(outputDict['rect_image'])
+
+                # Put the AprilTag bound boxes and numbers to the image
+                for tag in outputDict['apriltags']:
+                    for idx in range(len(tag['corners'])):
+                        cv2.line(image, tuple(tag['corners'][idx-1, :].astype(int)),
+                                 tuple(tag['corners'][idx, :].astype(int)), (0, 255, 0))
+                        # cv2.rectangle(image, (tag['corners'][0, 0].astype(int)-10,tag['corners'][0, 1].astype(int)-10), (tag['corners'][0, 0].astype(int)+15,tag['corners'][0, 1].astype(int)+15), (0, 0, 255), cv2.FILLED)
+                    cv2.putText(image, str(tag['tag_id']),
+                                org=(tag['corners'][0, 0].astype(int)+10,
+                                     tag['corners'][0, 1].astype(int)+10),
+                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                fontScale=1.0,
+                                thickness=2,
+                                color=(255, 0, 0))
+
+                # Put device and timestamp to the image
+                cv2.putText(image, 'device: ' + self.ACQ_DEVICE_NAME + ', timestamp: '+str(self.raw_image.header.stamp.secs)+'+'+str(self.raw_image.header.stamp.nsecs),
+                            org=(30, 30),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                             fontScale=1.0,
                             thickness=2,
                             color=(255, 0, 0))
 
-            # Put device and timestamp to the image
-            cv2.putText(image, 'device: ' + self.ACQ_DEVICE_NAME + ', timestamp: '+str(self.raw_image.header.stamp.secs)+'+'+str(self.raw_image.header.stamp.nsecs),
-                        org=(30, 30),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=1.0,
-                        thickness=2,
-                        color=(255, 0, 0))
+                # Add the original and diagnostic info to the outputDict
+                outputDict['test_stream_image'] = self.bridge.cv2_to_compressed_imgmsg(
+                    image, dst_format='png')
+                outputDict['test_stream_image'].header.stamp.secs = self.raw_image.header.stamp.secs
+                outputDict['test_stream_image'].header.stamp.nsecs = self.raw_image.header.stamp.nsecs
+                outputDict['test_stream_image'].header.frame_id = self.ACQ_DEVICE_NAME
 
-            # Add the original and diagnostic info to the outputDict
-            outputDict['test_stream_image'] = self.bridge.cv2_to_compressed_imgmsg(
-                image, dst_format='png')
-            outputDict['test_stream_image'].header.stamp.secs = self.raw_image.header.stamp.secs
-            outputDict['test_stream_image'].header.stamp.nsecs = self.raw_image.header.stamp.nsecs
-            outputDict['test_stream_image'].header.frame_id = self.ACQ_DEVICE_NAME
+                outputDict['raw_image'] = self.raw_image
+                outputDict['raw_camera_info'] = self.camera_info
 
-            outputDict['raw_image'] = self.raw_image
-            outputDict['raw_camera_info'] = self.camera_info
+                outputDict['rectified_image'] = self.bridge.cv2_to_compressed_imgmsg(
+                    outputDict['rect_image'], dst_format='png')
+                outputDict['rectified_image'].header.stamp.secs = self.raw_image.header.stamp.secs
+                outputDict['rectified_image'].header.stamp.nsecs = self.raw_image.header.stamp.nsecs
+                outputDict['rectified_image'].header.frame_id = self.ACQ_DEVICE_NAME
 
-            outputDict['rectified_image'] = self.bridge.cv2_to_compressed_imgmsg(
-                outputDict['rect_image'], dst_format='png')
-            outputDict['rectified_image'].header.stamp.secs = self.raw_image.header.stamp.secs
-            outputDict['rectified_image'].header.stamp.nsecs = self.raw_image.header.stamp.nsecs
-            outputDict['rectified_image'].header.frame_id = self.ACQ_DEVICE_NAME
-
-        # PUBLISH HERE
-        self.publish(outputDict)
+            # PUBLISH HERE
+            self.publish(outputDict)
 
     def process(self, raw_image, cameraMatrix, distCoeffs):
         """
@@ -418,8 +433,9 @@ def get_environment_variables():
 
     config['ACQ_POSES_UPDATE_RATE'] = float(
         os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
-   
+
     return config
+
 
 def main():
     logger = multiprocessing.log_to_stderr()
@@ -427,9 +443,9 @@ def main():
     logger.info('Device side processor starting in LIVE mode')
 
     config = get_environment_variables()
-    
+
     ap = ApriltagProcessorNode(logger, config)
-     
+
     rospy.spin()
 
 
