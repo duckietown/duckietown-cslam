@@ -20,7 +20,7 @@ from geometry_msgs.msg import *
 from std_msgs.msg import Header, String, Time
 from visualization_msgs.msg import *
 from nav_msgs.msg import Odometry, Path
-from duckietown_msgs.msg import AprilTagDetection
+from duckietown_msgs.msg import AprilTagExtended
 import inspect
 import yaml
 
@@ -487,7 +487,7 @@ class TransformListener():
         self.lastbeat = time.time()
         # Get frame IDs of the objects to which the ROS messages are referred.
         node_id0 = data.header.frame_id
-        if msg_type == "AprilTagDetection":
+        if msg_type == "AprilTagExtended":
             node_id1 = str(data.tag_id)
             pose_error = float(data.pose_error) * 10**8 / 37.0
             # self.pose_errors.append(pose_error)
@@ -627,8 +627,8 @@ class TransformListener():
         # Initialize ID map.
         self.initialize_id_map()
         # Subscribe to topics.
-        rospy.Subscriber("/poses_acquisition/poses", AprilTagDetection,
-                         lambda msg: self.transform_callback(msg, "AprilTagDetection"))
+        rospy.Subscriber("/poses_acquisition/poses", AprilTagExtended,
+                         lambda msg: self.transform_callback(msg, "AprilTagExtended"))
         rospy.Subscriber("/poses_acquisition/odometry", TransformStamped,
                          lambda msg: self.transform_callback(msg, "TransformStamped"))
 

@@ -1,4 +1,4 @@
-FROM ros:kinetic-ros-core
+FROM duckietown/dt-ros-commons:master19-amd64
 
 MAINTAINER Amaury Camus <camusam@ethz.ch>
 
@@ -36,11 +36,6 @@ COPY ${apriltag_dir}/apriltags3.py /apriltag_processor_node/apriltags3.py
 ENV ACQ_APRILTAG_LIB /apriltag_processor_node/apriltag/
 ENV ACQ_APRILTAG_SO /apriltag_processor_node/apriltag/build/lib
 
-# Setup the duckietown_msgs
-RUN mkdir -p /catkin-ws/src
-COPY ${apriltag_processor_src_dir}/duckietown_msgs /catkin-ws/src/duckietown_msgs
-RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
-
 # Copy the Python files
 COPY ${apriltag_processor_src_dir}/processing_node/apriltag_processor_node.py /apriltag_processor_node
 COPY ${algo_dir}/image_rectifier.py /apriltag_processor_node
@@ -62,4 +57,4 @@ ENV ACQ_BEAUTIFY 0
 ENV ACQ_APRILTAG_QUAD_DECIMATE 1.0
 
 # Start the processes
-CMD /bin/bash -c "cd /apriltag_processor_node; source /catkin-ws/devel/setup.bash; /apriltag_processor_node/wrapper.sh"
+CMD /bin/bash -c "cd /apriltag_processor_node; source /opt/ros/kinetic/setup.bash; source /code/catkin_ws/devel/setup.bash; /apriltag_processor_node/wrapper.sh"

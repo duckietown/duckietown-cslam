@@ -1,4 +1,4 @@
-FROM ros:kinetic-ros-core
+FROM duckietown/dt-ros-commons:master19-amd64
 
 MAINTAINER Amaury Camus <camusam@ethz.ch>
 
@@ -27,9 +27,6 @@ RUN cd /graph_optimizer/lib; python setup.py develop --no-deps
 ARG ros_nodes=ros/src/pose_graph_builder
 RUN mkdir -p /graph_optimizer/catkin_ws/src/pose_graph_builder
 COPY ${ros_nodes} /graph_optimizer/catkin_ws/src/pose_graph_builder
-
-# Add the some Duckietown messages (needed for the custom AprilTagDetection message)
-COPY ros/src/duckietown_msgs /graph_optimizer/catkin_ws/src/duckietown_msgs
 
 # Setup the ros-visualization
 COPY ros/src/cslam_visualization /graph_optimizer/catkin_ws/src/cslam_visualization

@@ -17,7 +17,7 @@ from std_msgs.msg import Header
 
 import apriltags3
 import cv2
-from duckietown_msgs.msg import AprilTagDetection, Pose2DStamped
+from duckietown_msgs.msg import AprilTagExtended, Pose2DStamped
 from image_rectifier import ImageRectifier
 
 ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
@@ -63,7 +63,7 @@ class ApriltagProcessorNode():
         self.image_queue = multiprocessing.Queue()
         self.publishers = {}
         self.publishers["apriltags"] = rospy.Publisher(
-            "/poses_acquisition/" + self.ACQ_POSES_TOPIC, AprilTagDetection, queue_size=20)
+            "/poses_acquisition/" + self.ACQ_POSES_TOPIC, AprilTagExtended, queue_size=20)
 
         # If the test stream is requested
         if self.ACQ_TEST_STREAM:
@@ -329,7 +329,7 @@ class ImageProcessor(multiprocessing.Process):
         if "apriltags" in incomingData:
             for tag in incomingData["apriltags"]:
                 # Publish the relative pose
-                newApriltagDetectionMsg = AprilTagDetection()
+                newApriltagDetectionMsg = AprilTagExtended()
                 newApriltagDetectionMsg.header.stamp.secs = int(
                     tag["timestamp_secs"])
                 newApriltagDetectionMsg.header.stamp.nsecs = int(
