@@ -14,7 +14,7 @@ from geometry_msgs.msg import TransformStamped
 from std_msgs.msg import Header
 
 from duckietown_msgs.msg import Pose2DStamped, WheelsCmdStamped
-from pathos.multiprocessing import ProcessingPool
+from pathos.multiprocessing import ProcessingPool, Process
 
 
 class OdometryProcessor():
@@ -22,17 +22,21 @@ class OdometryProcessor():
     Processes the data coming from a remote device (Duckiebot or watchtower).
     """
 
-    def __init__(self, logger):
+    def __init__(self, logger, config):
+
+        self.config = config
+        self.logger = logger
 
         # Get the environment variables
-        self.ACQ_DEVICE_NAME = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
-        self.logger = logger
-        self.ACQ_TOPIC_WHEEL_COMMAND = os.getenv(
-            "ACQ_TOPIC_WHEEL_COMMAND", "wheels_driver_node/wheels_cmd")
+        self.ACQ_DEVICE_NAME = self.config['ACQ_DEVICE_NAME']
+        self.ACQ_TOPIC_WHEEL_COMMAND = self.config["ACQ_TOPIC_WHEEL_COMMAND"]
+        self.ACQ_ODOMETRY_TOPIC = self.config['ACQ_ODOMETRY_TOPIC']
+        self.INPUT_BAG_PATH = self.config["INPUT_BAG_PATH"]
+        self.OUTPUT_BAG_PATH = self.config["OUTPUT_BAG_PATH"]
+
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('acquisition_processor',
                         anonymous=True, disable_signals=True)
-        self.ACQ_ODOMETRY_TOPIC = os.getenv('ACQ_ODOMETRY_TOPIC', "odometry")
 
         self.subscriber = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_WHEEL_COMMAND, WheelsCmdStamped,
                                            self.wheels_cmd_callback,  queue_size=150)
@@ -48,15 +52,42 @@ class OdometryProcessor():
         self.odometry_processed = False
 
         self.last_header = None
-        self.odometry_publisher = rospy.Publisher(
-            "/poses_acquisition/"+self.ACQ_ODOMETRY_TOPIC, TransformStamped, queue_size=1)
+        self.odometry_topic = str(
+            "/poses_acquisition/"+self.ACQ_ODOMETRY_TOPIC)
+
+        if self.OUTPUT_BAG_PATH is not None:
+            self.odometry_publisher = rospy.Publisher(
+                self.odometry_topic, TransformStamped, queue_size=1)
+
+        if self.INPUT_BAG_PATH is not None:
+            self.bag_reader = Process(
+                target=self.read_bag)
+            self.bag_reader.start()
+        if self.OUTPUT_BAG_PATH is not None:
+            self.outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
+
+        self.last_call_back_time = rospy.get_time()
 
         self.logger.info('Acquisition processor is set up.')
+
+    def read_bag(self):
+        bag = rosbag.Bag(self.INPUT_BAG_PATH, 'r')
+        start_time = bag.get_start_time()
+        end_time = bag.get_end_time()
+        self.duration = end_time - start_time
+        rospy.sleep(4)
+        os.system("rosbag play %s" % self.INPUT_BAG_PATH)
+        rospy.sleep(self.duration * 1.3)
+        while rospy.get_time() - self.last_call_back_time < rospy.Duration(5):
+            rospy.sleep(1)
+        rospy.signal_shutdown("the bag is finished")
 
     def wheels_cmd_callback(self, wheels_msg):
         """
         Callback function that is executed upon reception of a new wheel command.
         """
+        self.last_call_back_time = rospy.get_time()
+        self.logger.info("got wheel message")
         wheel_radius = 0.065
         duckiebot_width = 0.10
         speed_factor = 0.65  # full speed is one, that is 0.65m/s
@@ -119,15 +150,30 @@ class OdometryProcessor():
         odometry.transform.rotation.z = q_z
         odometry.transform.rotation.w = q_w
         self.logger.info("publishing odometry")
+        if self.OUTPUT_BAG_PATH is None:
+            self.odometry_publisher.publish(odometry)
+        else:
+            self.outputbag.write(self.odometry_topic, odometry)
 
-        self.odometry_publisher.publish(odometry)
+
+def get_environment_variables():
+    config = dict()
+    config["ACQ_DEVICE_NAME"] = os.getenv('ACQ_DEVICE_NAME', 'autobot01')
+    config["ACQ_TOPIC_WHEEL_COMMAND"] = os.getenv(
+        'ACQ_TOPIC_WHEEL_COMMAND', "wheels_driver_node/wheels_cmd")
+    config["ACQ_ODOMETRY_TOPIC"] = os.getenv(
+        'ACQ_ODOMETRY_TOPIC', 'odometry')
+    config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
+    config['OUTPUT_BAG_PATH'] = os.getenv('OUTPUT_BAG_PATH')
+    return config
 
 
 def main():
     logger = multiprocessing.log_to_stderr()
     logger.setLevel(logging.INFO)
     logger.info('Odometry processor started')
-    odometryprocessor = OdometryProcessor(logger)
+    config = get_environment_variables()
+    odometryprocessor = OdometryProcessor(logger, config)
     rospy.spin()
 
 

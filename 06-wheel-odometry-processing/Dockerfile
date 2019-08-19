@@ -1,4 +1,4 @@
-FROM ros:kinetic-ros-core
+FROM duckietown/dt-ros-commons:master19-amd64
 
 MAINTAINER Amaury Camus <camusam@ethz.ch>
 
@@ -21,24 +21,18 @@ RUN pip install pathos multiprocessing-logging
 
 # Argumens for where the different places from which we will get files from are
 ARG ros_src_dir=ros/src
+ENV container_package_path=${CATKIN_WS_DIR}/src/processing_node
 
 # Create a directory to store the Python files and the visual odometry library
-RUN mkdir /processing_node
-
-
-# Setup the duckietown_msgs
-RUN mkdir -p /catkin-ws/src
-COPY ${ros_src_dir}/duckietown_msgs /catkin-ws/src/duckietown_msgs
-RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash; cd /catkin-ws/; catkin_make"
-
+RUN mkdir ${container_package_path}
 
 # Copy the Python files
-COPY ${ros_src_dir}/processing_node/odometry_processor_node.py /processing_node
+COPY ${ros_src_dir}/processing_node/odometry_processor_node.py ${container_package_path}
 
 # Copy the bash wrapper
-COPY ${ros_src_dir}/processing_node/wrapper.sh /processing_node
-RUN chmod +x /processing_node/*.sh
-RUN chmod +x /processing_node/*.py
+COPY ${ros_src_dir}/processing_node/wrapper.sh ${container_package_path}
+RUN chmod +x ${container_package_path}/*.sh
+RUN chmod +x ${container_package_path}/*.py
 
 # OPTIONALLY YOU CAN ALSO SPECIFY + DEFAULT VALUES
 ENV ACQ_ROS_MASTER_URI_DEVICE_PORT 11311
@@ -49,4 +43,4 @@ ENV ACQ_ODOMETRY_TOPIC odometry
 
 
 # Start the processes
-CMD /bin/bash -c "cd /processing_node; source /catkin-ws/devel/setup.bash; /processing_node/wrapper.sh"
+CMD /bin/bash -c "cd ${container_package_path}; source ${CATKIN_WS_DIR}/devel/setup.bash; ${container_package_path}/wrapper.sh"
