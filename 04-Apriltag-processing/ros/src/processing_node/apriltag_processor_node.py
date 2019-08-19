@@ -14,6 +14,7 @@ from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import (CameraInfo, CompressedImage, Image,
                              RegionOfInterest)
 from std_msgs.msg import Header
+from multiprocessing import Process
 
 import apriltags3
 import cv2
@@ -42,6 +43,8 @@ class ApriltagProcessorNode():
         self.ACQ_POSES_TOPIC = self.config['ACQ_POSES_TOPIC']
         self.ACQ_APRILTAG_QUAD_DECIMATE = self.config['ACQ_APRILTAG_QUAD_DECIMATE']
         self.ACQ_POSES_UPDATE_RATE = self.config['ACQ_POSES_UPDATE_RATE']
+        self.INPUT_BAG_PATH = config['INPUT_BAG_PATH']
+        self.OUTPUT_BAG_PATH = config['OUTPUT_BAG_PATH']
 
         self.aprilTagProcessor = apriltags3.Detector(searchpath=[ACQ_APRILTAG_SO],
                                                      families='tag36h11',
@@ -55,15 +58,14 @@ class ApriltagProcessorNode():
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('apriltag_processor_node',
                         anonymous=True, disable_signals=True)
-        self.subscriberRawImage = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW, CompressedImage,
-                                                   self.camera_image_callback,  queue_size=50)
-        self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO, CameraInfo,
-                                                     self.camera_info_callback,  queue_size=50)
+
         self.publish_queue = multiprocessing.Queue()
         self.image_queue = multiprocessing.Queue()
         self.publishers = {}
+        self.apriltag_pose_topic = str(
+            "/poses_acquisition/" + self.ACQ_POSES_TOPIC)
         self.publishers["apriltags"] = rospy.Publisher(
-            "/poses_acquisition/" + self.ACQ_POSES_TOPIC, AprilTagExtended, queue_size=20)
+            apriltag_pose_topic, AprilTagExtended, queue_size=20)
 
         # If the test stream is requested
         if self.ACQ_TEST_STREAM:
@@ -98,16 +100,63 @@ class ApriltagProcessorNode():
                 new_image_processor)
             new_image_processor.start()
 
+        self.camera_topic = str(
+            '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW)
+        self.camera_info_topic = str(
+            '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_CAMERAINFO)
+
+        self.subscriberImage = rospy.Subscriber(self.camera_topic, CompressedImage,
+                                                self.camera_image_callback,  queue_size=50)
+        self.subscriberCameraInfo = rospy.Subscriber(self.camera_info_topic, CameraInfo,
+                                                     self.camera_info_callback,  queue_size=50)
+        if self.INPUT_BAG_PATH is not None:
+            self.bag_reader = Process(
+                target=self.read_bag)
+            self.bag_reader.start()
+        if self.OUTPUT_BAG_PATH is not None:
+            self.outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
+        self.last_call_back_time = rospy.get_time()
+
         self.logger.info('Apriltag processor node is set up.')
 
         self.publish_loop()
+
+    def read_bag(self):
+        bag = rosbag.Bag(self.INPUT_BAG_PATH, 'r')
+        start_time = bag.get_start_time()
+        end_time = bag.get_end_time()
+        self.duration = end_time - start_time
+        rospy.sleep(4)
+        os.system("rosbag play %s" % self.INPUT_BAG_PATH)
+        rospy.sleep(self.duration * 1.3)
+
+        for i in range(2):
+            while not self.publish_queue.empty():
+                rospy.sleep(5)
+            rospy.sleep(5)
+        while rospy.get_time() - self.last_call_back_time < rospy.Duration(5):
+            rospy.sleep(1)
+        rospy.signal_shutdown("the bag is finished")
 
     def publish_loop(self):
         while True:
             try:
                 message_dict = self.publish_queue.get(block=True)
-                self.publishers[message_dict["topic"]
-                                ].publish(message_dict["message"])
+                if self.INPUT_BAG_PATH is None:
+                    self.publishers[message_dict["topic"]
+                                    ].publish(message_dict["message"])
+                elif self.OUTPUT_BAG_PATH is None:
+                    self.logger.warning(
+                        "Input bag was specified but no output path was specified. Publishing to the online topics.")
+                else:
+                    if(message_dict["topic"] == "apriltags"):
+                        self.outputbag.write(
+                            self.apriltag_pose_topic, message_dict["message"])
+                    else:
+                        # TODO this is bad, the topics will be wrong
+                        self.outputbag.write(
+                            message_dict["topic"], message_dict["message"])
+
             except Exception as e:
                 self.logger.warning("publish loop : %s" % str(e))
 
@@ -115,20 +164,24 @@ class ApriltagProcessorNode():
         """
         Callback function that is executed upon reception of new camera info data.
         """
+        self.last_call_back_time = rospy.get_time()
+
         self.lastCameraInfo = ros_data
 
     def camera_image_callback(self, ros_data):
         """
         Callback function that is executed upon reception of a new camera image.
         """
+        self.last_call_back_time = rospy.get_time()
+
         self.logger.info("Got image")
         if self.lastCameraInfo is not None:
             # Collect latest ros_data
             self.image_queue.put(
-                (ros_data, self.lastCameraInfo, self.seq_stamper))
+                (ros_data, self.lastCameraInfo, self.seq_stamper), block=True)
             self.seq_stamper += 1
 
-            self.logger.warning(str(len(multiprocessing.active_children())))
+            # self.logger.warning(str(len(multiprocessing.active_children())))
         else:
             self.logger.warning("No camera info")
 
@@ -433,6 +486,8 @@ def get_environment_variables():
 
     config['ACQ_POSES_UPDATE_RATE'] = float(
         os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
+    config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
+    config['OUTPUT_BAG_PATH'] = os.getenv('OUTPUT_BAG_PATH')
 
     return config
 
