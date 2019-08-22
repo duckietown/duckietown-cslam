@@ -2415,7 +2415,7 @@
   vehicle_name: autobot03
   traffic_sign_type:
 
-- tag_id: 410
+- tag_id: 403
   tag_type: Vehicle
   street_name:
   vehicle_name: autobot04
@@ -2460,7 +2460,7 @@
 - tag_id: 410
   tag_type: Vehicle
   street_name:
-  vehicle_name: autobot04
+  vehicle_name: autobot11
   traffic_sign_type:
 
 - tag_id: 411

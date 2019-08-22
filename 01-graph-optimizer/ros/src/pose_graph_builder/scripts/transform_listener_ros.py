@@ -8,7 +8,7 @@ import yaml
 from multiprocessing import Process
 import duckietown_cslam.resampler.resampler as resampler
 from duckietown_cslam.duckietownGraphBuilder.duckietown_graph_builder import create_info_matrix
-
+import subprocess
 import time
 import g2o
 import geometry as g
@@ -264,7 +264,7 @@ class TransformListener():
         self.pose_errors = []
         self.first_time_stamp = -1
         self.lastbeat = -1
-        self.timeout = 25
+        self.timeout = 10
         self.callback_times = []
         self.threads = []
         self.bag_reader = None
@@ -484,7 +484,7 @@ class TransformListener():
         a = time.time()
 
         self.num_messages_received += 1
-        self.lastbeat = time.time()
+        self.lastbeat = a
         # Get frame IDs of the objects to which the ROS messages are referred.
         node_id0 = data.header.frame_id
         if msg_type == "AprilTagExtended":
@@ -563,16 +563,18 @@ class TransformListener():
     def heartbeat_callback(self, timer_event):
         if not self.got_bag:
             return
-        if(self.callback_times != []):
-            mean = np.mean(self.callback_times)
-            var = np.var(self.callback_times)
-            print("callback : mean = %f and var = %f" % (mean, var))
+        # if(self.callback_times != []):
+        #     mean = np.mean(self.callback_times)
+        #     var = np.var(self.callback_times)
+        #     print("callback : mean = %f and var = %f" % (mean, var))
         current_time = time.time()
         if self.lastbeat == -1:
             return
-        if current_time - self.lastbeat > self.timeout:
+        diff = current_time - self.lastbeat
+        if diff > self.timeout:
+            print("heartbeat is timed out")
             self.resampler.optimize(
-                self.max_iteration * 100,
+                self.max_iteration * 10,
                 save_result=self.save_output,
                 verbose=self.verbose,
                 output_name="/tmp/output.g2o",
@@ -636,19 +638,24 @@ class TransformListener():
         self.optim_callback = rospy.Timer(rospy.Duration(self.optimization_period),
                                           self.optimization_callback)
 
-        self.heartbeat = rospy.Timer(rospy.Duration(self.optimization_period),
+        self.heartbeat = rospy.Timer(rospy.Duration(1.0),
                                      self.heartbeat_callback)
         # spin() simply keeps python from exiting until this node is stopped
         if bag_is_present:
-            self.bag_reader = Process(target=self.read_bag, args=[bag_path])
-            self.bag_reader.start()
+            self.read_bag(bag_path)
         rospy.spin()
 
     def read_bag(self, bag_path):
         if os.path.isfile(bag_path):
-            rospy.sleep(4)
-            os.system("rosbag play %s" % bag_path)
             self.got_bag = True
+            rospy.sleep(4)
+            try:
+
+                subprocess.check_output("rosbag play %s" %
+                                        bag_path, shell=True)
+                print("finished with reading the bag")
+            except Exception as e:
+                print("error : %s" % e)
 
         else:
             self.got_bag = False

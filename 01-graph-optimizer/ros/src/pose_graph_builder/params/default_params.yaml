@@ -9,7 +9,7 @@ save_g2o_output : False
 resampling_frequency : 15.0
 
 # DUCKIETOWN_GRAPH PARAMS
-stocking_time : 600
+stocking_time : 120
 optimization_frequency : 0.5
 minimum_edge_number_for_optimization : 100
 rejection_sampling_int : 30
