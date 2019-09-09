@@ -568,23 +568,23 @@ class MovableNode(Node):
             else:
                 mode = 'w'
             with open(result_file, mode=mode) as trajectory_yaml:
-                data = yaml.load(trajectory_yaml)
                 if not self.has_a_result_file:
                     header = ["time_stamp", "x", "y", "z", "R11", "R12",
                               "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
                     data = {"header": header}
                     data["data"] = {}
+                else:
+                    data = yaml.load(trajectory_yaml)
 
                 for pose in poses_stamped:
-                    row = []
-                    row.extend(pose[1].t)
+                    row = [pose[1].t]
                     row.extend(pose[1].R[0])
                     row.extend(pose[1].R[1])
                     row.extend(pose[1].R[2])
                     # print(row)
                     # row = ["coucou", 4, "les cococs"]
                     data["data"][pose[0]] = row
-
+                yaml.dump(data, trajectory_yaml)
                 self.has_a_result_file = True
 
             # TODO : Code this function
