@@ -1,0 +1,9 @@
+version: '3'
+services:
+    apriltag-processor:
+        image: duckietown/post-processor:master19-amd64
+        network_mode: "host"
+        environment:
+            ROS_MASTER_URI: http://172.31.168.115:11311
+            ACQ_DEVICE_NAME: watchtower10
+
