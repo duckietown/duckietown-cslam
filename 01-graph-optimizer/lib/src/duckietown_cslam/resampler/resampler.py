@@ -13,7 +13,7 @@ import numpy as np
 
 
 def merge_measure_information(list_measure):
-    result = np.eye(6)
+    result = np.zeros((6, 6))
 
     if len(list_measure) == 0:
         return None

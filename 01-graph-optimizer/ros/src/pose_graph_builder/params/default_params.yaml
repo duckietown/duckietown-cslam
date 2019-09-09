@@ -2,7 +2,7 @@
 # G2O PARAMS
 optim_verbose : False
 online_optimization : False # Leave to false, with True doesn't work 
-maximum_g2o_iterations : 5
+maximum_g2o_iterations : 20
 save_g2o_output : False
 
 # RESAMPLER PARAMS

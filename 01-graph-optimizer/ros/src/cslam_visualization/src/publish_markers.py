@@ -1,4 +1,4 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python
 import rospy
 import tf
 import cslam_visualization.utils as utils
@@ -11,15 +11,17 @@ if __name__ == '__main__':
     pub = rospy.Publisher('cslam_markers', MarkerArray, queue_size=10)
 
     rate = rospy.Rate(10.0)
-    
+
     while not rospy.is_shutdown():
         frames_list = listener.getFrameStrings()
-        
-        duckiebots = [frame for frame in frames_list if "duckiebot" in frame]
+
+        duckiebots = [
+            frame for frame in frames_list if "duckiebot" in frame or "autobot" in frame]
         watchtowers = [frame for frame in frames_list if "watchtower" in frame]
         apriltags = [frame for frame in frames_list if "apriltag" in frame]
-        
-        markers = utils.get_markers(duckiebots,watchtowers,apriltags,listener)
+
+        markers = utils.get_markers(
+            duckiebots, watchtowers, apriltags, listener)
         pub.publish(markers)
-        
+
         rate.sleep()

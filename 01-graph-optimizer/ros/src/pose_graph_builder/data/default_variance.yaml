@@ -6,8 +6,9 @@ watchtower:
 
 odometry: 
   type: odometry
-  position_deviation: 0.05
-  angle_deviation: 1.0
+  position_deviation: 0.5
+  angle_deviation: 2.0
+
 
 retrointerpolation: 
   type: retrointerpolation
@@ -19,5 +20,5 @@ retrointerpolation:
 # not used at the moment
 duckiebot: 
   type: duckiebot
-  position_deviation: 0.05
-  angle_deviation: 15.0
+  position_deviation: 20
+  angle_deviation: 30

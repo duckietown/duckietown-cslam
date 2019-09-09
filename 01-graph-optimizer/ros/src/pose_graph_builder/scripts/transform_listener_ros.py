@@ -31,6 +31,16 @@ def load_yaml_file(fn):
     return yaml.load(data, Loader=yaml.SafeLoader)
 
 
+def get_node_type(node_id):
+    if "watchtower" in node_id:
+        node_type = "watchtower"
+    elif "apriltag" in node_id:
+        node_type = "apriltag"
+    else:
+        node_type = "duckiebot"
+    return node_type
+
+
 def get_transform_from_data(data):
     t = [
         data.transform.translation.x, data.transform.translation.y,
@@ -47,6 +57,21 @@ def get_transform_from_data(data):
 
     return g2o.Isometry3d(M, t)
 
+
+def create_info_matrix_odometry(standard_space_deviation, standard_angle_deviation, constraints=[1, 1, 1, 1, 1, 1]):
+    m = np.eye(6)
+    for i in range(0, 3, 2):
+        if(not constraints[i]):
+            m[i, i] = 0
+        else:
+            m[i, i] = 1.0 / (standard_space_deviation**2)
+    m[1, 1] *= 5
+    for i in range(3, 6):
+        if(not constraints[i]):
+            m[i, i] = 0
+        else:
+            m[i, i] = 1.0 / (standard_angle_deviation**2)
+    return m
 
 # def create_info_matrix(standard_measure_deviation, standard_angle_deviation, constraints=[1, 1, 1, 1, 1, 1]):
 #     m = np.eye(6)
@@ -260,7 +285,7 @@ class TransformListener():
         self.edge_counters = dict()
         self.optimization_period = 1.0/self.optimization_frequency
         self.resampler = None
-        self.id_map = {}
+        self.forward_id_map = {}
         self.pose_errors = []
         self.first_time_stamp = -1
         self.lastbeat = -1
@@ -289,10 +314,11 @@ class TransformListener():
                             tag_id = myobject["tag_id"]
                             mytype = myobject['tag_type']
                             vehicle_name = myobject['vehicle_name']
-                            self.id_map[str(tag_id)] = mytype
-                            if vehicle_name:
+                            self.forward_id_map[str(tag_id)] = (
+                                mytype, vehicle_name)
+                            if not vehicle_name and mytype == "vehicle":
                                 # print(vehicle_name)
-                                self.id_map[str(vehicle_name)] = str(tag_id)
+                                print("A vehicle doesn't have a name")
 
                     except yaml.YAMLError as exc:
                         print(exc)
@@ -309,21 +335,13 @@ class TransformListener():
                 ID of the objected, formatted by adding "duckiebot_" or "apriltag_"
                 to it, based on its type.
         """
-        vertex_type = ""
-        if not id.isdigit():
-            # print(id)
-            id = self.id_map.get(id, "0")
-            # print(id)
-
-            vertex_type = self.id_map.get(id, "apriltag")
-            # print(vertex_type)
-        else:
-            vertex_type = self.id_map.get(id, "apriltag")
-
-        if (vertex_type == "Vehicle"):
-            id = "duckiebot_%s" % id
-        else:
-            id = "apriltag_%s" % id
+        if id.isdigit():
+            tag_type, vehicle_name = self.forward_id_map.get(
+                id, ("apriltag", None))
+            if tag_type == "Vehicle":
+                id = vehicle_name
+            else:
+                id = "apriltag%s" % id
 
         return id
 
@@ -337,10 +355,11 @@ class TransformListener():
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
+
         transform = get_transform_from_data(data)
         space_dev = self.default_variance["odometry"]["position_deviation"]
         angle_dev = self.default_variance["odometry"]["angle_deviation"]
-        measure_information = create_info_matrix(space_dev, angle_dev)
+        measure_information = create_info_matrix_odometry(space_dev, angle_dev)
         # Add edge to the graph.
         return self.resampler.handle_odometry_edge(node_id, transform, time_stamp, measure_information)
 
@@ -356,10 +375,11 @@ class TransformListener():
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
+
         transform = get_transform_from_data(data)
         # Get type of the object seen.
 
-        type_of_object_seen = node_id1.split("_")[0]
+        type_of_object_seen = get_node_type(node_id1)
         space_dev = self.default_variance["watchtower"]["position_deviation"]
         angle_dev = self.default_variance["watchtower"]["angle_deviation"]
         if(pose_error != None):
@@ -389,9 +409,6 @@ class TransformListener():
             return self.resampler.handle_watchtower_edge(node_id0, node_id1, transform, time_stamp, measure_information=measure_information, is_duckiebot=True)
         else:
             # Add edge to the graph.
-            april_tag_number = int(node_id1.split("_")[1])
-            if(april_tag_number < 300 or april_tag_number > 499):
-                return
             if node_id0 not in self.edge_counters:
                 self.edge_counters[node_id0] = dict()
             if node_id1 not in self.edge_counters[node_id0]:
@@ -431,28 +448,25 @@ class TransformListener():
             measure_information = create_info_matrix(space_dev, angle_dev)
 
         # Get type of the object that sees the other object, for a sanity check.
-        type_of_object_seeing = node_id0.split("_")[0]
-        if (type_of_object_seeing == "duckiebot"):
-            # The pose needs to be adjusted to take into account the relative
-            # pose of the camera on the Duckiebot w.r.t. to the base frame of
-            # the Duckiebot.
-            t = [0.075, 0.0, 0.025]
-            # This angle is an estimate of the angle by which the plastic
-            # support that holds the camera is tilted.
-            x_angle = -102
-            z_angle = -90
-            x_angle = np.deg2rad(x_angle)
-            z_angle = np.deg2rad(z_angle)
-            R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
 
-            R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
-            R = np.matmul(R_z, R_x)  # verified
-            H_base_to_camera = g2o.Isometry3d(R, t)
-            transform = H_base_to_camera * transform
-            # Add edge to the graph.
-            # return self.resampler.handle_duckiebot_edge(node_id0, node_id1, transform, time_stamp, measure_information)
-        else:
-            print("This should not be here! %s " % node_id0)
+        # The pose needs to be adjusted to take into account the relative
+        # pose of the camera on the Duckiebot w.r.t. to the base frame of
+        # the Duckiebot.
+        t = [0.075, 0.0, 0.025]
+        # This angle is an estimate of the angle by which the plastic
+        # support that holds the camera is tilted.
+        x_angle = -102
+        z_angle = -90
+        x_angle = np.deg2rad(x_angle)
+        z_angle = np.deg2rad(z_angle)
+        R_x = g.rotation_from_axis_angle(np.array([1, 0, 0]), x_angle)
+
+        R_z = g.rotation_from_axis_angle(np.array([0, 0, 1]), z_angle)
+        R = np.matmul(R_z, R_x)  # verified
+        H_base_to_camera = g2o.Isometry3d(R, t)
+        transform = H_base_to_camera * transform
+        # Add edge to the graph.
+        # return self.resampler.handle_duckiebot_edge(node_id0, node_id1, transform, time_stamp, measure_information)
 
     def filter_name(self, node_id):
         """ Converts the frame IDs of the objects in the ROS messages (e.g.,
@@ -467,13 +481,7 @@ class TransformListener():
             Returns:
                 Converted frame ID.
         """
-        if (node_id.startswith("watchtower")):
-            node_id = "watchtower_%d" % int(node_id.strip("watchtower"))
-
-        if (node_id.startswith("demowatchtower")):
-            node_id = "watchtower_%d" % int(node_id.strip("demowatchtower"))
-
-        elif (len(node_id.split("_")) == 1):
+        if ("watchtower" not in node_id):
             node_id = self.find_vertex_name(node_id)
 
         return node_id
@@ -489,7 +497,7 @@ class TransformListener():
         node_id0 = data.header.frame_id
         if msg_type == "AprilTagExtended":
             node_id1 = str(data.tag_id)
-            pose_error = float(data.pose_error) * 10**8 / 37.0
+            # pose_error = float(data.pose_error) * 10**8 / 37.0
             # self.pose_errors.append(pose_error)
             # var = np.var(self.pose_errors)
             # mean = np.mean(self.pose_errors)
@@ -501,16 +509,18 @@ class TransformListener():
                 "Transform callback received unsupported msg_type %s" % msg_type)
 
         # Convert the frame IDs to the right format.
+        # print("before filter : message from %s to %s" % (node_id0, node_id1))
+
         node_id0 = self.filter_name(node_id0)
         node_id1 = self.filter_name(node_id1)
-
+        print("after filter : message from %s to %s" % (node_id0, node_id1))
         # Ignore messages from one watchtower to another watchtower (i.e.,
         # odometry messages between watchtowers).
         is_from_watchtower = False
-        if (node_id0.startswith("watchtower")):
+        if ("watchtower" in node_id0):
             is_from_watchtower = True
-            if (node_id1.startswith("watchtower")):
-                # print(data)
+            if ("watchtower" in node_id1):
+                print(data)
                 return 0
 
         # Create translation vector.
@@ -522,18 +532,22 @@ class TransformListener():
             self.resampler.signal_reference_time_stamp(self.first_time_stamp)
 
         if (node_id1 == node_id0):
+            print("got odometry")
             # Same ID: odometry message, e.g. the same Duckiebot sending
             # odometry information at different instances in time.
             self.handle_odometry_message(
                 node_id1, data, time_stamp)
         elif (is_from_watchtower):
+            print("got message from watchtower")
+
             # Tag detected by a watchtower.
             self.handle_watchtower_message(
-                node_id0, node_id1, data, time_stamp, pose_error)
+                node_id0, node_id1, data, time_stamp)
         else:
             # Tag detected by a Duckiebot.
+            print("got message from duckiebot")
             self.handle_duckiebot_message(
-                node_id0, node_id1, data, time_stamp, pose_error)
+                node_id0, node_id1, data, time_stamp)
         b = time.time()
         self.callback_times.append(b-a)
 

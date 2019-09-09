@@ -13,6 +13,16 @@ import numpy as np
 import pprint
 
 
+def get_node_type(node_id):
+    if "watchtower" in node_id:
+        node_type = "watchtower"
+    elif "apriltag" in node_id:
+        node_type = "apriltag"
+    else:
+        node_type = "duckiebot"
+    return node_type
+
+
 def interpolate_measure(measure, alpha):
     R = measure.R
     t = measure.t
@@ -211,7 +221,8 @@ class CyclicCounter(object):
 class Node(object):
     def __init__(self, node_id, types, duckietown_graph, movable=False):
         self.node_id = node_id
-        self.node_type, self.node_number = node_id.split("_")
+        self.node_type = get_node_type(node_id)
+        self.node_number = int(filter(str.isdigit, node_id))
         self.types = types
         self.duckietown_graph = duckietown_graph
         self.time_stamps_to_indices = dict()
@@ -265,12 +276,19 @@ class MovableNode(Node):
             node_id, types, duckietown_graph, movable=True)
         self.retro_interpolate = retro_interpolate
         self.first_odometry_time_stamp = 0
+        self.first_watchtower_message = 0
         self.last_odometry_time_stamp = 0
         self.cyclic_counter = CyclicCounter(100000, 1000, self.node_id)
         self.stocking_time = stocking_time
         self.result_folder = result_folder
         self.last_time_stamp = -1
+        self.has_a_result_file = False
         self.had_odometry_before = False
+
+    def check_if_first_watchtower_msg(self, time_stamp):
+        with self.node_lock:
+            if self.first_watchtower_message == 0:
+                self.first_watchtower_message = time_stamp
 
     def set_last_odometry_time_stamp(self, time_stamp):
         with self.node_lock:
@@ -543,24 +561,31 @@ class MovableNode(Node):
         """ Saves the trajectory to a file corresponding to node_type, node_id
             return True is success, False otherwise
         """
-        result_file = "%s/%s.csv" % (self.result_folder, self.node_id)
+        result_file = "%s/%s.yaml" % (self.result_folder, self.node_id)
         if os.path.isdir(self.result_folder):
-            with open(result_file, mode='a+') as trajectory_csv:
-                trajectory_writer = csv.writer(
-                    trajectory_csv, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                header = ["time_stamp", "x", "y", "z", "R11", "R12",
-                          "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
-                trajectory_writer.writerow(header)
+            if self.has_a_result_file:
+                mode = 'a+'
+            else:
+                mode = 'w'
+            with open(result_file, mode=mode) as trajectory_yaml:
+                data = yaml.load(trajectory_yaml)
+                if not self.has_a_result_file:
+                    header = ["time_stamp", "x", "y", "z", "R11", "R12",
+                              "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
+                    data = {"header": header}
+                    data["data"] = {}
 
                 for pose in poses_stamped:
-                    row = [pose[0]]
+                    row = []
                     row.extend(pose[1].t)
                     row.extend(pose[1].R[0])
                     row.extend(pose[1].R[1])
                     row.extend(pose[1].R[2])
                     # print(row)
                     # row = ["coucou", 4, "les cococs"]
-                    trajectory_writer.writerow(row)
+                    data["data"][pose[0]] = row
+
+                self.has_a_result_file = True
 
             # TODO : Code this function
             print("Trying to save for %s" % self.node_id)
@@ -584,18 +609,19 @@ class MovableNode(Node):
     def clean(self):
         anterior_time_stamps_indices = []
 
-        if(self.first_odometry_time_stamp != 0):
-            with self.node_lock:
-                anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
-                ) if time_stamp <= self.first_odometry_time_stamp]
-                for time_stamp in anterior_time_stamps:
-                    self.cyclic_counter.remove_index(
-                        self.time_stamps_to_indices[time_stamp])
-                    anterior_time_stamps_indices.append(
-                        self.get_g2o_index(time_stamp))
-                    self.time_stamps_to_indices.pop(time_stamp)
-            for index in anterior_time_stamps_indices:
-                self.duckietown_graph.remove_vertex_by_index(index)
+        for first_time_stamp in [self.first_odometry_time_stamp, self.first_watchtower_message]:
+            if(first_time_stamp != 0):
+                with self.node_lock:
+                    anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
+                    ) if time_stamp <= first_time_stamp]
+                    for time_stamp in anterior_time_stamps:
+                        self.cyclic_counter.remove_index(
+                            self.time_stamps_to_indices[time_stamp])
+                        anterior_time_stamps_indices.append(
+                            self.get_g2o_index(time_stamp))
+                        self.time_stamps_to_indices.pop(time_stamp)
+                for index in anterior_time_stamps_indices:
+                    self.duckietown_graph.remove_vertex_by_index(index)
 
 
 class DuckietownGraphBuilder(object):
@@ -728,7 +754,7 @@ class DuckietownGraphBuilder(object):
             return self.node_dict[node_id]
         else:
             with self.lock:
-                node_type = node_id.split("_")[0]
+                node_type = get_node_type(node_id)
                 if (node_type in self.movable):
                     node = MovableNode(node_id, self.types,
                                        self, stocking_time=self.stocking_time, retro_interpolate=self.retro_interpolate, result_folder=self.result_folder)
@@ -843,7 +869,8 @@ class DuckietownGraphBuilder(object):
             # with self.lock:
             node_0.add_timestamp(time_stamp)
             node_1.add_timestamp(time_stamp)
-
+            if(node_0.node_type == "watchtower" and node_1.is_movable()):
+                node_1.check_if_first_watchtower_msg(time_stamp)
             # Obtain ID of the vertices in the graph in the integer format.
             vertex0_index = node_0.get_g2o_index(time_stamp)
             vertex1_index = node_1.get_g2o_index(time_stamp)
@@ -904,9 +931,6 @@ class DuckietownGraphBuilder(object):
         """
         node = self.get_node(node_id)
         self.graph.set_fixed(node.get_g2o_index(time_stamp))
-
-    def get_id(self, node_type, node_id):
-        return "%s_%s" % (node_type, node_id)
 
     def add_priors(self, node_id_0, node_id_1, time_stamp):
         node0 = self.get_node(node_id_0)

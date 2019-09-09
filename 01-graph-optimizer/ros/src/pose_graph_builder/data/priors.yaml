@@ -2,7 +2,7 @@
 onthefloor: 
   from_type: origin
   to_type: duckiebot
-  standard_space_deviation: 0.005
+  standard_space_deviation: 0.00005
   standard_angle_deviation: 1
   position: [0.0, 0.0, 0.08]
   rotation: [0.0, 0.0, 0.0]
