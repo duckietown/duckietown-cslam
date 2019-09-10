@@ -375,7 +375,6 @@ class TransformListener():
                transform: Transform contained in the ROS message.
                time_stamp: Timestamp associated to the ROS message.
         """
-
         transform = get_transform_from_data(data)
         # Get type of the object seen.
 
@@ -513,7 +512,7 @@ class TransformListener():
 
         node_id0 = self.filter_name(node_id0)
         node_id1 = self.filter_name(node_id1)
-        print("after filter : message from %s to %s" % (node_id0, node_id1))
+        # print("after filter : message from %s to %s" % (node_id0, node_id1))
         # Ignore messages from one watchtower to another watchtower (i.e.,
         # odometry messages between watchtowers).
         is_from_watchtower = False
@@ -532,20 +531,20 @@ class TransformListener():
             self.resampler.signal_reference_time_stamp(self.first_time_stamp)
 
         if (node_id1 == node_id0):
-            print("got odometry")
+            # print("got odometry")
             # Same ID: odometry message, e.g. the same Duckiebot sending
             # odometry information at different instances in time.
             self.handle_odometry_message(
                 node_id1, data, time_stamp)
         elif (is_from_watchtower):
-            print("got message from watchtower")
+            # print("got message from watchtower")
 
             # Tag detected by a watchtower.
             self.handle_watchtower_message(
                 node_id0, node_id1, data, time_stamp)
         else:
             # Tag detected by a Duckiebot.
-            print("got message from duckiebot")
+            # print("got message from duckiebot")
             self.handle_duckiebot_message(
                 node_id0, node_id1, data, time_stamp)
         b = time.time()
@@ -664,7 +663,7 @@ class TransformListener():
             self.got_bag = True
             rospy.sleep(4)
             try:
-
+                print(bag_path)
                 subprocess.check_output("rosbag play %s" %
                                         bag_path, shell=True)
                 print("finished with reading the bag")

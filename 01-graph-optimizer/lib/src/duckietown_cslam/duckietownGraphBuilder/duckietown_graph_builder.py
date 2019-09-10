@@ -569,21 +569,38 @@ class MovableNode(Node):
                 mode = 'w'
             with open(result_file, mode=mode) as trajectory_yaml:
                 if not self.has_a_result_file:
-                    header = ["time_stamp", "x", "y", "z", "R11", "R12",
+                    header = ["x", "y", "z", "R11", "R12",
                               "R13", "R21", "R22", "R23", "R31", "R32", "R33"]
-                    data = {"header": header}
-                    data["data"] = {}
+                    data = {"data_header": {"time_stamp": header}}
+                    data["trajectory_data"] = {}
                 else:
                     data = yaml.load(trajectory_yaml)
 
                 for pose in poses_stamped:
-                    row = [pose[1].t]
-                    row.extend(pose[1].R[0])
-                    row.extend(pose[1].R[1])
-                    row.extend(pose[1].R[2])
+                    row = []
+                    for i in range(0, 3):
+                        row.append(str("%.3f" % pose[1].t[i]))
+                    for i in range(0, 3):
+                        for k in range(0, 3):
+                            row.append(str("%.5f" % pose[1].R[i][k]))
+
                     # print(row)
                     # row = ["coucou", 4, "les cococs"]
-                    data["data"][pose[0]] = row
+
+                    data["trajectory_data"][pose[0]] = row
+
+                time_stamps = data["trajectory_data"].keys()
+                min_time_stamp = min(time_stamps)
+                data["begin_time_stamp"] = min_time_stamp
+
+                keys = {}
+                for key, _ in data["trajectory_data"].iteritems():
+                    new_key = key - min_time_stamp
+                    keys[key] = "%08.4f" % new_key
+
+                for key, new_key in keys.iteritems():
+                    data["trajectory_data"][new_key] = data["trajectory_data"].pop(
+                        key)
                 yaml.dump(data, trajectory_yaml)
                 self.has_a_result_file = True
 
