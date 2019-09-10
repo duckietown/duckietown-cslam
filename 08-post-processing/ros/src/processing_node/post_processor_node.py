@@ -885,7 +885,7 @@ def get_environment_variables():
     config['ACQ_TAG_SIZE'] = float(os.getenv('ACQ_TAG_SIZE', 0.065))
     config['ACQ_POSES_TOPIC'] = os.getenv('ACQ_POSES_TOPIC', "poses")
     config["ACQ_TOPIC_WHEEL_COMMAND"] = os.getenv(
-        'ACQ_TOPIC_WHEEL_COMMAND', "wheels_driver_node/wheels_cmd")
+        'ACQ_TOPIC_WHEEL_COMMAND', "wheels_driver_node/wheels_cmd_decalibrated")
     config["ACQ_ODOMETRY_TOPIC"] = os.getenv(
         'ACQ_ODOMETRY_TOPIC', 'odometry')
     config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
