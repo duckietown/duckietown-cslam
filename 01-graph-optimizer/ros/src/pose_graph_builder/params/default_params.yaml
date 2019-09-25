@@ -10,7 +10,7 @@ resampling_frequency : 15.0
 
 # DUCKIETOWN_GRAPH PARAMS
 stocking_time : 120
-optimization_frequency : 0.5
+optimization_frequency : 0.2
 minimum_edge_number_for_optimization : 100
 rejection_sampling_int : 30
 max_number_same_edge : 20

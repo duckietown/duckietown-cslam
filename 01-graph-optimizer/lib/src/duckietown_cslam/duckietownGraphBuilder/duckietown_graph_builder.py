@@ -716,14 +716,24 @@ class DuckietownGraphBuilder(object):
 
         self.stocking_time = stocking_time
         self.last_cleaning = 0.0
+        self.timeout = 5.0
         self.using_priors = using_priors
         self.default_variance = default_variance
+        self.last_callback = -1
         if(priors_filename is not None):
             self.priors = PriorHandler(priors_filename)
 
         if (initial_floor_april_tags != ""):
             self.load_initial_floor_april_tags(initial_floor_april_tags)
         print("init done")
+
+    def wait(self):
+        now = time.time()
+        if self.last_callback == -1:
+            self.last_callback = now
+        while now - self.last_callback <= self.timeout:
+            time.sleep(1.0)
+            now = time.time()
 
     def load_initial_floor_april_tags(self, initial_floor_april_tag_file):
         """Adds the poses of the initial floor April tags to the graph by
@@ -897,7 +907,7 @@ class DuckietownGraphBuilder(object):
                                 measure, robust_kernel_value=0.1, measure_information=measure_information)
             if self.using_priors:
                 self.add_priors(node_id_0, node_id_1, time_stamp)
-
+            self.last_callback = time.time()
         else:
             node = self.get_node(node_id_0)
             # Associate timestamps to the vertex.
@@ -924,6 +934,7 @@ class DuckietownGraphBuilder(object):
                         is_initial_floor_tag=False,
                         fixed=False,
                         time_stamp=time_stamp)
+                    self.last_callback = time.time()
 
                 else:
                     # Update the known last odometry message time_stamp for the node
@@ -935,6 +946,7 @@ class DuckietownGraphBuilder(object):
                     node.interpolate(old_time_stamp, time_stamp,
                                      measure, measure_information=measure_information)
 
+                    self.last_callback = time.time()
                     return True
 
             else:

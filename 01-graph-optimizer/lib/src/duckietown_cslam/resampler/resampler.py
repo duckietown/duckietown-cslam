@@ -348,6 +348,8 @@ class Resampler():
         self.stopFlag = threading.Event()
         self.frequency = resampling_frequency
         self.time_interval = 1.0 / self.frequency
+        self.last_callback = -1
+        self.timeout = 5.0
 
     def handle_odometry_edge(self, duckiebot_id, measure, time_stamp, measure_information=None):
         if duckiebot_id not in self.odometry_samplers:
@@ -355,6 +357,7 @@ class Resampler():
                 duckiebot_id, self.pose_graph, time_stamp, self.reference_time_stamp, self.frequency)
         odometry_sampler = self.odometry_samplers[duckiebot_id]
         odometry_sampler.add_edge(measure, time_stamp, measure_information)
+        self.last_callback = time.time()
 
     def handle_watchtower_edge(self, watchtower_id, node_id1, measure, time_stamp, measure_information=None, is_duckiebot=False):
         if is_duckiebot:
@@ -367,10 +370,12 @@ class Resampler():
         else:
             self.pose_graph.add_edge(
                 watchtower_id, node_id1, measure, time_stamp, measure_information)
+        self.last_callback = time.time()
 
     def handle_duckiebot_edge(self, duckiebot_id, node_id1, measure, time_stamp, measure_information=None):
         self.pose_graph.add_edge(
             duckiebot_id, node_id1, measure, time_stamp, measure_information)
+        self.last_callback = time.time()
 
     def optimize(self,
                  max_iteration,
@@ -386,6 +391,15 @@ class Resampler():
 
     def get_optimized_movable_paths(self):
         return self.pose_graph.get_movable_paths()
+
+    def wait(self):
+        now = time.time()
+        if self.last_callback == -1:
+            self.last_callback = now
+        while now - self.last_callback <= self.timeout:
+            time.sleep(1.0)
+            now = time.time()
+        self.pose_graph.wait()
 
     def on_shutdown(self):
         self.stopFlag.set()

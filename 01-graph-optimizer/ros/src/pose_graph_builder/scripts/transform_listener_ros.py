@@ -159,16 +159,15 @@ class PointBroadcaster(threading.Thread):
 
 
 class PathBroadcaster(threading.Thread):
-    def __init__(self, dictionnary):
+    def __init__(self, node_path, node_id):
         threading.Thread.__init__(self)
-        self.path_dict = dictionnary
+        self.node_path = node_path
+        self.node_id = node_id
         self.path = Path()
         self.publisher = rospy.Publisher(
-            '/movable_path', Path, queue_size=10)
-        self.colors = [[0, 0, 1], [0, 1, 0], [1, 0, 0],
-                       [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]
+            '/movable_path_%s' % self.node_id, Path, queue_size=10)
 
-    def path_broadcast(self, node_id, node_path, color_index):
+    def run(self):
         """ Brodcasts the path for the node
 
             Args:
@@ -178,21 +177,13 @@ class PathBroadcaster(threading.Thread):
         # Create broadcaster and transform.
         # Set frame ID. TODO: change it depending on the node type.
         self.path.header.stamp = rospy.Time.now()
-        if (node_id.startswith("duckiebot")):
+        if (self.node_id.startswith("duckiebot")):
             self.path.header.frame_id = "map"
         else:
             self.path.header.frame_id = "map"
-        # Set frame ID.
-        # line_strip.id = int(node_id.split("_")[1])
-        # line_strip.color.r = self.colors[color_index][0]
-        # line_strip.color.g = self.colors[color_index][1]
-        # line_strip.color.b = self.colors[color_index][2]
-        # line_strip.color.a = 1.0
-        # line_strip.scale.x = 0.01
-        # Set transform:
-        # - Create translation vector.
-        for time_stamp in sorted(node_path.keys()):
-            node_pose = self.path_dict[node_id][time_stamp]
+
+        for time_stamp in sorted(self.node_path.keys()):
+            node_pose = self.node_path[time_stamp]
             pose_stamped = geometry_msgs.msg.PoseStamped()
             R = node_pose.R
             # R[np.where(np.sabs(R) < 0.00001)] = 0
@@ -205,6 +196,7 @@ class PathBroadcaster(threading.Thread):
                 pose.position.x = node_pose.t[0]
                 pose.position.y = node_pose.t[1]
                 pose.position.z = node_pose.t[2]
+                # NOTE: in Pygeometry, quaternion is the(w, x, y, z) form.
                 pose.orientation.w = q[0]
                 pose.orientation.x = q[1]
                 pose.orientation.y = q[2]
@@ -218,28 +210,8 @@ class PathBroadcaster(threading.Thread):
                 self.path.poses.append(pose_stamped)
             except:
                 print("bad rotation %s" % str(R))
-        # - Create rotation matrix.
-        #   Verify that the rotation is a proper rotation.
-        # det = np.linalg.det(node_pose.R)
-        # if (det < 0):
-        #     print("after optim : det = %f" % det)
-        #   NOTE: in Pygeometry, quaternion is the (w, x, y, z) form.
-        # t.transform.rotation.w = q[0]
-        # t.transform.rotation.x = q[1]
-        # t.transform.rotation.y = q[2]
-        # t.transform.rotation.z = q[3]
-        # Send the transform.
-        self.publisher.publish(self.path)
-        # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
-        # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
 
-    def run(self):
-        color_index = 0
-        for node_id, node_path in self.path_dict.iteritems():
-            self.path_broadcast(node_id, node_path, color_index)
-            color_index += 1
-            if(color_index == len(self.colors)):
-                color_index = 0
+        self.publisher.publish(self.path)
 
 
 class TransformListener():
@@ -570,8 +542,9 @@ class TransformListener():
 
             path_dict = self.resampler.get_optimized_movable_paths()
             # print(path_dict)
-            path_broadcaster = PathBroadcaster(path_dict)
-            path_broadcaster.start()
+            for node_id, node_path in path_dict.iteritems():
+                path_broadcaster = PathBroadcaster(node_path, node_id)
+                path_broadcaster.start()
 
     def heartbeat_callback(self, timer_event):
         if not self.got_bag:
@@ -586,6 +559,7 @@ class TransformListener():
         diff = current_time - self.lastbeat
         if diff > self.timeout:
             print("heartbeat is timed out")
+            self.resampler.wait()
             self.resampler.optimize(
                 self.max_iteration * 10,
                 save_result=self.save_output,
@@ -600,10 +574,15 @@ class TransformListener():
 
             path_dict = self.resampler.get_optimized_movable_paths()
             # print(path_dict)
-            path_broadcaster = PathBroadcaster(path_dict)
-            path_broadcaster.start()
+            path_broadcasters = []
+            for node_id, node_path in path_dict.iteritems():
+                path_broadcaster = PathBroadcaster(node_path, node_id)
+                path_broadcaster.start()
+                path_broadcasters.append(path_broadcaster)
+
             point_broadcaster.join()
-            path_broadcaster.join()
+            for path_broadcaster in path_broadcasters:
+                path_broadcaster.join()
             self.signal_handler(signal.SIGINT, inspect.currentframe())
 
     def listen(self):
