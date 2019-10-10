@@ -188,7 +188,8 @@ def get_trafficsign_apriltags():
     rospack = rospkg.RosPack()
     graph_builder_path = rospack.get_path('pose_graph_builder')
 
-    apriltags_DB = os.path.join(graph_builder_path, 'data', 'apriltagsDB.yaml')
+    apriltags_DB = os.path.join(
+        graph_builder_path, "..", 'duckietown-world/src/duckietown_world/data', 'apriltagsDB.yaml')
 
     tag_map = {}
 

@@ -272,7 +272,9 @@ class TransformListener():
             its ID and its type (e.g. TrafficSign, Localization, etc.).
         """
         config_folder = rospy.get_param("config_folder")
-        aprilstagDB = "%s/%s" % (config_folder, "apriltagsDB.yaml")
+        duckietown_world_folder = rospy.get_param("duckietown_world_folder")
+        aprilstagDB = "%s/%s" % (duckietown_world_folder,
+                                 "src/duckietown_world/data/apriltagsDB.yaml")
         aprilstagDB_custom = "%s/%s" % (config_folder,
                                         "apriltagsDB_custom.yaml")
         # Read YAML file.
@@ -595,8 +597,13 @@ class TransformListener():
         # anonymous=True flag means that rospy will choose a unique
         # name for our 'listener' node so that multiple listeners can
         # run simultaneously.
-        initial_floor_april_tags = "%s/%s" % (rospy.get_param("config_folder"),
-                                              "robotarium2.yaml")
+        map_name = os.getenv("MAP_NAME", "robotarium2")
+
+        if ".yaml" not in map_name and ".yml" not in map_name:
+            map_name = "%s.yaml" % map_name
+
+        initial_floor_april_tags = "%s/%s/%s" % (rospy.get_param("duckietown_world_folder"),
+                                                 "src/duckietown_world/data/gd1/maps", map_name)
         priors_filename = "%s/%s" % (rospy.get_param("config_folder"),
                                      "priors.yaml")
         default_variance_filename = "%s/%s" % (rospy.get_param("config_folder"),
