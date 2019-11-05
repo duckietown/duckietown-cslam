@@ -65,7 +65,7 @@ class ApriltagProcessorNode():
         self.apriltag_pose_topic = str(
             "/poses_acquisition/" + self.ACQ_POSES_TOPIC)
         self.publishers["apriltags"] = rospy.Publisher(
-            apriltag_pose_topic, AprilTagExtended, queue_size=20)
+            self.apriltag_pose_topic, AprilTagExtended, queue_size=20)
 
         # If the test stream is requested
         if self.ACQ_TEST_STREAM:

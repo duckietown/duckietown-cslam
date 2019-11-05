@@ -8,4 +8,4 @@ echo ROS_MASTER_URI
 
 cd /code/catkin_ws
 source /code/catkin_ws/devel/setup.bash
-roslaunch pose_graph_builder graph_builder.launch 
+roslaunch pose_graph_builder graph_builder.launch

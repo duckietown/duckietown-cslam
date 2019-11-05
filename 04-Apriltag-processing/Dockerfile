@@ -1,4 +1,4 @@
-FROM duckietown/dt-ros-commons:master19-amd64
+FROM duckietown/dt-ros-commons:daffy-amd64
 
 MAINTAINER Amaury Camus <camusam@ethz.ch>
 

@@ -71,11 +71,11 @@ class OdometryProcessor():
         self.odometry_msg.transform.translation.z = 0.0
         self.odometry_msg.transform.rotation.x = 0.0
         self.odometry_msg.transform.rotation.y = 0.0
-        if self.OUTPUT_BAG_PATH is not None:
+        if self.OUTPUT_BAG_PATH is None:
             self.odometry_publisher = rospy.Publisher(
                 self.odometry_topic, TransformStamped, queue_size=1)
 
-        if self.OUTPUT_BAG_PATH is not None:
+        else:
             self.outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
 
         if self.INPUT_BAG_PATH is not None:
@@ -88,8 +88,9 @@ class OdometryProcessor():
         self.logger.info('Acquisition processor is set up.')
 
     def heartbeat_callback(self, timerevent):
-        if not self.bag_reader.is_alive():
-            rospy.signal_shutdown("exiting from heartbeat")
+        if self.INPUT_BAG_PATH is not None:
+            if not self.bag_reader.is_alive():
+                rospy.signal_shutdown("exiting from heartbeat")
 
     def read_bag(self):
         bag = rosbag.Bag(self.INPUT_BAG_PATH + ".bag", 'r')
@@ -169,7 +170,7 @@ def get_environment_variables():
     config = dict()
     config["ACQ_DEVICE_NAME"] = os.getenv('ACQ_DEVICE_NAME', 'autobot01')
     config["ACQ_TOPIC_WHEEL_COMMAND"] = os.getenv(
-        'ACQ_TOPIC_WHEEL_COMMAND', "wheels_driver_node/wheels_cmd")
+        'ACQ_TOPIC_WHEEL_COMMAND', "wheels_driver_node/wheels_cmd_decalibrated")
     config["ACQ_ODOMETRY_TOPIC"] = os.getenv(
         'ACQ_ODOMETRY_TOPIC', 'odometry')
     config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')

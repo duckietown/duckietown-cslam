@@ -39,4 +39,4 @@ RUN chmod +x /code/catkin_ws/src/pose_graph_builder/*.sh
 ENV DUCKIETOWN_WORLD_FORK duckietown
 ENV MAP_NAME robotarium2
 
-CMD /bin/bash -c "cd ${CATKIN_WS_DIR}/src; git clone https://github.com/${DUCKIETOWN_WORLD_FORK}/duckietown-world.git ;source /opt/ros/kinetic/setup.bash; source ${CATKIN_WS_DIR}/devel/setup.bash/devel/setup.bash; /code/catkin_ws/src/pose_graph_builder/wrapper.sh"
+CMD /bin/bash -c "cd ${CATKIN_WS_DIR}/src; git clone https://github.com/${DUCKIETOWN_WORLD_FORK}/duckietown-world.git ;source /opt/ros/kinetic/setup.bash; /code/catkin_ws/src/pose_graph_builder/wrapper.sh"

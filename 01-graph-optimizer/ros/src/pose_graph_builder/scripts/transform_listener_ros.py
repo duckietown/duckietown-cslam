@@ -614,7 +614,7 @@ class TransformListener():
         using_priors = rospy.get_param("using_priors")
         result_folder = rospy.get_param("result_folder")
         resampling_frequency = rospy.get_param("resampling_frequency", 20.0)
-        bag_present = False
+        bag_is_present = False
         bag_env = "ATMSGS_BAG"
         if not bag_env in os.environ:
             print('I expect environment variable %s' % bag_env)

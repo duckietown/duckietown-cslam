@@ -7,8 +7,7 @@ services:
         environment:
             ATMSGS_BAG: /data/processed.bag
             OUTPUT_DIR: /challenges/challenge-evaluation-output
-            ROS_HOSTNAME: 172.31.168.115
-            ROS_IP: 172.31.168.115
+            ROS_MASTER_IP: 172.31.168.115
             ROS_MASTER : duckietown3
             DUCKIETOWN_WORLD_FORK : AmaurX
             MAP_NAME : robotarium2
