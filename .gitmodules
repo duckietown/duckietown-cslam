@@ -7,3 +7,6 @@
 [submodule "04-Apriltag-processing/lib/src/apriltags3-py"]
 	path = 04-Apriltag-processing/lib/src/apriltags3-py
 	url = https://github.com/duckietown/apriltags3-py
+[submodule "08-post-processing/lib/src/apriltags3-py"]
+	path = 08-post-processing/lib/src/apriltags3-py
+	url = https://github.com/duckietown/apriltags3-py
