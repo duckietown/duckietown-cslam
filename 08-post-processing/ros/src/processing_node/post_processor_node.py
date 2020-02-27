@@ -93,7 +93,7 @@ class PostProcessor():
 
     def launch_all(self):
         number_of_agent = len(self.list_of_agent_apriltag)
-        number_of_processes = max(2, int(16.0/number_of_agent))
+        number_of_processes = max(2, int(8.0/number_of_agent))
         topic_remapping = {}
         for agent in self.list_of_agent_apriltag:
             config = self.sub_config
@@ -139,7 +139,10 @@ class PostProcessor():
         return 0
 
     def get_data_and_create_bag(self):
-        outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
+        if os.path.isfile(self.OUTPUT_BAG_PATH):
+            outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'a')
+        else:
+            outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
 
         for node in self.node_list:
             data = node.get_data()
@@ -192,19 +195,6 @@ class ApriltagProcessorNode():
         self.publishers["apriltags"] = rospy.Publisher(
             self.apriltag_pose_topic, AprilTagExtended, queue_size=20)
 
-        # If the test stream is requested
-        # if self.ACQ_TEST_STREAM:
-        #     self.publishers["test_stream_image"] = rospy.Publisher(
-        #         "/poses_acquisition/test_video/"+self.ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-        #     self.publishers["raw_image"] = rospy.Publisher(
-        #         "/poses_acquisition/raw_video/"+self.ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-        #     self.publishers["rectified_image"] = rospy.Publisher(
-        #         "/poses_acquisition/rectified_video/"+self.ACQ_DEVICE_NAME+"/compressed", CompressedImage, queue_size=1)
-        #     self.publishers["raw_camera_info"] = rospy.Publisher(
-        #         "/poses_acquisition/camera_info_raw/"+self.ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
-        #     self.publishers["new_camera_matrix"] = rospy.Publisher(
-        #         "/poses_acquisition/camera_info_rectified/"+self.ACQ_DEVICE_NAME, CameraInfo, queue_size=1)
-
         # Initialize attributes
         self.lastCameraInfo = None
 
@@ -239,136 +229,10 @@ class ApriltagProcessorNode():
         self.last_call_back_time = rospy.get_time()
 
         self.end_reached = False
-        # if self.INPUT_BAG_PATH is not None:
-        #     self.bag_reader = multiprocessing.Process(
-        #         target=self.read_bag)
-        #     self.bag_reader.start()
-        #     self.image_processor_list.append(self.bag_reader)
 
         self.logger.info('Apriltag processor node for %s is set up.' %
                          self.ACQ_DEVICE_NAME)
-        # self.heartbeat = rospy.Timer(rospy.Duration(1.0),
-        #                              self.heartbeat_callback)
 
-        # if self.OUTPUT_BAG_PATH is None:
-        #     self.publish_loop_process = multiprocessing.Process(
-        #         target=self.publish_loop)
-        #     self.publish_loop_process.start()
-        #     self.image_processor_list.append(self.publish_loop_process)
-
-        # if self.INPUT_BAG_PATH:
-        #     self.read_bag()
-
-    # def heartbeat_callback(self, timer_event):
-    #     pass
-    #     if len(multiprocessing.active_children()) < 2:
-    #         rospy.signal_shutdown("from main process")
-
-    # def read_bag(self):
-    #     bag = rosbag.Bag(self.INPUT_BAG_PATH + ".bag", 'r')
-    #     outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
-
-    #     start_time = bag.get_start_time()
-    #     end_time = bag.get_end_time()
-    #     self.duration = end_time - start_time
-    #     rospy.sleep(4)
-    #     os.system("rosbag play %s.bag" % self.INPUT_BAG_PATH)
-    #     rospy.sleep(self.duration * 1.3)
-    #     self.logger.info(self.publish_queue.qsize())
-    #     while not self.publish_queue.empty():
-    #         self.logger.info("in the loop")
-    #         message_dict = self.publish_queue.get(block=True)
-    #         self.logger.info("in the loop, got a message")
-
-    #         if message_dict["topic"] == "apriltags":
-    #             self.logger.info("in the if !")
-
-    #             outputbag.write(self.apriltag_pose_topic,
-    #                             message_dict["message"])
-    #     outputbag.close()
-    #     rospy.sleep(1)
-    #     rospy.signal_shutdown("the bag is finished")
-
-    # def read_bag_old(self):
-    #     bag = rosbag.Bag(self.INPUT_BAG_PATH + ".bag", 'r')
-    #     outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
-
-    #     start_time = bag.get_start_time()
-    #     end_time = bag.get_end_time()
-    #     self.duration = end_time - start_time
-    #     bag_dict = {}
-    #     for topic, message, timestamp in bag.read_messages():
-    #         if timestamp not in bag_dict:
-    #             bag_dict[rospy.Time.to_sec(timestamp)] = [(
-    #                 topic, message, timestamp)]
-    #         else:
-    #             bag_dict[rospy.Time.to_sec(timestamp)].add(
-    #                 (topic, message, timestamp))
-    #     # pprint.pprint(bag_dict)
-
-    #     for timestamp in sorted(bag_dict.keys()):
-    #         for (topic, message, timestamp) in bag_dict[timestamp]:
-    #             # print(bag_dict[timestamp][self.camera_info_topic][1])
-    #             if topic == self.camera_info_topic:
-    #                 new_message = CameraInfo()
-    #                 new_message.header = message.header
-    #                 new_message.height = message.height
-    #                 new_message.width = message.width
-    #                 new_message.distortion_model = message.distortion_model
-    #                 new_message.D = message.D
-    #                 new_message.K = message.K
-    #                 new_message.R = message.R
-    #                 new_message.P = message.P
-    #                 new_message.binning_x = message.binning_x
-    #                 new_message.binning_y = message.binning_y
-    #                 new_message.roi = message.roi
-
-    #                 self.camera_info_callback(new_message)
-    #             if topic == self.camera_topic:
-    #                 new_message = CompressedImage()
-    #                 new_message.header = message.header
-    #                 new_message.format = message.format
-    #                 new_message.data = message.data
-    #                 self.camera_image_callback(new_message)
-    #             time.sleep(0.005)
-
-    #     # print(self.image_queue.qsize())
-
-    #     while not self.publish_queue.empty():
-    #         rospy.sleep(5)
-    #     rospy.sleep(5)
-
-    #     while rospy.get_time() - self.last_call_back_time < 5.0:
-    #         rospy.sleep(1)
-
-    #     while not self.publish_queue.empty():
-    #         message_dict = self.publish_queue.get(block=True)
-    #         if message_dict == "apriltags":
-    #             outputbag.write(self.apriltag_pose_topic,
-    #                             message_dict["message"])
-    #     outputbag.close()
-    #     rospy.sleep(1)
-
-    #     rospy.signal_shutdown("the bag is finished")
-
-    # def publish_loop(self):
-    #     while True:
-    #         try:
-    #             message_dict = self.publish_queue.get(block=True)
-    #             if message_dict == self.death_signal[0]:
-    #                 break
-    #             if self.INPUT_BAG_PATH is None:
-    #                 self.publishers[message_dict["topic"]
-    #                                 ].publish(message_dict["message"])
-    #             elif self.OUTPUT_BAG_PATH is None:
-    #                 self.logger.warning(
-    #                     "Input bag was specified but no output path was specified. Publishing to the online topics.")
-    #             else:
-    #                 if True:
-    #                     print("should not go here ")
-
-    #         except Exception as e:
-    #             self.logger.warning("publish loop : %s" % str(e))
     def are_all_processors_finished(self):
         for process in self.image_processor_list:
             process.join(timeout=0)
@@ -721,20 +585,11 @@ class OdometryProcessor():
         self.ACQ_DEVICE_NAME = self.config['ACQ_DEVICE_NAME']
         self.ACQ_TOPIC_WHEEL_COMMAND = self.config["ACQ_TOPIC_WHEEL_COMMAND"]
         self.ACQ_ODOMETRY_TOPIC = self.config['ACQ_ODOMETRY_TOPIC']
-        # self.INPUT_BAG_PATH = self.config["INPUT_BAG_PATH"]
-        # self.OUTPUT_BAG_PATH = self.config["OUTPUT_BAG_PATH"]
 
-        # Initialize ROS nodes and subscribe to topics
-        # rospy.init_node('acquisition_processor',
-        #                 anonymous=True, disable_signals=True)
         self.last_call_back_time = rospy.get_time()
 
         self.subscriber = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_WHEEL_COMMAND, WheelsCmdStamped,
                                            self.wheels_cmd_callback,  queue_size=150)
-
-        # Only if set (probably not for watchtowers)
-        # self.subscriberCameraInfo = rospy.Subscriber('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_VELOCITY_TO_POSE, Pose2DStamped,
-        #                                              self.odometry_callback,  queue_size=1)
 
         self.wheel_radius = 0.065
         self.duckiebot_width = 0.10
@@ -761,38 +616,8 @@ class OdometryProcessor():
         self.odometry_msg.transform.translation.z = 0.0
         self.odometry_msg.transform.rotation.x = 0.0
         self.odometry_msg.transform.rotation.y = 0.0
-        # if self.OUTPUT_BAG_PATH is not None:
-        #     self.odometry_publisher = rospy.Publisher(
-        #         self.odometry_topic, TransformStamped, queue_size=1)
 
-        # if self.OUTPUT_BAG_PATH is not None:
-        #     self.outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
-
-        # if self.INPUT_BAG_PATH is not None:
-        #     self.bag_reader = multiprocessing.Process(
-        #         target=self.read_bag)
-        #     self.bag_reader.start()
-
-        # self.heartbeat = rospy.Timer(rospy.Duration(1.0),
-        #                              self.heartbeat_callback)
         self.logger.info('Acquisition processor is set up.')
-
-    # def heartbeat_callback(self, timerevent):
-    #     if not self.bag_reader.is_alive():
-    #         rospy.signal_shutdown("exiting from heartbeat")
-
-    # def read_bag(self):
-    #     bag = rosbag.Bag(self.INPUT_BAG_PATH + ".bag", 'r')
-    #     start_time = bag.get_start_time()
-    #     end_time = bag.get_end_time()
-    #     self.duration = end_time - start_time
-    #     rospy.sleep(4)
-    #     os.system("rosbag play %s.bag -r 3" % self.INPUT_BAG_PATH)
-    #     rospy.sleep(self.duration * 0.5)
-    #     while rospy.get_time() - self.last_call_back_time < 5.0:
-    #         rospy.sleep(1.0)
-    #     self.outputbag.close()
-    #     rospy.signal_shutdown("the bag is finished")
 
     def signal_end(self):
         self.logger.info("giving death signal")
@@ -869,7 +694,7 @@ class OdometryProcessor():
         message_dict = {"topic": "odometry",
                         "message": odometry_msg}
         self.odometry_list.append(message_dict)
-            # self.outputbag.write(self.odometry_topic, self.odometry_msg)
+        # self.outputbag.write(self.odometry_topic, self.odometry_msg)
 
 
 def get_environment_variables():
