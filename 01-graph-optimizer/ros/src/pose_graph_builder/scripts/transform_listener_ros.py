@@ -567,7 +567,8 @@ class TransformListener():
                 save_result=self.save_output,
                 verbose=self.verbose,
                 output_name="/tmp/output.g2o",
-                online=self.online_optimization)
+                online=self.online_optimization,
+                final=True)
             pose_dict = self.resampler.get_all_optimized_poses()
             # c = rospy.get_time()
 

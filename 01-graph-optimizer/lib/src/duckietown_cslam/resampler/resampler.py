@@ -382,9 +382,10 @@ class Resampler():
                  save_result,
                  verbose,
                  output_name,
-                 online):
+                 online,
+                 final=False):
         self.pose_graph.optimize(max_iteration, save_result=save_result,
-                                 verbose=verbose, output_name=output_name, online=online)
+                                 verbose=verbose, output_name=output_name, online=online, final=final)
 
     def get_all_optimized_poses(self):
         return self.pose_graph.get_all_poses()

@@ -284,6 +284,7 @@ class MovableNode(Node):
         self.last_time_stamp = -1
         self.has_a_result_file = False
         self.had_odometry_before = False
+        self.last_watchtower_time_stamp = -1
 
     def check_if_first_watchtower_msg(self, time_stamp):
         with self.node_lock:
@@ -293,6 +294,11 @@ class MovableNode(Node):
     def set_last_odometry_time_stamp(self, time_stamp):
         with self.node_lock:
             self.last_odometry_time_stamp = time_stamp
+
+    def set_last_watchtower_time_stamp(self, time_stamp):
+        with self.node_lock:
+            if time_stamp > self.last_watchtower_time_stamp:
+                self.last_watchtower_time_stamp = time_stamp
 
     def set_first_odometry_time_stamp(self, time_stamp):
         with self.node_lock:
@@ -640,6 +646,23 @@ class MovableNode(Node):
                 for index in anterior_time_stamps_indices:
                     self.duckietown_graph.remove_vertex_by_index(index)
 
+    def final_clean(self):
+        self.clean()
+        posterior_time_stamps_indices = []
+
+        if(self.last_watchtower_time_stamp != -1):
+            with self.node_lock:
+                posterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
+                ) if time_stamp > self.last_watchtower_time_stamp]
+                for time_stamp in posterior_time_stamps:
+                    self.cyclic_counter.remove_index(
+                        self.time_stamps_to_indices[time_stamp])
+                    posterior_time_stamps_indices.append(
+                        self.get_g2o_index(time_stamp))
+                    self.time_stamps_to_indices.pop(time_stamp)
+            for index in posterior_time_stamps_indices:
+                self.duckietown_graph.remove_vertex_by_index(index)
+
 
 class DuckietownGraphBuilder(object):
     """Creates an internal g2o pose graph, and optimizes over it. At the same
@@ -898,6 +921,7 @@ class DuckietownGraphBuilder(object):
             node_1.add_timestamp(time_stamp)
             if(node_0.node_type == "watchtower" and node_1.is_movable()):
                 node_1.check_if_first_watchtower_msg(time_stamp)
+                node_1.set_last_watchtower_time_stamp(time_stamp)
             # Obtain ID of the vertices in the graph in the integer format.
             vertex0_index = node_0.get_g2o_index(time_stamp)
             vertex1_index = node_1.get_g2o_index(time_stamp)
@@ -994,7 +1018,8 @@ class DuckietownGraphBuilder(object):
                  verbose=True,
                  save_result=True,
                  output_name="output.g2o",
-                 online=False):
+                 online=False,
+                 final=False):
         """Performs optimization.
 
             Args:
@@ -1007,8 +1032,10 @@ class DuckietownGraphBuilder(object):
          """
         # TODO : cleaning is gonna be useless when remove_old_poses will have run many times
         # Maybe find a way to stop doing it after a while
-
-        self.clean_graph()
+        if final:
+            self.final_clean_graph()
+        else:
+            self.clean_graph()
         if self.stocking_time is not None:
             global_last_time_stamp = self.get_global_last_time()
             if(global_last_time_stamp - self.last_cleaning > self.stocking_time/2.0):
@@ -1052,6 +1079,16 @@ class DuckietownGraphBuilder(object):
             for _, node in self.node_dict.iteritems():
                 if node.is_movable():
                     node.clean()
+
+    def final_clean_graph(self):
+        """
+            Gets rid of useless vertices in the graph
+            Considered as useless are vertices that are anterior to the first odometry message
+        """
+        with self.lock:
+            for _, node in self.node_dict.iteritems():
+                if node.is_movable():
+                    node.final_clean()
 
     ###################################
     #        ACCESS FUNCTIONS         #
