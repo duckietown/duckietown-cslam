@@ -5,6 +5,7 @@ import math
 import multiprocessing
 import os
 import sys
+import time
 
 import numpy as np
 import rosbag
@@ -16,17 +17,22 @@ from sensor_msgs.msg import (CameraInfo, CompressedImage, Image,
 from std_msgs.msg import Header
 from multiprocessing import Process
 
-import apriltags3
+import aruco_lib_adapter
 import cv2
-from duckietown_msgs.msg import AprilTagExtended, Pose2DStamped
+from duckietown_msgs.msg import AprilTagExtended
 from image_rectifier import ImageRectifier
 
-ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
-ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
-sys.path.append(ACQ_APRILTAG_LIB)
+
+# from cv_bridge.boost.cv_bridge_boost import getCvType
+
+# ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
+# ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
+# ACQ_APRILTAG_LIB = "/home/galanton/duckietown/cslam_aruco_detector/ros/src/lib/aruco/build"
+ACQ_APRILTAG_SO = "/home/galanton/duckietown/cslam_aruco_detector/ros/src/lib/aruco/build/libaruco_func.so"
+# sys.path.append(ACQ_APRILTAG_LIB)
 
 
-class ApriltagProcessorNode():
+class ArucoDetectorNode():
     """
     Processes the data coming from a remote device (Duckiebot or watchtower).
     """
@@ -41,19 +47,14 @@ class ApriltagProcessorNode():
         self.ACQ_BEAUTIFY = self.config['ACQ_BEAUTIFY']
         self.ACQ_TAG_SIZE = self.config['ACQ_TAG_SIZE']
         self.ACQ_POSES_TOPIC = self.config['ACQ_POSES_TOPIC']
-        self.ACQ_APRILTAG_QUAD_DECIMATE = self.config['ACQ_APRILTAG_QUAD_DECIMATE']
-        self.ACQ_POSES_UPDATE_RATE = self.config['ACQ_POSES_UPDATE_RATE']
+        # self.ACQ_APRILTAG_QUAD_DECIMATE = self.config['ACQ_APRILTAG_QUAD_DECIMATE']
+        # self.ACQ_POSES_UPDATE_RATE = self.config['ACQ_POSES_UPDATE_RATE']
         self.INPUT_BAG_PATH = config['INPUT_BAG_PATH']
         self.OUTPUT_BAG_PATH = config['OUTPUT_BAG_PATH']
 
-        self.aprilTagProcessor = apriltags3.Detector(searchpath=[ACQ_APRILTAG_SO],
-                                                     families='tag36h11',
-                                                     nthreads=4,
-                                                     quad_decimate=1.0,
-                                                     quad_sigma=0.0,
-                                                     refine_edges=1,
-                                                     decode_sharpening=0.25,
-                                                     debug=0)
+        self.aprilTagProcessor = aruco_lib_adapter.Detector(
+            searchpath=[ACQ_APRILTAG_SO], families='tag36h11', nthreads=4, quad_decimate=10.0,
+            quad_sigma=0.0, refine_edges=1, decode_sharpening=0.25, debug=0)
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('apriltag_processor_node',
@@ -87,18 +88,14 @@ class ApriltagProcessorNode():
         self.logger.info('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW)
 
         self.seq_stamper = 0
-        self.image_processor_list = []
 
         # Initialize the device side processor
         self.imageprocessor_options = {'beautify': self.ACQ_BEAUTIFY,
                                        'tag_size': self.ACQ_TAG_SIZE}
         rospy.on_shutdown(self.on_shutdown)
-        for i in range(8):
-            new_image_processor = ImageProcessor(
-                self.imageprocessor_options, self.logger, self.publishers, self.aprilTagProcessor, self.publish_queue, self.config, self.image_queue)
-            self.image_processor_list.append(
-                new_image_processor)
-            new_image_processor.start()
+        self.image_processor = ImageProcessor(self.imageprocessor_options, self.logger, self.publishers,
+                                              self.aprilTagProcessor, self.publish_queue, self.config, self.image_queue)
+        self.image_processor.start()
 
         self.camera_topic = str(
             '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW)
@@ -110,8 +107,7 @@ class ApriltagProcessorNode():
         self.subscriberCameraInfo = rospy.Subscriber(self.camera_info_topic, CameraInfo,
                                                      self.camera_info_callback,  queue_size=50)
         if self.INPUT_BAG_PATH is not None:
-            self.bag_reader = Process(
-                target=self.read_bag)
+            self.bag_reader = Process(target=self.read_bag)
             self.bag_reader.start()
         if self.OUTPUT_BAG_PATH is not None:
             self.outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
@@ -143,19 +139,16 @@ class ApriltagProcessorNode():
             try:
                 message_dict = self.publish_queue.get(block=True)
                 if self.INPUT_BAG_PATH is None:
-                    self.publishers[message_dict["topic"]
-                                    ].publish(message_dict["message"])
+                    self.publishers[message_dict["topic"]].publish(message_dict["message"])
                 elif self.OUTPUT_BAG_PATH is None:
                     self.logger.warning(
                         "Input bag was specified but no output path was specified. Publishing to the online topics.")
                 else:
                     if(message_dict["topic"] == "apriltags"):
-                        self.outputbag.write(
-                            self.apriltag_pose_topic, message_dict["message"])
+                        self.outputbag.write(self.apriltag_pose_topic, message_dict["message"])
                     else:
                         # TODO this is bad, the topics will be wrong
-                        self.outputbag.write(
-                            message_dict["topic"], message_dict["message"])
+                        self.outputbag.write(message_dict["topic"], message_dict["message"])
 
             except Exception as e:
                 self.logger.warning("publish loop : %s" % str(e))
@@ -174,11 +167,10 @@ class ApriltagProcessorNode():
         """
         self.last_call_back_time = rospy.get_time()
 
-        self.logger.info("Got image")
+        # self.logger.info("Got image")
         if self.lastCameraInfo is not None:
             # Collect latest ros_data
-            self.image_queue.put(
-                (ros_data, self.lastCameraInfo, self.seq_stamper), block=True)
+            self.image_queue.put((ros_data, self.lastCameraInfo, self.seq_stamper), block=True)
             self.seq_stamper += 1
 
             # self.logger.warning(str(len(multiprocessing.active_children())))
@@ -188,8 +180,7 @@ class ApriltagProcessorNode():
     def on_shutdown(self):
 
         self.logger.info("Waiting for all apriltag image processors to end")
-        for process in self.image_processor_list:
-            process.kill()
+        self.image_processor.kill()
         self.logger.info("apriltag processor node shutting down now")
 
 
@@ -223,8 +214,10 @@ class ImageProcessor(multiprocessing.Process):
             (self.raw_image, self.camera_info,
              self.seq_stamper) = self.image_queue.get(block=True)
 
-            cv_image = self.bridge.compressed_imgmsg_to_cv2(
-                self.raw_image, desired_encoding='mono8')
+            cv_image = cv2.imread('/home/galanton/duckietown/cslam_aruco_detector/ros/src/example_image.jpg',
+                                  cv2.IMREAD_ANYCOLOR)
+            # cv_image = self.bridge.compressed_imgmsg_to_cv2(
+            #     self.raw_image, desired_encoding='mono8')
 
             # Scale the K matrix if the image resolution is not the same as in the calibration
             currRawImage_height = cv_image.shape[0]
@@ -245,14 +238,17 @@ class ImageProcessor(multiprocessing.Process):
             outputDict = dict()
 
             # Process the image and extract the apriltags
-            outputDict = self.process(cv_image,  (np.array(
-                self.camera_info.K)*scale_matrix).reshape((3, 3)), self.camera_info.D)
-            outputDict['header'] = self.raw_image.header
+            outputDict = self.process(cv_image, currRawImage_width, currRawImage_height,
+                                      (np.array(self.camera_info.K)*scale_matrix).reshape((3, 3)), self.camera_info.D)
+            # outputDict['header'] = self.raw_image.header
+            outputDict['header'] = rospy.Header
 
             # Add the time stamp and source of the input image to the output
             for idx in range(len(outputDict['apriltags'])):
-                outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
-                outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
+                outputDict['apriltags'][idx]['timestamp_secs'] = 123
+                outputDict['apriltags'][idx]['timestamp_nsecs'] = 42
+                # outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
+                # outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
                 outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
 
             # Generate a diagnostic image
@@ -300,7 +296,7 @@ class ImageProcessor(multiprocessing.Process):
             # PUBLISH HERE
             self.publish(outputDict)
 
-    def process(self, raw_image, cameraMatrix, distCoeffs):
+    def process(self, raw_image, width, height, cameraMatrix, distCoeffs):
         """
         Processes an image.
         """
@@ -321,15 +317,19 @@ class ImageProcessor(multiprocessing.Process):
             else:
                 rect_image_gray = rect_image
 
+            if len(raw_image.shape) == 3:
+                raw_image_gray = cv2.cvtColor(raw_image, cv2.COLOR_BGR2GRAY)
+            else:
+                raw_image_gray = raw_image
+
             # Beautify if wanted:
             if self.opt_beautify and self.ImageRectifier:
                 raw_image = self.ImageRectifier.beautify(raw_image)
 
             # 3. Extract poses from april tags data
-            camera_params = (
-                newCameraMatrix[0, 0], newCameraMatrix[1, 1], newCameraMatrix[0, 2], newCameraMatrix[1, 2])
             tags = self.aprilTagProcessor.detect(
-                rect_image_gray, True, camera_params, self.tag_size)
+                raw_image_gray, width, height, cameraMatrix, distCoeffs)
+                # rect_image_gray, True, camera_params, self.tag_size)
 
             # 4. Package output
             outputDict = dict()
@@ -339,7 +339,7 @@ class ImageProcessor(multiprocessing.Process):
             for atag in tags:
                 outputDict['apriltags'].append({'tag_id': atag.tag_id,
                                                 'corners': atag.corners,
-                                                'qvec': self.mat2quat(atag.pose_R),
+                                                'qvec': self.rvec2quat(atag.pose_R),
                                                 'tvec': atag.pose_t,
                                                 'tag_family': atag.tag_family,
                                                 'hamming': atag.hamming,
@@ -354,29 +354,18 @@ class ImageProcessor(multiprocessing.Process):
                 'ImageProcessor process failed: : %s' % str(e))
             pass
 
-    def mat2quat(self, M):
-        """
-        Helper function that converts rotation matrices to quaternions.
-        """
-        try:
-            Qxx, Qyx, Qzx, Qxy, Qyy, Qzy, Qxz, Qyz, Qzz = M.flat
-            K = np.array([[Qxx - Qyy - Qzz, 0, 0, 0],
-                          [Qyx + Qxy, Qyy - Qxx - Qzz, 0, 0],
-                          [Qzx + Qxz, Qzy + Qyz, Qzz - Qxx - Qyy, 0],
-                          [Qyz - Qzy, Qzx - Qxz, Qxy - Qyx, Qxx + Qyy + Qzz]]) / 3.0
-            # Use Hermitian eigenvectors, values for speed
-            vals, vecs = np.linalg.eigh(K)
-            # Select largest eigenvector, reorder to x,y,z,w quaternion
-            q = vecs[[0, 1, 2, 3], np.argmax(vals)]
-            # Prefer quaternion with positive w
-            # (q * -1 corresponds to same rotation as q)
-            if q[3] < 0:
-                q *= -1
-            return q
-        except Exception as e:
-            self.logger.warning(
-                'ImageProcessor process failed: : %s' % str(e))
-            pass
+    def rvec2quat(self, rvec):
+        x = rvec[0]
+        y = rvec[1]
+        z = rvec[2]
+        r = math.sqrt(x * x + y * y + z * z)
+        c = math.cos(r / 2)
+        s = math.sin(r / 2)
+        quat_x = c
+        quat_y = s * z / r
+        quat_z = -s * y / r
+        quat_w = -s * x / r
+        return np.array([quat_x, quat_y, quat_z, quat_w])
 
     def publish(self, incomingData):
         if "apriltags" in incomingData:
@@ -417,8 +406,8 @@ class ImageProcessor(multiprocessing.Process):
                 self.publish_queue.put(
                     {"topic": "apriltags", "message": newApriltagDetectionMsg})
                 # self.publishers["apriltags"].publish(newApriltagDetectionMsg)
-                self.logger.info("Published pose for tag %d in sequence %d" % (
-                    tag["tag_id"], self.seq_stamper))
+                # self.logger.info("Published pose for tag %d in sequence %d" % (
+                #     tag["tag_id"], self.seq_stamper))
 
         # Publish the test and raw data if submitted and requested:
         if self.ACQ_TEST_STREAM:
@@ -471,21 +460,17 @@ class ImageProcessor(multiprocessing.Process):
 def get_environment_variables():
     config = dict()
 
-    config['ACQ_DEVICE_NAME'] = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
-    config['ACQ_TOPIC_RAW'] = os.getenv(
-        'ACQ_TOPIC_RAW', 'camera_node/image/compressed')
-    config['ACQ_TOPIC_CAMERAINFO'] = os.getenv(
-        'ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
-    config['ACQ_TEST_STREAM'] = bool(int(os.getenv('ACQ_TEST_STREAM', 1)))
-    config['ACQ_BEAUTIFY'] = bool(int(os.getenv('ACQ_BEAUTIFY', 1)))
+    config['ACQ_DEVICE_NAME'] = os.getenv('ACQ_DEVICE_NAME', 'watchtower66')
+    config['ACQ_TOPIC_RAW'] = os.getenv('ACQ_TOPIC_RAW', 'camera_image/compressed')
+    config['ACQ_TOPIC_CAMERAINFO'] = os.getenv('ACQ_TOPIC_CAMERAINFO', 'camera_image_info')
+    config['ACQ_TEST_STREAM'] = bool(int(os.getenv('ACQ_TEST_STREAM', 0)))
+    config['ACQ_BEAUTIFY'] = bool(int(os.getenv('ACQ_BEAUTIFY', 0)))
     config['ACQ_TAG_SIZE'] = float(os.getenv('ACQ_TAG_SIZE', 0.065))
     config['ACQ_POSES_TOPIC'] = os.getenv('ACQ_POSES_TOPIC', "poses")
 
-    config['ACQ_APRILTAG_QUAD_DECIMATE'] = float(
-        os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
+    # config['ACQ_APRILTAG_QUAD_DECIMATE'] = float(os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
+    # config['ACQ_POSES_UPDATE_RATE'] = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
 
-    config['ACQ_POSES_UPDATE_RATE'] = float(
-        os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
     config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
     config['OUTPUT_BAG_PATH'] = os.getenv('OUTPUT_BAG_PATH')
 
@@ -499,7 +484,7 @@ def main():
 
     config = get_environment_variables()
 
-    ap = ApriltagProcessorNode(logger, config)
+    adn = ArucoDetectorNode(logger, config)
 
     rospy.spin()
 
