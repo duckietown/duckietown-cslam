@@ -73,13 +73,10 @@ extern "C" PyObject *aruco_detect_and_estimate(PyObject *calib_dict, unsigned ch
         PyDict_SetItem(marker_dict, PyUnicode_FromString("tag_family"), PyUnicode_FromString(marker.dict_info.c_str()));
 #endif
 
-        // these points are first 4 points in contour, not corners
         PyObject *marker_corners = PyList_New(0);
         for (int i = 0; i < 4; i++) {
-            PyObject *marker_corner = PyList_New(0);
-            PyList_Append(marker_corner, PyLong_FromLong(marker.contourPoints[i].x));
-            PyList_Append(marker_corner, PyLong_FromLong(marker.contourPoints[i].y));
-            PyList_Append(marker_corners, marker_corner);
+            PyList_Append(marker_corners, PyFloat_FromDouble((double) marker[i].x));
+            PyList_Append(marker_corners, PyFloat_FromDouble((double) marker[i].y));
         }
 #ifdef __PYTHON2__
         PyDict_SetItemString(marker_dict, "corners", marker_corners);

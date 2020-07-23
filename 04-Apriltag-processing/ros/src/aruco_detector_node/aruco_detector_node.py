@@ -171,7 +171,7 @@ class ArucoDetectorNode():
     def on_shutdown(self):
 
         self.logger.info("Waiting for all apriltag image processors to end")
-        self.image_processor.kill()
+        self.image_processor.terminate()
         self.logger.info("apriltag processor node shutting down now")
         self.subscriberImage.unregister()
 
@@ -199,18 +199,12 @@ class ImageProcessor(multiprocessing.Process):
         self.raw_image = None
         self.camera_info = None
         self.seq_stamper = None
-        self.total_time = 0.0
-        self.min_time = 10000000000000.0
-        self.max_time = -1.0
-        self.iterations = 0.0
 
     def run(self):
         while True:
 
             (self.raw_image, self.camera_info,
              self.seq_stamper) = self.image_queue.get(block=True)
-
-            t0 = time.time()
 
             # cv_image = cv2.imread('/home/galanton/duckietown/cslam_aruco_detector/ros/src/example_image.jpg',
             #                       cv2.IMREAD_ANYCOLOR)
@@ -291,13 +285,6 @@ class ImageProcessor(multiprocessing.Process):
                 outputDict['rectified_image'].header.stamp.nsecs = self.raw_image.header.stamp.nsecs
                 outputDict['rectified_image'].header.frame_id = self.ACQ_DEVICE_NAME
 
-            t1 = time.time()
-            self.total_time += t1 - t0
-            self.iterations += 1
-            self.min_time = min(t1 - t0, self.min_time)
-            self.max_time = max(t1 - t0, self.max_time)
-            # print("%05d  %5.4f  %5.4f  %5.4f  %5.4f  %5.4f" %
-            #       (self.iterations, self.total_time, self.min_time, self.max_time, self.total_time / self.iterations, t1 - t0))
 
             # PUBLISH HERE
             self.publish(outputDict)
