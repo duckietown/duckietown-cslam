@@ -55,48 +55,9 @@ class Detection():
 
 class Detector(object):
 
-    '''Pythonic wrapper for apriltag_detector.
-
-    families: Tag families, separated with a space, default: tag36h11
-
-    nthreads: Number of threads, default: 1
-
-    quad_decimate: Detection of quads can be done on a lower-resolution image, improving speed at a cost of pose accuracy and a slight decrease in detection rate. Decoding the binary payload is still done at full resolution, default: 2.0
-
-    quad_sigma: What Gaussian blur should be applied to the segmented image (used for quad detection?)  Parameter is the standard deviation in pixels.  Very noisy images benefit from non-zero values (e.g. 0.8), default:  0.0
-
-    refine_edges: When non-zero, the edges of the each quad are adjusted to "snap to" strong gradients nearby. This is useful when decimation is employed, as it can increase the quality of the initial quad estimate substantially. Generally recommended to be on (1). Very computationally inexpensive. Option is ignored if quad_decimate = 1, default: 1
-
-    decode_sharpening: How much sharpening should be done to decoded images? This can help decode small tags but may or may not help in odd lighting conditions or low light conditions, default = 0.25
-
-    searchpath: Where to look for the Apriltag 3 library, must be a list, default: ['apriltags']
-
-    debug: If 1, will save debug images. Runs very slow, default: 0
-    '''
-
-    def __init__(self,
-                families='tag36h11',
-                nthreads=1,
-                quad_decimate=2.0,
-                quad_sigma=0.0,
-                refine_edges=1,
-                decode_sharpening=0.25,
-                debug=0,
-                searchpath=['apriltags']):
-
-        # Parse the parameters
-        self.params = dict()
-        self.params['families'] = families.split()
-        self.params['nthreads'] = nthreads
-        self.params['quad_decimate'] = quad_decimate
-        self.params['quad_sigma'] = quad_sigma
-        self.params['refine_edges'] = refine_edges
-        self.params['decode_sharpening'] = decode_sharpening
-        self.params['debug'] = debug
+    def __init__(self, searchpath=None, marker_size=0.065, tag_family="TAG36h11"):
 
         self.libc = None
-        self.tag_detector = None
-        self.tag_detector_ptr = None
 
         for path in searchpath:
             if os.path.exists(path):
@@ -104,14 +65,12 @@ class Detector(object):
                 break
 
         if self.libc is None:
-            raise RuntimeError('could not find DLL in', searchpath)
+            raise RuntimeError('could not find library in', searchpath)
 
-
-        marker_size = 0.065
-        tag_family = "TAG36h11"
 
         self.libc.aruco_init.argtypes = [ctypes.c_float, ctypes.c_char_p]
-        self.libc.aruco_init(marker_size, bytes(tag_family, encoding='utf8'))
+        # self.libc.aruco_init(marker_size, bytes(tag_family, encoding='utf8'))     # for python3
+        self.libc.aruco_init(marker_size, bytes(tag_family))
 
     def detect(self, image, width, height, cameraMatrix, distCoeffs):
 
@@ -159,11 +118,9 @@ image of type numpy.uint8.'''
 
             return_info.append(detection)
 
-        print(detections)
-
         return return_info
 
-
+# inconsistent now
 if __name__ == '__main__':
 
     test_images_path = 'test'

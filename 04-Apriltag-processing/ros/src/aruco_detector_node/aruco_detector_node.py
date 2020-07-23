@@ -4,17 +4,13 @@ import logging
 import math
 import multiprocessing
 import os
-import sys
 import time
 
 import numpy as np
 import rosbag
 import rospy
-from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import TransformStamped
-from sensor_msgs.msg import (CameraInfo, CompressedImage, Image,
-                             RegionOfInterest)
-from std_msgs.msg import Header
+from cv_bridge import CvBridge
+from sensor_msgs.msg import (CameraInfo, CompressedImage)
 from multiprocessing import Process
 
 import aruco_lib_adapter
@@ -23,12 +19,10 @@ from duckietown_msgs.msg import AprilTagExtended
 from image_rectifier import ImageRectifier
 
 
-# from cv_bridge.boost.cv_bridge_boost import getCvType
-
 # ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
-# ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
+ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
 # ACQ_APRILTAG_LIB = "/home/galanton/duckietown/cslam_aruco_detector/ros/src/lib/aruco/build"
-ACQ_APRILTAG_SO = "/home/galanton/duckietown/cslam_aruco_detector/ros/src/lib/aruco/build/libaruco_func.so"
+# ACQ_APRILTAG_SO = "/home/galanton/duckietown/cslam_aruco_detector/ros/src/lib/aruco/build/libaruco_lib.so"
 # sys.path.append(ACQ_APRILTAG_LIB)
 
 
@@ -47,14 +41,11 @@ class ArucoDetectorNode():
         self.ACQ_BEAUTIFY = self.config['ACQ_BEAUTIFY']
         self.ACQ_TAG_SIZE = self.config['ACQ_TAG_SIZE']
         self.ACQ_POSES_TOPIC = self.config['ACQ_POSES_TOPIC']
-        # self.ACQ_APRILTAG_QUAD_DECIMATE = self.config['ACQ_APRILTAG_QUAD_DECIMATE']
-        # self.ACQ_POSES_UPDATE_RATE = self.config['ACQ_POSES_UPDATE_RATE']
         self.INPUT_BAG_PATH = config['INPUT_BAG_PATH']
         self.OUTPUT_BAG_PATH = config['OUTPUT_BAG_PATH']
 
         self.aprilTagProcessor = aruco_lib_adapter.Detector(
-            searchpath=[ACQ_APRILTAG_SO], families='tag36h11', nthreads=4, quad_decimate=10.0,
-            quad_sigma=0.0, refine_edges=1, decode_sharpening=0.25, debug=0)
+            searchpath=[ACQ_APRILTAG_SO], marker_size=self.ACQ_TAG_SIZE, tag_family='TAG36h11')
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('apriltag_processor_node',
@@ -182,6 +173,7 @@ class ArucoDetectorNode():
         self.logger.info("Waiting for all apriltag image processors to end")
         self.image_processor.kill()
         self.logger.info("apriltag processor node shutting down now")
+        self.subscriberImage.unregister()
 
 
 class ImageProcessor(multiprocessing.Process):
@@ -207,6 +199,10 @@ class ImageProcessor(multiprocessing.Process):
         self.raw_image = None
         self.camera_info = None
         self.seq_stamper = None
+        self.total_time = 0.0
+        self.min_time = 10000000000000.0
+        self.max_time = -1.0
+        self.iterations = 0.0
 
     def run(self):
         while True:
@@ -214,10 +210,12 @@ class ImageProcessor(multiprocessing.Process):
             (self.raw_image, self.camera_info,
              self.seq_stamper) = self.image_queue.get(block=True)
 
-            cv_image = cv2.imread('/home/galanton/duckietown/cslam_aruco_detector/ros/src/example_image.jpg',
-                                  cv2.IMREAD_ANYCOLOR)
-            # cv_image = self.bridge.compressed_imgmsg_to_cv2(
-            #     self.raw_image, desired_encoding='mono8')
+            t0 = time.time()
+
+            # cv_image = cv2.imread('/home/galanton/duckietown/cslam_aruco_detector/ros/src/example_image.jpg',
+            #                       cv2.IMREAD_ANYCOLOR)
+            cv_image = self.bridge.compressed_imgmsg_to_cv2(
+                self.raw_image, desired_encoding='mono8')
 
             # Scale the K matrix if the image resolution is not the same as in the calibration
             currRawImage_height = cv_image.shape[0]
@@ -240,15 +238,15 @@ class ImageProcessor(multiprocessing.Process):
             # Process the image and extract the apriltags
             outputDict = self.process(cv_image, currRawImage_width, currRawImage_height,
                                       (np.array(self.camera_info.K)*scale_matrix).reshape((3, 3)), self.camera_info.D)
-            # outputDict['header'] = self.raw_image.header
-            outputDict['header'] = rospy.Header
+            outputDict['header'] = self.raw_image.header
+            # outputDict['header'] = rospy.Header
 
             # Add the time stamp and source of the input image to the output
             for idx in range(len(outputDict['apriltags'])):
-                outputDict['apriltags'][idx]['timestamp_secs'] = 123
-                outputDict['apriltags'][idx]['timestamp_nsecs'] = 42
-                # outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
-                # outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
+                # outputDict['apriltags'][idx]['timestamp_secs'] = 123
+                # outputDict['apriltags'][idx]['timestamp_nsecs'] = 42
+                outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
+                outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
                 outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
 
             # Generate a diagnostic image
@@ -293,6 +291,14 @@ class ImageProcessor(multiprocessing.Process):
                 outputDict['rectified_image'].header.stamp.nsecs = self.raw_image.header.stamp.nsecs
                 outputDict['rectified_image'].header.frame_id = self.ACQ_DEVICE_NAME
 
+            t1 = time.time()
+            self.total_time += t1 - t0
+            self.iterations += 1
+            self.min_time = min(t1 - t0, self.min_time)
+            self.max_time = max(t1 - t0, self.max_time)
+            # print("%05d  %5.4f  %5.4f  %5.4f  %5.4f  %5.4f" %
+            #       (self.iterations, self.total_time, self.min_time, self.max_time, self.total_time / self.iterations, t1 - t0))
+
             # PUBLISH HERE
             self.publish(outputDict)
 
@@ -329,7 +335,6 @@ class ImageProcessor(multiprocessing.Process):
             # 3. Extract poses from april tags data
             tags = self.aprilTagProcessor.detect(
                 raw_image_gray, width, height, cameraMatrix, distCoeffs)
-                # rect_image_gray, True, camera_params, self.tag_size)
 
             # 4. Package output
             outputDict = dict()
@@ -359,6 +364,8 @@ class ImageProcessor(multiprocessing.Process):
         y = rvec[1]
         z = rvec[2]
         r = math.sqrt(x * x + y * y + z * z)
+        if r < 0.00001:
+            return np.array([1, 0, 0, 0])
         c = math.cos(r / 2)
         s = math.sin(r / 2)
         quat_x = c
@@ -467,10 +474,6 @@ def get_environment_variables():
     config['ACQ_BEAUTIFY'] = bool(int(os.getenv('ACQ_BEAUTIFY', 0)))
     config['ACQ_TAG_SIZE'] = float(os.getenv('ACQ_TAG_SIZE', 0.065))
     config['ACQ_POSES_TOPIC'] = os.getenv('ACQ_POSES_TOPIC', "poses")
-
-    # config['ACQ_APRILTAG_QUAD_DECIMATE'] = float(os.getenv('ACQ_APRILTAG_QUAD_DECIMATE', 1.0))
-    # config['ACQ_POSES_UPDATE_RATE'] = float(os.getenv('ACQ_POSES_UPDATE_RATE', 10))  # Hz
-
     config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
     config['OUTPUT_BAG_PATH'] = os.getenv('OUTPUT_BAG_PATH')
 
