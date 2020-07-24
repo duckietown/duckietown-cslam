@@ -24,11 +24,14 @@ ARG algo_dir=lib/src/duckietown_cslam/algo
 RUN mkdir /aruco_detector_node
 
 # Download and install the Aruco library and configure the environment variables for it
+#RUN mkdir /aruco_detector_node/aruco-3.1.12
+#COPY ${aruco_lib_dir}/aruco-3.1.12 /aruco_detector_node/aruco-3.1.12
 RUN cd /aruco_detector_node && wget "https://sourceforge.net/projects/aruco/files/3.1.12/aruco-3.1.12.zip" && \
     unzip aruco-3.1.12.zip && rm -r aruco-3.1.12.zip
 COPY ${aruco_lib_dir}/aruco_caller.cpp /aruco_detector_node/
 COPY ${aruco_lib_dir}/CMakeLists.txt /aruco_detector_node/
 RUN  /bin/bash -c "mkdir /aruco_detector_node/build; cd /aruco_detector_node/build; cmake ..; make -j$(nproc)"
+COPY ${aruco_lib_dir}/config.yml /aruco_detector_node/
 COPY ${aruco_lib_dir}/aruco_lib_adapter.py /aruco_detector_node/
 #ENV ACQ_APRILTAG_LIB /aruco_detector_node/
 ENV ACQ_APRILTAG_SO /aruco_detector_node/build/libaruco_lib.so
@@ -50,6 +53,7 @@ ENV ACQ_TAG_SIZE 0.065
 ENV ACQ_POSES_TOPIC poses
 ENV ACQ_TEST_STREAM 0
 ENV ACQ_BEAUTIFY 0
+ENV IMAGE_PROCESSORS 8
 
 # YOU ALWAYS NEED TO SPECIFY:
 # ACQ_ROS_MASTER_URI_DEVICE

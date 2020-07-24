@@ -18,9 +18,9 @@ DFCMarkerTracker marker_tracker;
 bool was_init = false;
 float marker_size;
 
-extern "C" void aruco_init(float marker_size_, char *tag_family) {
+extern "C" void aruco_init(float marker_size_, char *config_file) {
     marker_size = marker_size_;
-    marker_tracker.setDictionary(tag_family);
+    marker_tracker.loadParamsFromFile(config_file);
     was_init = true;
 }
 

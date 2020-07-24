@@ -43,9 +43,10 @@ class ArucoDetectorNode():
         self.ACQ_POSES_TOPIC = self.config['ACQ_POSES_TOPIC']
         self.INPUT_BAG_PATH = config['INPUT_BAG_PATH']
         self.OUTPUT_BAG_PATH = config['OUTPUT_BAG_PATH']
+        self.IMAGE_PROCESSORS = self.config['IMAGE_PROCESSORS']
 
         self.aprilTagProcessor = aruco_lib_adapter.Detector(
-            searchpath=[ACQ_APRILTAG_SO], marker_size=self.ACQ_TAG_SIZE, tag_family='TAG36h11')
+            searchpath=[ACQ_APRILTAG_SO], marker_size=self.ACQ_TAG_SIZE, config_file="/aruco_detector_node/config.yml")
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('apriltag_processor_node',
@@ -84,9 +85,13 @@ class ArucoDetectorNode():
         self.imageprocessor_options = {'beautify': self.ACQ_BEAUTIFY,
                                        'tag_size': self.ACQ_TAG_SIZE}
         rospy.on_shutdown(self.on_shutdown)
-        self.image_processor = ImageProcessor(self.imageprocessor_options, self.logger, self.publishers,
-                                              self.aprilTagProcessor, self.publish_queue, self.config, self.image_queue)
-        self.image_processor.start()
+        self.image_processor_list = []
+        for i in range(self.IMAGE_PROCESSORS):
+            new_image_processor = ImageProcessor(
+                self.imageprocessor_options, self.logger, self.publishers, self.aprilTagProcessor, self.publish_queue, self.config, self.image_queue)
+            self.image_processor_list.append(
+                new_image_processor)
+            new_image_processor.start()
 
         self.camera_topic = str(
             '/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW)
@@ -171,7 +176,8 @@ class ArucoDetectorNode():
     def on_shutdown(self):
 
         self.logger.info("Waiting for all apriltag image processors to end")
-        self.image_processor.terminate()
+        for process in self.image_processor_list:
+            process.terminate()
         self.logger.info("apriltag processor node shutting down now")
         self.subscriberImage.unregister()
 
@@ -205,6 +211,7 @@ class ImageProcessor(multiprocessing.Process):
 
             (self.raw_image, self.camera_info,
              self.seq_stamper) = self.image_queue.get(block=True)
+            print("                                image queue size: " + str(self.image_queue.qsize()))
 
             # cv_image = cv2.imread('/home/galanton/duckietown/cslam_aruco_detector/ros/src/example_image.jpg',
             #                       cv2.IMREAD_ANYCOLOR)
@@ -463,6 +470,7 @@ def get_environment_variables():
     config['ACQ_POSES_TOPIC'] = os.getenv('ACQ_POSES_TOPIC', "poses")
     config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
     config['OUTPUT_BAG_PATH'] = os.getenv('OUTPUT_BAG_PATH')
+    config['IMAGE_PROCESSORS'] = int(os.getenv('IMAGE_PROCESSORS', 8))
 
     return config
 

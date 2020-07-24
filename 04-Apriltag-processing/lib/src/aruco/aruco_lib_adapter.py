@@ -55,7 +55,7 @@ class Detection():
 
 class Detector(object):
 
-    def __init__(self, searchpath=None, marker_size=0.065, tag_family="TAG36h11"):
+    def __init__(self, searchpath=None, marker_size=0.065, config_file="/config.yml"):
 
         self.libc = None
 
@@ -69,8 +69,8 @@ class Detector(object):
 
 
         self.libc.aruco_init.argtypes = [ctypes.c_float, ctypes.c_char_p]
-        # self.libc.aruco_init(marker_size, bytes(tag_family, encoding='utf8'))     # for python3
-        self.libc.aruco_init(marker_size, bytes(tag_family))
+        # self.libc.aruco_init(marker_size, bytes(config_file, encoding='utf8'))     # for python3
+        self.libc.aruco_init(marker_size, bytes(config_file))
 
     def detect(self, image, width, height, cameraMatrix, distCoeffs):
 
