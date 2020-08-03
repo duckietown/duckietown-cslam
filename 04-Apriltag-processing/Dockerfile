@@ -1,61 +1,69 @@
 FROM duckietown/dt-ros-commons:daffy-amd64
 
-MAINTAINER Amaury Camus <camusam@ethz.ch>
-
 # Install OpenCV and CvBridge
 RUN apt-get update && apt-get install -f -y --allow-unauthenticated python-opencv ros-kinetic-cv-bridge ros-kinetic-rospy python-pip && apt-get clean
-
 RUN pip install pathos multiprocessing-logging
 
 
 # Download and install opencv-4.3.0 for Aruco library
 RUN apt-get install -y wget unzip
-RUN cd / && wget "https://github.com/opencv/opencv/archive/4.3.0.zip" && unzip 4.3.0.zip && rm -r 4.3.0.zip
+RUN cd / && wget https://github.com/opencv/opencv/archive/4.3.0.zip && unzip 4.3.0.zip && rm -r 4.3.0.zip
 RUN mkdir /opencv-4.3.0/build && cd /opencv-4.3.0/build && \
     cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local .. && make -j$(nproc) && make install
 
+# Download and install Boost.NumPy for python-boost binding
+RUN apt-get install -y git
+RUN cd / && git clone https://github.com/ndarray/Boost.NumPy.git && cd Boost.NumPy && \
+    mkdir build && cd build && cmake .. && make -j$(nproc) && make install
 
 # Argumens for where the different places from which we will get files from are
+ARG boost_numpy_dir=/usr/local/lib64
 ARG aruco_lib_dir=lib/src/aruco
-ARG aruco_detector_src_dir=ros/src
+ARG apriltag_processor_src_dir=ros/src
 ARG algo_dir=lib/src/duckietown_cslam/algo
 
 # Create a directory to store the Python files and the Aruco library
-RUN mkdir /aruco_detector_node
+RUN mkdir /apriltag_processor_node
 
 # Download and install the Aruco library and configure the environment variables for it
-#RUN mkdir /aruco_detector_node/aruco-3.1.12
-#COPY ${aruco_lib_dir}/aruco-3.1.12 /aruco_detector_node/aruco-3.1.12
-RUN cd /aruco_detector_node && wget "https://sourceforge.net/projects/aruco/files/3.1.12/aruco-3.1.12.zip" && \
+#RUN mkdir /apriltag_processor_node/aruco-3.1.12
+#COPY ${aruco_lib_dir}/aruco-3.1.12 /apriltag_processor_node/aruco-3.1.12
+RUN cd /apriltag_processor_node && wget https://sourceforge.net/projects/aruco/files/3.1.12/aruco-3.1.12.zip && \
     unzip aruco-3.1.12.zip && rm -r aruco-3.1.12.zip
-COPY ${aruco_lib_dir}/aruco_caller.cpp /aruco_detector_node/
-COPY ${aruco_lib_dir}/CMakeLists.txt /aruco_detector_node/
-RUN  /bin/bash -c "mkdir /aruco_detector_node/build; cd /aruco_detector_node/build; cmake ..; make -j$(nproc)"
-COPY ${aruco_lib_dir}/config.yml /aruco_detector_node/
-COPY ${aruco_lib_dir}/aruco_lib_adapter.py /aruco_detector_node/
-#ENV ACQ_APRILTAG_LIB /aruco_detector_node/
-ENV ACQ_APRILTAG_SO /aruco_detector_node/build/libaruco_lib.so
+
+# Copy and build Aruco specific program files
+COPY ${aruco_lib_dir}/aruco_caller.cpp /apriltag_processor_node/
+COPY ${aruco_lib_dir}/CMakeLists.txt /apriltag_processor_node/
+RUN mkdir /apriltag_processor_node/build && cd /apriltag_processor_node/build && \
+    cmake -D BOOST_NUMPY_SO=${boost_numpy_dir}/libboost_numpy.so .. && make -j$(nproc) aruco_caller
+COPY ${aruco_lib_dir}/config.yml /apriltag_processor_node/
+COPY ${aruco_lib_dir}/aruco_lib_adapter.py /apriltag_processor_node/
+ENV ACQ_ARUCO_CALLER_DIR /apriltag_processor_node/build
+ENV ACQ_CONFIG_YML /apriltag_processor_node/config.yml
 
 # Copy the Python files
-COPY ${aruco_detector_src_dir}/aruco_detector_node/aruco_detector_node.py /aruco_detector_node
-COPY ${algo_dir}/image_rectifier.py /aruco_detector_node
+COPY ${apriltag_processor_src_dir}/apriltag_processor_node/apriltag_processor_node.py /apriltag_processor_node
+COPY ${algo_dir}/image_rectifier.py /apriltag_processor_node
+
+# Copy AprilTagExtended source file
+COPY duckietown_msgs /apriltag_processor_node/duckietown_msgs
 
 # Copy the bash wrapper
-COPY ${aruco_detector_src_dir}/aruco_detector_node/wrapper.sh /aruco_detector_node
-RUN chmod +x /aruco_detector_node/wrapper.sh
+COPY ${apriltag_processor_src_dir}/apriltag_processor_node/wrapper.sh /apriltag_processor_node
+RUN chmod +x /apriltag_processor_node/wrapper.sh
 
-# OPTIONALLY YOU CAN ALSO SPECIFY + DEFAULT VALUES
+# Set optional environment variables
 ENV ACQ_ROS_MASTER_URI_DEVICE_PORT 11311
 ENV ACQ_ROS_MASTER_URI_SERVER_PORT 11311
-ENV ACQ_TOPIC_RAW camera_image/compressed
-ENV ACQ_TOPIC_CAMERAINFO camera_image_info
+ENV ACQ_TOPIC_RAW imageSparse/compressed
+ENV ACQ_TOPIC_CAMERAINFO camera_node/camera_info
 ENV ACQ_TAG_SIZE 0.065
 ENV ACQ_POSES_TOPIC poses
 ENV ACQ_TEST_STREAM 0
 ENV ACQ_BEAUTIFY 0
-ENV IMAGE_PROCESSORS 8
+ENV IMAGE_PROCESSORS 4
 
-# YOU ALWAYS NEED TO SPECIFY:
+# You always need to specify:
 # ACQ_ROS_MASTER_URI_DEVICE
 # ACQ_ROS_MASTER_URI_DEVICE_IP
 # ACQ_ROS_MASTER_URI_SERVER
@@ -63,5 +71,6 @@ ENV IMAGE_PROCESSORS 8
 # ACQ_DEVICE_NAME # should match the topic, e.g. watchtower10
 
 # Start the processes
-CMD /bin/bash -c "cd /aruco_detector_node; source /opt/ros/kinetic/setup.bash; \
-                  source /code/catkin_ws/devel/setup.bash; /aruco_detector_node/wrapper.sh"
+CMD /bin/bash -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${boost_numpy_dir} && \
+                  source /opt/ros/kinetic/setup.bash && \
+                  cd /apriltag_processor_node && ./wrapper.sh"

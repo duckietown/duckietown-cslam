@@ -1,22 +1,12 @@
-#!/usr/bin/env python
-
-'''Python wrapper for C version of apriltags. This program creates two
-classes that are used to detect apriltags and extract information from
-them. Using this module, you can identify all apriltags visible in an
-image, and get information about the location and orientation of the
-tags.
-
-Original author: Isaac Dulin, Spring 2016
-Updates: Matt Zucker, Fall 2016
-Apriltags 3 version: Aleksandar Petrov, Spring 2019
-
-'''
 from __future__ import division
 from __future__ import print_function
 
-import ctypes
 import os
+import sys
 import numpy
+
+sys.path.append(os.getenv('ACQ_ARUCO_CALLER_DIR'))
+from aruco_caller import aruco_init, aruco_detect_and_estimate
 
 class Detection():
 
@@ -55,22 +45,8 @@ class Detection():
 
 class Detector(object):
 
-    def __init__(self, searchpath=None, marker_size=0.065, config_file="/config.yml"):
-
-        self.libc = None
-
-        for path in searchpath:
-            if os.path.exists(path):
-                self.libc = ctypes.CDLL(path)
-                break
-
-        if self.libc is None:
-            raise RuntimeError('could not find library in', searchpath)
-
-
-        self.libc.aruco_init.argtypes = [ctypes.c_float, ctypes.c_char_p]
-        # self.libc.aruco_init(marker_size, bytes(config_file, encoding='utf8'))     # for python3
-        self.libc.aruco_init(marker_size, bytes(config_file))
+    def __init__(self, marker_size=0.065, config_file="config.yml"):
+        aruco_init(marker_size, config_file)
 
     def detect(self, image, width, height, cameraMatrix, distCoeffs):
 
@@ -80,22 +56,21 @@ image of type numpy.uint8.'''
         assert len(image.shape) == 2
         assert image.dtype == numpy.uint8
 
-        calib_data = {}
-        calib_data["width"] = width
-        calib_data["height"] = height
-        calib_data["cameraMatrix00"] = cameraMatrix[0][0]
-        calib_data["cameraMatrix02"] = cameraMatrix[0][2]
-        calib_data["cameraMatrix11"] = cameraMatrix[1][1]
-        calib_data["cameraMatrix12"] = cameraMatrix[1][2]
-        calib_data["distorsion0"] = distCoeffs[0]
-        calib_data["distorsion1"] = distCoeffs[1]
-        calib_data["distorsion2"] = distCoeffs[2]
-        calib_data["distorsion3"] = distCoeffs[3]
+        calib_data = {
+            "width": width,
+            "height": height,
+            "cameraMatrix00": cameraMatrix[0][0],
+            "cameraMatrix02": cameraMatrix[0][2],
+            "cameraMatrix11": cameraMatrix[1][1],
+            "cameraMatrix12": cameraMatrix[1][2],
+            "distortion0": distCoeffs[0],
+            "distortion1": distCoeffs[1],
+            "distortion2": distCoeffs[2],
+            "distortion3": distCoeffs[3]
+        }
 
         #detect apriltags in the image
-        self.libc.aruco_detect_and_estimate.restype = ctypes.py_object
-        detections = self.libc.aruco_detect_and_estimate(ctypes.py_object(calib_data),
-                                                         image.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)))
+        detections = aruco_detect_and_estimate(calib_data, image)
 
         return_info = []
 

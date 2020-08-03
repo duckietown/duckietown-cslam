@@ -4,7 +4,6 @@ import logging
 import math
 import multiprocessing
 import os
-import time
 
 import numpy as np
 import rosbag
@@ -19,14 +18,7 @@ from duckietown_msgs.msg import AprilTagExtended
 from image_rectifier import ImageRectifier
 
 
-# ACQ_APRILTAG_LIB = os.getenv('ACQ_APRILTAG_LIB')
-ACQ_APRILTAG_SO = os.getenv('ACQ_APRILTAG_SO')
-# ACQ_APRILTAG_LIB = "/home/galanton/duckietown/cslam_aruco_detector/ros/src/lib/aruco/build"
-# ACQ_APRILTAG_SO = "/home/galanton/duckietown/cslam_aruco_detector/ros/src/lib/aruco/build/libaruco_lib.so"
-# sys.path.append(ACQ_APRILTAG_LIB)
-
-
-class ArucoDetectorNode():
+class ApriltagProcessorNode():
     """
     Processes the data coming from a remote device (Duckiebot or watchtower).
     """
@@ -44,9 +36,10 @@ class ArucoDetectorNode():
         self.INPUT_BAG_PATH = config['INPUT_BAG_PATH']
         self.OUTPUT_BAG_PATH = config['OUTPUT_BAG_PATH']
         self.IMAGE_PROCESSORS = self.config['IMAGE_PROCESSORS']
+        self.ACQ_CONFIG_YML = self.config['ACQ_CONFIG_YML']
 
         self.aprilTagProcessor = aruco_lib_adapter.Detector(
-            searchpath=[ACQ_APRILTAG_SO], marker_size=self.ACQ_TAG_SIZE, config_file="/aruco_detector_node/config.yml")
+            marker_size=self.ACQ_TAG_SIZE, config_file=self.ACQ_CONFIG_YML)
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('apriltag_processor_node',
@@ -461,9 +454,9 @@ class ImageProcessor(multiprocessing.Process):
 def get_environment_variables():
     config = dict()
 
-    config['ACQ_DEVICE_NAME'] = os.getenv('ACQ_DEVICE_NAME', 'watchtower66')
-    config['ACQ_TOPIC_RAW'] = os.getenv('ACQ_TOPIC_RAW', 'camera_image/compressed')
-    config['ACQ_TOPIC_CAMERAINFO'] = os.getenv('ACQ_TOPIC_CAMERAINFO', 'camera_image_info')
+    config['ACQ_DEVICE_NAME'] = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
+    config['ACQ_TOPIC_RAW'] = os.getenv('ACQ_TOPIC_RAW', 'camera_node/image/compressed')
+    config['ACQ_TOPIC_CAMERAINFO'] = os.getenv('ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
     config['ACQ_TEST_STREAM'] = bool(int(os.getenv('ACQ_TEST_STREAM', 0)))
     config['ACQ_BEAUTIFY'] = bool(int(os.getenv('ACQ_BEAUTIFY', 0)))
     config['ACQ_TAG_SIZE'] = float(os.getenv('ACQ_TAG_SIZE', 0.065))
@@ -471,6 +464,7 @@ def get_environment_variables():
     config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
     config['OUTPUT_BAG_PATH'] = os.getenv('OUTPUT_BAG_PATH')
     config['IMAGE_PROCESSORS'] = int(os.getenv('IMAGE_PROCESSORS', 8))
+    config['ACQ_CONFIG_YML'] = os.getenv('ACQ_CONFIG_YML', 'config.yml')
 
     return config
 
@@ -482,7 +476,7 @@ def main():
 
     config = get_environment_variables()
 
-    adn = ArucoDetectorNode(logger, config)
+    adn = ApriltagProcessorNode(logger, config)
 
     rospy.spin()
 
