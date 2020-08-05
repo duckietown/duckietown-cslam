@@ -1,4 +1,4 @@
-FROM duckietown/dt-ros-commons:daffy-amd64
+FROM duckietown/dt-ros-commons:daffy-arm32v7
 
 # Install OpenCV and CvBridge
 RUN apt-get update && apt-get install -f -y --allow-unauthenticated python-opencv ros-kinetic-cv-bridge ros-kinetic-rospy python-pip && apt-get clean

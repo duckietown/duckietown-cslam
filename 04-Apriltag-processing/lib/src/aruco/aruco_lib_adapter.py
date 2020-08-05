@@ -48,7 +48,7 @@ class Detector(object):
     def __init__(self, marker_size=0.065, config_file="config.yml"):
         aruco_init(marker_size, config_file)
 
-    def detect(self, image, width, height, cameraMatrix, distCoeffs):
+    def detect(self, image, cameraMatrix, distCoeffs):
 
         '''Run detectons on the provided image. The image must be a grayscale
 image of type numpy.uint8.'''
@@ -57,8 +57,8 @@ image of type numpy.uint8.'''
         assert image.dtype == numpy.uint8
 
         calib_data = {
-            "width": width,
-            "height": height,
+            "width": image.shape[1],
+            "height": image.shape[0],
             "cameraMatrix00": cameraMatrix[0][0],
             "cameraMatrix02": cameraMatrix[0][2],
             "cameraMatrix11": cameraMatrix[1][1],
@@ -82,7 +82,7 @@ image of type numpy.uint8.'''
             detection.decision_margin = -1
             detection.homography = numpy.zeros((3, 3))
             detection.center = numpy.zeros((2, 1))
-            detection.corners = numpy.array(marker["corners"])
+            detection.corners = numpy.array(marker["corners"]).reshape((4, 2))
             if len(marker["rvec"]) == 3:
                 detection.pose_R = numpy.array(marker["rvec"])
                 detection.pose_t = numpy.array(marker["tvec"])
@@ -95,10 +95,32 @@ image of type numpy.uint8.'''
 
         return return_info
 
-# inconsistent now
+def imshow_with_tags(img, window_name):
+    colored_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
+    for tag in tags:
+        for idx in range(len(tag.corners)):
+            cv2.line(colored_img,
+                     tuple(tag.corners[idx - 1, :].astype(int)),
+                     tuple(tag.corners[idx, :].astype(int)),
+                     (0, 255, 0))
+
+        cv2.putText(colored_img, str(tag.tag_id),
+                    org=(tag.corners[0, 0].astype(int) + 10,
+                         tag.corners[0, 1].astype(int) + 10),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.8,
+                    color=(0, 0, 255))
+
+    cv2.imshow(window_name, colored_img)
+    k = cv2.waitKey(0)
+    if k == 27:  # wait for ESC key to exit
+        cv2.destroyAllWindows()
+
 if __name__ == '__main__':
 
     test_images_path = 'test'
+    distCoeffs = numpy.zeros(4)
 
     visualization = True
     try:
@@ -118,14 +140,7 @@ if __name__ == '__main__':
     except:
         raise Exception('You need yaml in order to run the tests. However, you can still use the library without it.')
 
-    at_detector = Detector(searchpath=['apriltags/lib', 'apriltags/lib64'],
-                           families='tag36h11',
-                           nthreads=1,
-                           quad_decimate=1.0,
-                           quad_sigma=0.0,
-                           refine_edges=1,
-                           decode_sharpening=0.25,
-                           debug=0)
+    at_detector = Detector(marker_size=0.065, config_file="config.yml")
 
     with open(test_images_path + '/test_info.yaml', 'r') as stream:
         parameters = yaml.load(stream)
@@ -136,33 +151,13 @@ if __name__ == '__main__':
 
     img = cv2.imread(test_images_path+'/'+parameters['sample_test']['file'], cv2.IMREAD_GRAYSCALE)
     cameraMatrix = numpy.array(parameters['sample_test']['K']).reshape((3,3))
-    camera_params = ( cameraMatrix[0,0], cameraMatrix[1,1], cameraMatrix[0,2], cameraMatrix[1,2] )
+
+    tags = at_detector.detect(img, cameraMatrix, distCoeffs)
+    print(tags)
 
     if visualization:
         cv2.imshow('Original image',img)
-
-    tags = at_detector.detect(img, True, camera_params, parameters['sample_test']['tag_size'])
-    print(tags)
-
-    color_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-
-    for tag in tags:
-        for idx in range(len(tag.corners)):
-            cv2.line(color_img, tuple(tag.corners[idx-1, :].astype(int)), tuple(tag.corners[idx, :].astype(int)), (0, 255, 0))
-
-        cv2.putText(color_img, str(tag.tag_id),
-                    org=(tag.corners[0, 0].astype(int)+10,tag.corners[0, 1].astype(int)+10),
-                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.8,
-                    color=(0, 0, 255))
-
-    if visualization:
-        cv2.imshow('Detected tags', color_img)
-
-        k = cv2.waitKey(0)
-        if k == 27:         # wait for ESC key to exit
-            cv2.destroyAllWindows()
-
+        imshow_with_tags(img, 'Detected tags')
 
     #### TEST WITH THE ROTATION IMAGES ####
 
@@ -185,18 +180,22 @@ if __name__ == '__main__':
 
         parameters['rotation_test']['rotz'] = groundtruth
         cameraMatrix = numpy.array(parameters['rotation_test']['K']).reshape((3,3))
-        camera_params = ( cameraMatrix[0,0], cameraMatrix[1,1], cameraMatrix[0,2], cameraMatrix[1,2] )
 
         img = cv2.imread(ab_path, cv2.IMREAD_GRAYSCALE)
 
         start = time.time()
-        tags = at_detector.detect(img, True, camera_params, parameters['rotation_test']['tag_size'])
-
+        tags = at_detector.detect(img, cameraMatrix, distCoeffs)
         time_sum+=time.time()-start
         time_num+=1
 
-        print(tags[0].pose_t, parameters['rotation_test']['posx'], parameters['rotation_test']['posy'], parameters['rotation_test']['posz'])
-        print(tags[0].pose_R, parameters['rotation_test']['rotx'], parameters['rotation_test']['roty'], parameters['rotation_test']['rotz'])
+        if tags:
+            print(tags[0].pose_t, parameters['rotation_test']['posx'], parameters['rotation_test']['posy'], parameters['rotation_test']['posz'])
+            print(tags[0].pose_R, parameters['rotation_test']['rotx'], parameters['rotation_test']['roty'], parameters['rotation_test']['rotz'])
+        else:
+            print("Tags not found")
+
+        if visualization:
+            imshow_with_tags(img, "Detected tags for " + image_name)
 
     print("AVG time per detection: ", time_sum/time_num)
 
@@ -216,36 +215,18 @@ if __name__ == '__main__':
             continue
 
         cameraMatrix = numpy.array(parameters['multiple_tags_test']['K']).reshape((3,3))
-        camera_params = ( cameraMatrix[0,0], cameraMatrix[1,1], cameraMatrix[0,2], cameraMatrix[1,2] )
 
         img = cv2.imread(ab_path, cv2.IMREAD_GRAYSCALE)
 
         start = time.time()
-        tags = at_detector.detect(img, True, camera_params, parameters['multiple_tags_test']['tag_size'])
+        tags = at_detector.detect(img, cameraMatrix, distCoeffs)
         time_sum+=time.time()-start
         time_num+=1
 
         tag_ids = [tag.tag_id for tag in tags]
         print(len(tags), " tags found: ", tag_ids)
 
-
-        color_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-
-        for tag in tags:
-            for idx in range(len(tag.corners)):
-                cv2.line(color_img, tuple(tag.corners[idx-1, :].astype(int)), tuple(tag.corners[idx, :].astype(int)), (0, 255, 0))
-
-            cv2.putText(color_img, str(tag.tag_id),
-                        org=(tag.corners[0, 0].astype(int)+10,tag.corners[0, 1].astype(int)+10),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.8,
-                        color=(0, 0, 255))
-
         if visualization:
-            cv2.imshow('Detected tags for ' + image_name    , color_img)
-
-            k = cv2.waitKey(0)
-            if k == 27:         # wait for ESC key to exit
-                cv2.destroyAllWindows()
+            imshow_with_tags(img, "Detected tags for " + image_name)
 
     print("AVG time per detection: ", time_sum/time_num)

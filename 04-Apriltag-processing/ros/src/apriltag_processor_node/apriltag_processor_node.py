@@ -230,8 +230,8 @@ class ImageProcessor(multiprocessing.Process):
             outputDict = dict()
 
             # Process the image and extract the apriltags
-            outputDict = self.process(cv_image, currRawImage_width, currRawImage_height,
-                                      (np.array(self.camera_info.K)*scale_matrix).reshape((3, 3)), self.camera_info.D)
+            outputDict = self.process(
+                cv_image, (np.array(self.camera_info.K) * scale_matrix).reshape((3, 3)), self.camera_info.D)
             outputDict['header'] = self.raw_image.header
             # outputDict['header'] = rospy.Header
 
@@ -289,7 +289,7 @@ class ImageProcessor(multiprocessing.Process):
             # PUBLISH HERE
             self.publish(outputDict)
 
-    def process(self, raw_image, width, height, cameraMatrix, distCoeffs):
+    def process(self, raw_image, cameraMatrix, distCoeffs):
         """
         Processes an image.
         """
@@ -320,8 +320,7 @@ class ImageProcessor(multiprocessing.Process):
                 raw_image = self.ImageRectifier.beautify(raw_image)
 
             # 3. Extract poses from april tags data
-            tags = self.aprilTagProcessor.detect(
-                raw_image_gray, width, height, cameraMatrix, distCoeffs)
+            tags = self.aprilTagProcessor.detect(raw_image_gray, cameraMatrix, distCoeffs)
 
             # 4. Package output
             outputDict = dict()

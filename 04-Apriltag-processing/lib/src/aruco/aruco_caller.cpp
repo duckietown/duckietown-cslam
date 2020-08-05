@@ -54,7 +54,7 @@ list aruco_detect_and_estimate(const dict &calib_dict, const boost::numpy::ndarr
     }
 
     cv::Mat image(image_size.height, image_size.width, CV_8U, img_data.get_data());
-    map<int, cv::Ptr<TrackerImpl>> set_trackers = marker_tracker.track(image);
+    map<int, cv::Ptr<TrackerImpl>> set_trackers = marker_tracker.track(image, 0.1);
     marker_tracker.estimatePose();
 
     list markers_list;
