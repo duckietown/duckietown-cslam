@@ -18,6 +18,7 @@ from duckietown_msgs.msg import AprilTagExtended
 from image_rectifier import ImageRectifier
 
 
+
 class ApriltagProcessorNode():
     """
     Processes the data coming from a remote device (Duckiebot or watchtower).
@@ -33,13 +34,16 @@ class ApriltagProcessorNode():
         self.ACQ_BEAUTIFY = self.config['ACQ_BEAUTIFY']
         self.ACQ_TAG_SIZE = self.config['ACQ_TAG_SIZE']
         self.ACQ_POSES_TOPIC = self.config['ACQ_POSES_TOPIC']
+        self.ACQ_IMAGE_PROCESSORS = self.config['ACQ_IMAGE_PROCESSORS']
+        self.ACQ_CONFIG_YML = self.config['ACQ_CONFIG_YML']
+        self.ACQ_DETECTOR_TYPE = self.config['ACQ_DETECTOR_TYPE']
         self.INPUT_BAG_PATH = config['INPUT_BAG_PATH']
         self.OUTPUT_BAG_PATH = config['OUTPUT_BAG_PATH']
-        self.IMAGE_PROCESSORS = self.config['IMAGE_PROCESSORS']
-        self.ACQ_CONFIG_YML = self.config['ACQ_CONFIG_YML']
 
         self.aprilTagProcessor = aruco_lib_adapter.Detector(
-            marker_size=self.ACQ_TAG_SIZE, config_file=self.ACQ_CONFIG_YML)
+            detector_type=self.ACQ_DETECTOR_TYPE,
+            marker_size=self.ACQ_TAG_SIZE,
+            config_file=self.ACQ_CONFIG_YML)
 
         # Initialize ROS nodes and subscribe to topics
         rospy.init_node('apriltag_processor_node',
@@ -73,13 +77,13 @@ class ApriltagProcessorNode():
         self.logger.info('/'+self.ACQ_DEVICE_NAME+'/'+self.ACQ_TOPIC_RAW)
 
         self.seq_stamper = 0
+        self.image_processor_list = []
 
         # Initialize the device side processor
         self.imageprocessor_options = {'beautify': self.ACQ_BEAUTIFY,
                                        'tag_size': self.ACQ_TAG_SIZE}
         rospy.on_shutdown(self.on_shutdown)
-        self.image_processor_list = []
-        for i in range(self.IMAGE_PROCESSORS):
+        for i in range(self.ACQ_IMAGE_PROCESSORS):
             new_image_processor = ImageProcessor(
                 self.imageprocessor_options, self.logger, self.publishers, self.aprilTagProcessor, self.publish_queue, self.config, self.image_queue)
             self.image_processor_list.append(
@@ -96,7 +100,8 @@ class ApriltagProcessorNode():
         self.subscriberCameraInfo = rospy.Subscriber(self.camera_info_topic, CameraInfo,
                                                      self.camera_info_callback,  queue_size=50)
         if self.INPUT_BAG_PATH is not None:
-            self.bag_reader = Process(target=self.read_bag)
+            self.bag_reader = Process(
+                target=self.read_bag)
             self.bag_reader.start()
         if self.OUTPUT_BAG_PATH is not None:
             self.outputbag = rosbag.Bag(self.OUTPUT_BAG_PATH, 'w')
@@ -128,16 +133,19 @@ class ApriltagProcessorNode():
             try:
                 message_dict = self.publish_queue.get(block=True)
                 if self.INPUT_BAG_PATH is None:
-                    self.publishers[message_dict["topic"]].publish(message_dict["message"])
+                    self.publishers[message_dict["topic"]
+                                    ].publish(message_dict["message"])
                 elif self.OUTPUT_BAG_PATH is None:
                     self.logger.warning(
                         "Input bag was specified but no output path was specified. Publishing to the online topics.")
                 else:
                     if(message_dict["topic"] == "apriltags"):
-                        self.outputbag.write(self.apriltag_pose_topic, message_dict["message"])
+                        self.outputbag.write(
+                            self.apriltag_pose_topic, message_dict["message"])
                     else:
                         # TODO this is bad, the topics will be wrong
-                        self.outputbag.write(message_dict["topic"], message_dict["message"])
+                        self.outputbag.write(
+                            message_dict["topic"], message_dict["message"])
 
             except Exception as e:
                 self.logger.warning("publish loop : %s" % str(e))
@@ -159,7 +167,8 @@ class ApriltagProcessorNode():
         # self.logger.info("Got image")
         if self.lastCameraInfo is not None:
             # Collect latest ros_data
-            self.image_queue.put((ros_data, self.lastCameraInfo, self.seq_stamper), block=True)
+            self.image_queue.put(
+                (ros_data, self.lastCameraInfo, self.seq_stamper), block=True)
             self.seq_stamper += 1
 
             # self.logger.warning(str(len(multiprocessing.active_children())))
@@ -170,9 +179,8 @@ class ApriltagProcessorNode():
 
         self.logger.info("Waiting for all apriltag image processors to end")
         for process in self.image_processor_list:
-            process.terminate()
+            process.kill()
         self.logger.info("apriltag processor node shutting down now")
-        self.subscriberImage.unregister()
 
 
 class ImageProcessor(multiprocessing.Process):
@@ -204,47 +212,41 @@ class ImageProcessor(multiprocessing.Process):
 
             (self.raw_image, self.camera_info,
              self.seq_stamper) = self.image_queue.get(block=True)
-            print("                                image queue size: " + str(self.image_queue.qsize()))
-
-            # cv_image = cv2.imread('/home/galanton/duckietown/cslam_aruco_detector/ros/src/example_image.jpg',
-            #                       cv2.IMREAD_ANYCOLOR)
-            cv_image = self.bridge.compressed_imgmsg_to_cv2(
-                self.raw_image, desired_encoding='mono8')
-
-            # Scale the K matrix if the image resolution is not the same as in the calibration
-            currRawImage_height = cv_image.shape[0]
-            currRawImage_width = cv_image.shape[1]
-
-            scale_matrix = np.ones(9)
-            if self.camera_info.height != currRawImage_height or self.camera_info.width != currRawImage_width:
-                scale_width = float(currRawImage_width) / \
-                    self.camera_info.width
-                scale_height = float(currRawImage_height) / \
-                    self.camera_info.height
-
-                scale_matrix[0] *= scale_width
-                scale_matrix[2] *= scale_width
-                scale_matrix[4] *= scale_height
-                scale_matrix[5] *= scale_height
+            self.logger.info("qsize = " + str(self.image_queue.qsize()))
 
             outputDict = dict()
-
-            # Process the image and extract the apriltags
-            outputDict = self.process(
-                cv_image, (np.array(self.camera_info.K) * scale_matrix).reshape((3, 3)), self.camera_info.D)
-            outputDict['header'] = self.raw_image.header
-            # outputDict['header'] = rospy.Header
-
-            # Add the time stamp and source of the input image to the output
-            for idx in range(len(outputDict['apriltags'])):
-                # outputDict['apriltags'][idx]['timestamp_secs'] = 123
-                # outputDict['apriltags'][idx]['timestamp_nsecs'] = 42
-                outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
-                outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
-                outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
+            if self.ACQ_TEST_STREAM == 0:
+                # Process the image and extract the apriltags
+                outputDict = self.process_compressed(
+                    self.raw_image, np.array(self.camera_info.K).reshape((3, 3)), self.camera_info.D,
+                    self.camera_info.height, self.camera_info.width)
 
             # Generate a diagnostic image
-            if self.ACQ_TEST_STREAM == 1:
+            elif self.ACQ_TEST_STREAM == 1:
+                cv_image = self.bridge.compressed_imgmsg_to_cv2(
+                    self.raw_image, desired_encoding='mono8')
+
+                # Scale the K matrix if the image resolution is not the same as in the calibration
+                currRawImage_height = cv_image.shape[0]
+                currRawImage_width = cv_image.shape[1]
+
+                scale_matrix = np.ones(9)
+                if self.camera_info.height != currRawImage_height or self.camera_info.width != currRawImage_width:
+                    scale_width = float(currRawImage_width) / \
+                        self.camera_info.width
+                    scale_height = float(currRawImage_height) / \
+                        self.camera_info.height
+                    print("!!!!!!!!!!!!!!!!!", self.camera_info.height, currRawImage_height, self.camera_info.width, currRawImage_width)
+
+                    scale_matrix[0] *= scale_width
+                    scale_matrix[2] *= scale_width
+                    scale_matrix[4] *= scale_height
+                    scale_matrix[5] *= scale_height
+
+                # Process the image and extract the apriltags
+                outputDict = self.process_uncompressed(
+                    cv_image, (np.array(self.camera_info.K) * scale_matrix).reshape((3, 3)), self.camera_info.D)
+
                 image = np.copy(outputDict['rect_image'])
 
                 # Put the AprilTag bound boxes and numbers to the image
@@ -285,13 +287,40 @@ class ImageProcessor(multiprocessing.Process):
                 outputDict['rectified_image'].header.stamp.nsecs = self.raw_image.header.stamp.nsecs
                 outputDict['rectified_image'].header.frame_id = self.ACQ_DEVICE_NAME
 
+            outputDict['header'] = self.raw_image.header
+
+            # Add the time stamp and source of the input image to the output
+            for idx in range(len(outputDict['apriltags'])):
+                outputDict['apriltags'][idx]['timestamp_secs'] = self.raw_image.header.stamp.secs
+                outputDict['apriltags'][idx]['timestamp_nsecs'] = self.raw_image.header.stamp.nsecs
+                outputDict['apriltags'][idx]['source'] = self.ACQ_DEVICE_NAME
 
             # PUBLISH HERE
             self.publish(outputDict)
 
-    def process(self, raw_image, cameraMatrix, distCoeffs):
+    def process_compressed(self, raw_image, cameraMatrix, distCoeffs, img_height, img_width):
         """
-        Processes an image.
+        Processes a compressed image.
+        """
+
+        try:
+            # 1. Extract poses from april tags data
+            tags = self.aprilTagProcessor.detect(raw_image, cameraMatrix, distCoeffs, img_height, img_width)
+
+            # 2. Package output
+            outputDict = dict()
+            self.tags2outputDict(tags, outputDict)
+
+            return outputDict
+
+        except Exception as e:
+            self.logger.warning(
+                'ImageProcessor process failed: : %s' % str(e))
+            pass
+
+    def process_uncompressed(self, raw_image, cameraMatrix, distCoeffs):
+        """
+        Processes an uncompressed image.
         """
 
         try:
@@ -304,40 +333,21 @@ class ImageProcessor(multiprocessing.Process):
             rect_image, newCameraMatrix = self.ImageRectifier.rectify(
                 raw_image)
 
-            # 2. Extract april tags data
-            if len(rect_image.shape) == 3:
-                rect_image_gray = cv2.cvtColor(rect_image, cv2.COLOR_BGR2GRAY)
-            else:
-                rect_image_gray = rect_image
-
-            if len(raw_image.shape) == 3:
-                raw_image_gray = cv2.cvtColor(raw_image, cv2.COLOR_BGR2GRAY)
-            else:
-                raw_image_gray = raw_image
-
             # Beautify if wanted:
             if self.opt_beautify and self.ImageRectifier:
                 raw_image = self.ImageRectifier.beautify(raw_image)
 
-            # 3. Extract poses from april tags data
-            tags = self.aprilTagProcessor.detect(raw_image_gray, cameraMatrix, distCoeffs)
+            # 2. Extract poses from april tags data
+            tags = self.aprilTagProcessor.detect(
+                raw_image, cameraMatrix, distCoeffs,
+                raw_image.shape[0], raw_image.shape[1],
+                uncompressed=True)
 
-            # 4. Package output
+            # 3. Package output
             outputDict = dict()
             outputDict['rect_image'] = rect_image
             outputDict['new_camera_matrix'] = newCameraMatrix
-            outputDict['apriltags'] = list()
-            for atag in tags:
-                outputDict['apriltags'].append({'tag_id': atag.tag_id,
-                                                'corners': atag.corners,
-                                                'qvec': self.rvec2quat(atag.pose_R),
-                                                'tvec': atag.pose_t,
-                                                'tag_family': atag.tag_family,
-                                                'hamming': atag.hamming,
-                                                'decision_margin': atag.decision_margin,
-                                                'homography': atag.homography,
-                                                'center': atag.center,
-                                                'pose_error': atag.pose_err})
+            self.tags2outputDict(tags, outputDict)
             return outputDict
 
         except Exception as e:
@@ -345,7 +355,22 @@ class ImageProcessor(multiprocessing.Process):
                 'ImageProcessor process failed: : %s' % str(e))
             pass
 
+    def tags2outputDict(self, tags, outputDict):
+        """
+        Helper function that transfers tags info to outputDict.
+        """
+        outputDict['apriltags'] = list()
+        for atag in tags:
+            outputDict['apriltags'].append(
+                {'tag_id': atag.tag_id, 'tag_family': atag.tag_family, 'corners': atag.corners,
+                 'qvec': self.rvec2quat(atag.pose_R), 'tvec': atag.pose_t,
+                 'hamming': atag.hamming, 'decision_margin': atag.decision_margin,
+                 'homography': atag.homography, 'center': atag.center, 'pose_error': atag.pose_err})
+
     def rvec2quat(self, rvec):
+        """
+        Helper function that converts rotation vectors to quaternions.
+        """
         x = rvec[0]
         y = rvec[1]
         z = rvec[2]
@@ -454,16 +479,19 @@ def get_environment_variables():
     config = dict()
 
     config['ACQ_DEVICE_NAME'] = os.getenv('ACQ_DEVICE_NAME', 'watchtower10')
-    config['ACQ_TOPIC_RAW'] = os.getenv('ACQ_TOPIC_RAW', 'camera_node/image/compressed')
-    config['ACQ_TOPIC_CAMERAINFO'] = os.getenv('ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
+    config['ACQ_TOPIC_RAW'] = os.getenv(
+        'ACQ_TOPIC_RAW', 'camera_node/image/compressed')
+    config['ACQ_TOPIC_CAMERAINFO'] = os.getenv(
+        'ACQ_TOPIC_CAMERAINFO', 'camera_node/camera_info')
     config['ACQ_TEST_STREAM'] = bool(int(os.getenv('ACQ_TEST_STREAM', 0)))
     config['ACQ_BEAUTIFY'] = bool(int(os.getenv('ACQ_BEAUTIFY', 0)))
     config['ACQ_TAG_SIZE'] = float(os.getenv('ACQ_TAG_SIZE', 0.065))
     config['ACQ_POSES_TOPIC'] = os.getenv('ACQ_POSES_TOPIC', "poses")
+    config['ACQ_IMAGE_PROCESSORS'] = int(os.getenv('ACQ_IMAGE_PROCESSORS', 3))
+    config['ACQ_CONFIG_YML'] = os.getenv('ACQ_CONFIG_YML', 'config.yml')
+    config['ACQ_DETECTOR_TYPE'] = os.getenv('ACQ_DETECTOR_TYPE', 'DFC')
     config['INPUT_BAG_PATH'] = os.getenv('INPUT_BAG_PATH')
     config['OUTPUT_BAG_PATH'] = os.getenv('OUTPUT_BAG_PATH')
-    config['IMAGE_PROCESSORS'] = int(os.getenv('IMAGE_PROCESSORS', 8))
-    config['ACQ_CONFIG_YML'] = os.getenv('ACQ_CONFIG_YML', 'config.yml')
 
     return config
 
@@ -475,7 +503,7 @@ def main():
 
     config = get_environment_variables()
 
-    adn = ApriltagProcessorNode(logger, config)
+    ap = ApriltagProcessorNode(logger, config)
 
     rospy.spin()
 

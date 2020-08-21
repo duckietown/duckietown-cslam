@@ -2,7 +2,10 @@
 ---
 aruco-dictionary: "TAG36h11"
 aruco-maxThreads: 1
-#aruco-detectMode: DM_NORMAL
+#dcf-detectRate: 10
+#dcf-tau_s: 32
+#dcf-psr: 5.7
+aruco-detectMode: DM_VIDEO_FAST
 #aruco-cornerRefinementM: CORNER_SUBPIX
 #aruco-thresMethod: THRES_ADAPTIVE
 #aruco-borderDistThres: 1.4999999664723873e-02

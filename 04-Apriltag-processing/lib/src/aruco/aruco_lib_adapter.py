@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+
+"""Python wrapper for C++ library ArUco. This program creates two
+classes that are used to detect apriltags and extract information from
+them. Using this module, you can identify all apriltags visible in an
+image, and get information about the location and orientation of the
+tags.
+"""
+
 from __future__ import division
 from __future__ import print_function
 
@@ -5,12 +14,12 @@ import os
 import sys
 import numpy
 
-sys.path.append(os.getenv('ACQ_ARUCO_CALLER_DIR'))
-from aruco_caller import aruco_init, aruco_detect_and_estimate
+sys.path.append(os.getenv('ACQ_ARUCO_CALLER_DIR', '/apriltag_processor_node/build'))  # add path to aruco_caller module
+import aruco_caller
 
-class Detection():
 
-    '''Combined pythonic wrapper for apriltag_detection and apriltag_pose'''
+class Detection:
+    """Data class for detected marker info"""
 
     def __init__(self):
         self.tag_family = None
@@ -25,52 +34,61 @@ class Detection():
         self.pose_err = None
 
     def __str__(self):
-        return('Detection object:'+
-        '\ntag_family = ' + str(self.tag_family)+
-        '\ntag_id = ' + str(self.tag_id)+
-        '\nhamming = ' + str(self.hamming)+
-        '\ndecision_margin = ' + str(self.decision_margin)+
-        '\nhomography = ' + str(self.homography)+
-        '\ncenter = ' + str(self.center)+
-        '\ncorners = ' + str(self.corners)+
-        '\npose_R = ' + str(self.pose_R)+
-        '\npose_t = ' + str(self.pose_t)+
-        '\npose_err = ' + str(self.pose_err)+'\n')
+        return (
+            'Detection object:\n'
+            'tag_family = {0}\ntag_id = {1}\nhamming = {2}\ndecision_margin = {3}\n'
+            'homography = {4}\ncenter = {5}\ncorners = {6}\npose_R = {7}\npose_t = {8}\npose_err = {9}\n'.format(
+                *map(str, [self.tag_family, self.tag_id, self.hamming, self.decision_margin,
+                           self.homography, self.center, self.corners, self.pose_R, self.pose_t, self.pose_err])))
 
     def __repr__(self):
         return self.__str__()
 
 
-######################################################################
-
 class Detector(object):
+    """Python wrapper for ArUco library (actually for aruco_caller.cpp)"""
 
-    def __init__(self, marker_size=0.065, config_file="config.yml"):
-        aruco_init(marker_size, config_file)
+    def __init__(self, detector_type='DFC', marker_size=0.065, config_file="config.yml"):
+        """Initializer for ArUco library
+        Args:
+            detector_type (str): aruco_detector type; must be 'DFC' or 'STD'
+            marker_size (float): marker side length
+            config_file (str): path to configuration yml file
+        """
+        aruco_caller.aruco_init(detector_type, marker_size, config_file)
 
-    def detect(self, image, cameraMatrix, distCoeffs):
+    def __del__(self):
+        aruco_caller.aruco_destruct()
 
-        '''Run detectons on the provided image. The image must be a grayscale
-image of type numpy.uint8.'''
+    def detect(self, image, camera_matrix, dist_coeffs, img_height, img_width, uncompressed=False):
+        """Main function that calls marker detection from ArUco library
+        Args:
+            image (compressed_imgmsg or cv2_image): image for detection
+            camera_matrix (3x3 numpy.array): camera matrix K ((fx, 0, cx), (0, fy, cy), (0, 0, 1))
+            dist_coeffs (list): distortion coefficients D (k1, k2, p1, p2 [, k3])
+            img_height (float): image height
+            img_width (float): image width
+            uncompressed (bool): flag for already uncompressed images
+        Returns:
+            list: list of Detection objects containing info about each detected marker
+        """
 
-        assert len(image.shape) == 2
-        assert image.dtype == numpy.uint8
-
-        calib_data = {
-            "width": image.shape[1],
-            "height": image.shape[0],
-            "cameraMatrix00": cameraMatrix[0][0],
-            "cameraMatrix02": cameraMatrix[0][2],
-            "cameraMatrix11": cameraMatrix[1][1],
-            "cameraMatrix12": cameraMatrix[1][2],
-            "distortion0": distCoeffs[0],
-            "distortion1": distCoeffs[1],
-            "distortion2": distCoeffs[2],
-            "distortion3": distCoeffs[3]
+        calib_dict = {
+            "height": img_height, "width": img_width,
+            "camera_matrix00": camera_matrix[0][0], "camera_matrix02": camera_matrix[0][2],
+            "camera_matrix11": camera_matrix[1][1], "camera_matrix12": camera_matrix[1][2],
+            "distortion0": dist_coeffs[0], "distortion1": dist_coeffs[1],
+            "distortion2": dist_coeffs[2], "distortion3": dist_coeffs[3]
         }
 
-        #detect apriltags in the image
-        detections = aruco_detect_and_estimate(calib_data, image)
+        # choose right function
+        if uncompressed:
+            aruco_detect_func = aruco_caller.aruco_detect_and_estimate
+        else:
+            aruco_detect_func = aruco_caller.aruco_imdecode_detect_and_estimate
+        # detect markers in the image
+        detections = aruco_detect_func(
+            calib_dict, numpy.ndarray(shape=(1, len(image.data)), dtype=numpy.uint8, buffer=image.data))
 
         return_info = []
 
@@ -78,24 +96,33 @@ image of type numpy.uint8.'''
             detection = Detection()
             detection.tag_family = marker["tag_family"]
             detection.tag_id = marker["tag_id"]
-            detection.hamming = -1
-            detection.decision_margin = -1
-            detection.homography = numpy.zeros((3, 3))
-            detection.center = numpy.zeros((2, 1))
             detection.corners = numpy.array(marker["corners"]).reshape((4, 2))
+
+            # sometimes marker is detected but its pose can't be estimated
             if len(marker["rvec"]) == 3:
                 detection.pose_R = numpy.array(marker["rvec"])
                 detection.pose_t = numpy.array(marker["tvec"])
             else:
                 detection.pose_R = numpy.zeros(3)
                 detection.pose_t = numpy.zeros(3)
+
+            # these fields are unsupported now
+            detection.hamming = -1
+            detection.decision_margin = -1
+            detection.homography = numpy.zeros((3, 3))
+            detection.center = numpy.zeros((2, 1))
             detection.pose_err = -1
 
             return_info.append(detection)
 
         return return_info
 
-def imshow_with_tags(img, window_name):
+
+# AUTOTESTS ###################################################################
+
+def imshow_with_tags(img, tags, window_name):
+    """Helper function for tests that shows drawn tags on the provided image"""
+
     colored_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
     for tag in tags:
@@ -117,10 +144,11 @@ def imshow_with_tags(img, window_name):
     if k == 27:  # wait for ESC key to exit
         cv2.destroyAllWindows()
 
+
 if __name__ == '__main__':
 
     test_images_path = 'test'
-    distCoeffs = numpy.zeros(4)
+    distCoeffs = [0, 0, 0, 0]
 
     visualization = True
     try:
@@ -140,7 +168,15 @@ if __name__ == '__main__':
     except:
         raise Exception('You need yaml in order to run the tests. However, you can still use the library without it.')
 
-    at_detector = Detector(marker_size=0.065, config_file="config.yml")
+    with open("test_config.yml", 'w') as f:
+        f.write(
+            """%YAML:1.0
+            ---
+            aruco-dictionary: "TAG36h11"
+            aruco-maxThreads: 1
+            dcf-detectRate: 1""")
+    at_detector = Detector(config_file="test_config.yml")
+    os.remove("test_config.yml")
 
     with open(test_images_path + '/test_info.yaml', 'r') as stream:
         parameters = yaml.load(stream)
@@ -152,12 +188,12 @@ if __name__ == '__main__':
     img = cv2.imread(test_images_path+'/'+parameters['sample_test']['file'], cv2.IMREAD_GRAYSCALE)
     cameraMatrix = numpy.array(parameters['sample_test']['K']).reshape((3,3))
 
-    tags = at_detector.detect(img, cameraMatrix, distCoeffs)
+    tags = at_detector.detect(img, cameraMatrix, distCoeffs, img.shape[0], img.shape[1], True)
     print(tags)
 
     if visualization:
         cv2.imshow('Original image',img)
-        imshow_with_tags(img, 'Detected tags')
+        imshow_with_tags(img, tags, 'Detected tags')
 
     #### TEST WITH THE ROTATION IMAGES ####
 
@@ -184,7 +220,7 @@ if __name__ == '__main__':
         img = cv2.imread(ab_path, cv2.IMREAD_GRAYSCALE)
 
         start = time.time()
-        tags = at_detector.detect(img, cameraMatrix, distCoeffs)
+        tags = at_detector.detect(img, cameraMatrix, distCoeffs, img.shape[0], img.shape[1], True)
         time_sum+=time.time()-start
         time_num+=1
 
@@ -195,7 +231,7 @@ if __name__ == '__main__':
             print("Tags not found")
 
         if visualization:
-            imshow_with_tags(img, "Detected tags for " + image_name)
+            imshow_with_tags(img, tags, "Detected tags for " + image_name)
 
     print("AVG time per detection: ", time_sum/time_num)
 
@@ -219,7 +255,7 @@ if __name__ == '__main__':
         img = cv2.imread(ab_path, cv2.IMREAD_GRAYSCALE)
 
         start = time.time()
-        tags = at_detector.detect(img, cameraMatrix, distCoeffs)
+        tags = at_detector.detect(img, cameraMatrix, distCoeffs, img.shape[0], img.shape[1], True)
         time_sum+=time.time()-start
         time_num+=1
 
@@ -227,6 +263,6 @@ if __name__ == '__main__':
         print(len(tags), " tags found: ", tag_ids)
 
         if visualization:
-            imshow_with_tags(img, "Detected tags for " + image_name)
+            imshow_with_tags(img, tags, "Detected tags for " + image_name)
 
     print("AVG time per detection: ", time_sum/time_num)
