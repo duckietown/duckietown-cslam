@@ -236,7 +236,6 @@ class ImageProcessor(multiprocessing.Process):
                         self.camera_info.width
                     scale_height = float(currRawImage_height) / \
                         self.camera_info.height
-                    print("!!!!!!!!!!!!!!!!!", self.camera_info.height, currRawImage_height, self.camera_info.width, currRawImage_width)
 
                     scale_matrix[0] *= scale_width
                     scale_matrix[2] *= scale_width
@@ -335,12 +334,13 @@ class ImageProcessor(multiprocessing.Process):
 
             # Beautify if wanted:
             if self.opt_beautify and self.ImageRectifier:
-                raw_image = self.ImageRectifier.beautify(raw_image)
+                rect_image = self.ImageRectifier.beautify(rect_image)
 
             # 2. Extract poses from april tags data
+            newDistCoeffs = [0, 0, 0, 0]
             tags = self.aprilTagProcessor.detect(
-                raw_image, cameraMatrix, distCoeffs,
-                raw_image.shape[0], raw_image.shape[1],
+                rect_image, newCameraMatrix, newDistCoeffs,
+                rect_image.shape[0], rect_image.shape[1],
                 uncompressed=True)
 
             # 3. Package output

@@ -6,4 +6,11 @@ services:
         environment:
             ROS_MASTER_URI: http://172.31.168.115:11311
             ACQ_DEVICE_NAME: watchtower10
-
+            ACQ_TOPIC_RAW: camera_image/image/compressed
+            ACQ_TOPIC_CAMERAINFO: camera_node/camera_info
+            ACQ_TAG_SIZE: 0.065
+            ACQ_POSES_TOPIC: poses
+            ACQ_TEST_STREAM: 0
+            ACQ_BEAUTIFY: 0
+            ACQ_IMAGE_PROCESSORS: 3
+            ACQ_DETECTOR_TYPE: DFC

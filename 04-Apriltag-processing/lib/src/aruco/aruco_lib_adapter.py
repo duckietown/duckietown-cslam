@@ -65,7 +65,7 @@ class Detector(object):
         Args:
             image (compressed_imgmsg or cv2_image): image for detection
             camera_matrix (3x3 numpy.array): camera matrix K ((fx, 0, cx), (0, fy, cy), (0, 0, 1))
-            dist_coeffs (list): distortion coefficients D (k1, k2, p1, p2 [, k3])
+            dist_coeffs (list): distortion coefficients D (k1, k2, p1, p2)
             img_height (float): image height
             img_width (float): image width
             uncompressed (bool): flag for already uncompressed images
@@ -93,18 +93,16 @@ class Detector(object):
         return_info = []
 
         for marker in detections:
+            # sometimes marker is detected but its pose can't be estimated
+            if len(marker["rvec"]) != 3:
+                continue
+
             detection = Detection()
             detection.tag_family = marker["tag_family"]
             detection.tag_id = marker["tag_id"]
             detection.corners = numpy.array(marker["corners"]).reshape((4, 2))
-
-            # sometimes marker is detected but its pose can't be estimated
-            if len(marker["rvec"]) == 3:
-                detection.pose_R = numpy.array(marker["rvec"])
-                detection.pose_t = numpy.array(marker["tvec"])
-            else:
-                detection.pose_R = numpy.zeros(3)
-                detection.pose_t = numpy.zeros(3)
+            detection.pose_R = numpy.array(marker["rvec"])
+            detection.pose_t = numpy.array(marker["tvec"])
 
             # these fields are unsupported now
             detection.hamming = -1
@@ -147,7 +145,7 @@ def imshow_with_tags(img, tags, window_name):
 
 if __name__ == '__main__':
 
-    test_images_path = 'test'
+    test_images_path = '../apriltags3-py/test'
     distCoeffs = [0, 0, 0, 0]
 
     visualization = True
@@ -204,7 +202,7 @@ if __name__ == '__main__':
     time_num = 0
     time_sum = 0
 
-    test_images_path = 'test'
+    test_images_path = '../apriltags3-py/test'
     image_names = parameters['rotation_test']['files']
 
     for image_name in image_names:
