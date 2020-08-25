@@ -18,5 +18,10 @@ services:
         - ACQ_TEST_STREAM=0
         - ACQ_TOPIC_VELOCITY_TO_POSE=velocity_to_pose_node/pose
         - ACQ_TOPIC_RAW=camera_node/image/compressed
+        - ACQ_TOPIC_CAMERAINFO=camera_node/camera_info
+        - ACQ_TAG_SIZE=0.065
+        - ACQ_POSES_TOPIC=poses
+        - ACQ_IMAGE_PROCESSORS=3
+        - ACQ_DETECTOR_TYPE=DFC
       network_mode: "host"
       restart: always
