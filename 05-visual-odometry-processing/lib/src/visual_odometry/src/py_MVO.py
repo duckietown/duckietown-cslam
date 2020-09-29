@@ -180,7 +180,7 @@ class VisualOdometry:
 
         min_idx = min([self.new_cloud.shape[0], self.last_cloud.shape[0]])
         ratios = []  # List to obtain all the ratios of the distances
-        for i in xrange(min_idx):
+        for i in range(min_idx):
             if i > 0:
                 Xk = self.new_cloud[i]
                 p_Xk = self.new_cloud[i - 1]

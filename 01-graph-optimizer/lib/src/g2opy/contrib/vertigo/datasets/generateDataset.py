@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # This is part of the Vertigo suite.
 # Niko Suenderhauf
@@ -17,24 +17,24 @@ def checkOptions(options):
     """Make sure the options entered by the user make sense."""
 
     if options.outliers<0:
-        print "Number of outliers (--outliers) must be >=0."
+        print("Number of outliers (--outliers) must be >=0.")
         return False
     
 
     if options.groupsize<0:
-        print "Groupsize (--groupsize) must be >=0."
+        print("Groupsize (--groupsize) must be >=0.")
         return False
 
     if options.switchCov<=0.0:
-        print "Switch covariance (--switchCov) must be >0."
+        print("Switch covariance (--switchCov) must be >0.")
         return False
 
     if options.switchable and options.maxmix:
-        print "Please specify only one of --switchable or --maxmix."
+        print("Please specify only one of --switchable or --maxmix.")
         return False
 
     if options.filename == "" or options.filename==None:
-        print "Dataset to read (--in) must be given."
+        print("Dataset to read (--in) must be given.")
         return False
 
     if options.information == "":
@@ -43,7 +43,7 @@ def checkOptions(options):
     
     if options.information:
         if (options.information.count(",") != 0) and (options.information.count(",") != 5) and  (options.information.count(",") != 20):
-            print "Information matrix must be given in full upper-triangular form. E.g. --information=42,0,0,42,0,42 or as a single value that is used for all diagonal entries, e.g. --information=42."
+            print("Information matrix must be given in full upper-triangular form. E.g. --information=42,0,0,42,0,42 or as a single value that is used for all diagonal entries, e.g. --information=42.")
             return False
     
 
@@ -132,19 +132,19 @@ def writeDataset(filename, vertices, edges, mode, outliers=0, switchPrior=1, swi
 
         # check entries for information matrix for additional loop closure constraints (outliers)
         if not informationMatrix:
-            print "Determining information matrix automatically..."                                      
+            print("Determining information matrix automatically...")                                      
         else:        
             if informationMatrix.count(",")==0:
                 # if there is only a single value, convert it into full upper triangular form with that value on the diagonal
                 try:                
                     diagEntry=float(informationMatrix)
                 except:
-                    print "! Invalid value for information matrix. If you give only a single value, it must be a number, e.g. --information=42"
+                    print("! Invalid value for information matrix. If you give only a single value, it must be a number, e.g. --information=42")
                     return False
                 informationMatrix = "%f,0,0,%f,0,%f" % (diagEntry,diagEntry,diagEntry)
         
             elif informationMatrix.count(",")!=5:
-                print "! Invalid number of entries in information matrix. Full upper triangular form has to be given, e.g. --information=42,0,0,42,0,42."
+                print("! Invalid number of entries in information matrix. Full upper triangular form has to be given, e.g. --information=42,0,0,42,0,42.")
                 return False
             
     elif mode == 3:
@@ -152,21 +152,21 @@ def writeDataset(filename, vertices, edges, mode, outliers=0, switchPrior=1, swi
 
         # check entries for information matrix for additional loop closure constraints (outliers)        
         if not informationMatrix:
-            print "Determining information matrix automatically"                                      
+            print("Determining information matrix automatically")                                      
         else:        
             if informationMatrix.count(",")==0:
                 # if there is only a single value, convert it into full upper triangular form with that value on the diagonal
                 try:                
                     diagEntry=float(informationMatrix)
                 except:
-                    print "! Invalid value for information matrix. If you give only a single value, it must be a number, e.g. --information=42"
+                    print("! Invalid value for information matrix. If you give only a single value, it must be a number, e.g. --information=42")
                     return False
                 informationMatrix = "%f,0,0,0,0,0,%f,0,0,0,0,%f,0,0,0,%f,0,0,%f,0,%f" % (diagEntry,diagEntry,diagEntry,diagEntry, diagEntry, diagEntry)
             elif informationMatrix.count(",")!=20:
-                print "! Invalid number of entries in information matrix (--information). Full upper triangular form has to be given."
+                print("! Invalid number of entries in information matrix (--information). Full upper triangular form has to be given.")
                 return False
     else:
-        print "! Invalid mode. It must be either 2 or 3 but was", mode
+        print("! Invalid mode. It must be either 2 or 3 but was", mode)
         return False
     
 
@@ -196,7 +196,7 @@ def writeDataset(filename, vertices, edges, mode, outliers=0, switchPrior=1, swi
               informationMatrix = ' '.join(elem[-6:])
           else:
               informationMatrix = ' '.join(elem[-21:])
-          print informationMatrix
+          print(informationMatrix)
 
           
       # carry on adding edges
@@ -394,11 +394,11 @@ if __name__ == "__main__":
         random.seed(options.seed)
 
         # read the original dataset
-        print "Reading original dataset", options.filename, "..."        
+        print("Reading original dataset", options.filename, "...")        
         (vertices, edges, mode) = readDataset(options.filename)
 
         # build and save the modified dataset with additional false positive loop closures
-        print "Writing modified dataset", options.out, "..."
+        print("Writing modified dataset", options.out, "...")
         if writeDataset(options.out, vertices, edges, mode,
                      options.outliers,
                      1,
@@ -412,13 +412,13 @@ if __name__ == "__main__":
                      options.maxmix,
                      options.maxmixAgarwal,
                      options.perfectMatch):
-            print "Done."
+            print("Done.")
 
 
     # command line options were not ok
     else: 
-        print
-        print "Please use --help to see all available command line parameters."
+        print()
+        print("Please use --help to see all available command line parameters.")
 
 
     

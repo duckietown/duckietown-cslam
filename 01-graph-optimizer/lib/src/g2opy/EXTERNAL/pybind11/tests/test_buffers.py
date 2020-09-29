@@ -25,7 +25,7 @@ def test_from_python():
     assert cstats.alive() == 1
     del m3, m4
     assert cstats.alive() == 0
-    assert cstats.values() == ["2x3 matrix"]
+    assert list(cstats.values()) == ["2x3 matrix"]
     assert cstats.copy_constructions == 0
     # assert cstats.move_constructions >= 0  # Don't invoke any
     assert cstats.copy_assignments == 0
@@ -58,7 +58,7 @@ def test_to_python():
     del mat2  # holds a mat reference
     pytest.gc_collect()
     assert cstats.alive() == 0
-    assert cstats.values() == ["5x5 matrix"]
+    assert list(cstats.values()) == ["5x5 matrix"]
     assert cstats.copy_constructions == 0
     # assert cstats.move_constructions >= 0  # Don't invoke any
     assert cstats.copy_assignments == 0

@@ -11,7 +11,7 @@ def test_override(capture, msg):
             self.data = "Hello world"
 
         def run(self, value):
-            print('ExtendedExampleVirt::run(%i), calling parent..' % value)
+            print(('ExtendedExampleVirt::run(%i), calling parent..' % value))
             return super(ExtendedExampleVirt, self).run(value + 1)
 
         def run_bool(self):
@@ -22,7 +22,7 @@ def test_override(capture, msg):
             return "override1"
 
         def pure_virtual(self):
-            print('ExtendedExampleVirt::pure_virtual(): %s' % self.data)
+            print(('ExtendedExampleVirt::pure_virtual(): %s' % self.data))
 
     class ExtendedExampleVirt2(ExtendedExampleVirt):
         def __init__(self, state):
@@ -68,7 +68,7 @@ def test_override(capture, msg):
     assert cstats.alive() == 3
     del ex12, ex12p, ex12p2
     assert cstats.alive() == 0
-    assert cstats.values() == ['10', '11', '17']
+    assert list(cstats.values()) == ['10', '11', '17']
     assert cstats.copy_constructions == 0
     assert cstats.move_constructions >= 0
 
@@ -199,8 +199,8 @@ def test_move_support():
     del ncv1, ncv2
     assert nc_stats.alive() == 0
     assert mv_stats.alive() == 0
-    assert nc_stats.values() == ['4', '9', '9', '9']
-    assert mv_stats.values() == ['4', '5', '7', '7']
+    assert list(nc_stats.values()) == ['4', '9', '9', '9']
+    assert list(mv_stats.values()) == ['4', '5', '7', '7']
     assert nc_stats.copy_constructions == 0
     assert mv_stats.copy_constructions == 1
     assert nc_stats.move_constructions >= 0

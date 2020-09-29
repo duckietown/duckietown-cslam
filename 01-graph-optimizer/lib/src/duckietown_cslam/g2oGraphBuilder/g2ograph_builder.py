@@ -16,14 +16,14 @@ class ControlableLock(object):
     def acquire(self):
         if(self.is_locking):
             if(self.verbose):
-                print >>sys.stderr, "acquired", self
+                print("acquired", self, file=sys.stderr)
                 # traceback.print_tb
             self._lock.acquire()
 
     def release(self):
         if(self.is_locking):
             if(self.verbose):
-                print >>sys.stderr, "released", self
+                print("released", self, file=sys.stderr)
                 # traceback.print_tb
             self._lock.release()
 
@@ -159,14 +159,14 @@ class g2oGraphBuilder():
         # print("vertex_pose")
         with self.lock:
             if (vertexId not in self.optimizer.vertices()):
-                print("Vertex %i is not in the g2o graph" % vertexId)
+                print(("Vertex %i is not in the g2o graph" % vertexId))
                 if (self.last_lost != 0 and
                         self.last_lost in self.optimizer.vertices()):
-                    print(
-                        "Vertex %i wasn't but is now in g2o graph" % self.last_lost)
+                    print((
+                        "Vertex %i wasn't but is now in g2o graph" % self.last_lost))
                 elif (self.last_lost != 0):
-                    print("Vertex %i wasn't and still isn't in g2o graph" %
-                          self.last_lost)
+                    print(("Vertex %i wasn't and still isn't in g2o graph" %
+                          self.last_lost))
                 self.last_lost = vertexId
                 return None
             else:
@@ -177,7 +177,7 @@ class g2oGraphBuilder():
             if (vertexId in self.optimizer.vertices()):
                 self.optimizer.vertex(vertexId).set_fixed(True)
             else:
-                print("Vertex %i is not in the g2o graph" % vertexId)
+                print(("Vertex %i is not in the g2o graph" % vertexId))
 
     def get_transform(self, vertex1, vertex2):
         # print("get_transform")
@@ -249,11 +249,11 @@ class g2oGraphBuilder():
             self.optimizer.compute_active_errors()
             if verbose:
                 print('Optimization:')
-                print('Initial chi2 = %f' % self.optimizer.active_chi2())
+                print(('Initial chi2 = %f' % self.optimizer.active_chi2()))
             self.optimizer.optimize(number_of_steps, online=online)
             chi = self.optimizer.active_chi2()
             if not verbose:
-                print("Optimization finished with chi2 = %f" % chi)
+                print(("Optimization finished with chi2 = %f" % chi))
                 pass
             if (save_result):
                 self.optimizer.save(output_name)

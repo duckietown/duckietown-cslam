@@ -52,7 +52,7 @@ def test_init_factory_basic():
     assert [i.alive() for i in cstats] == [0, 0, 0]
     assert ConstructorStats.detail_reg_inst() == n_inst
 
-    assert [i.values() for i in cstats] == [
+    assert [list(i.values()) for i in cstats] == [
         ["3", "hi!"],
         ["7", "hi again"],
         ["42", "bye"]
@@ -125,7 +125,7 @@ def test_init_factory_casting():
     assert [i.alive() for i in cstats] == [0, 0, 0]
     assert ConstructorStats.detail_reg_inst() == n_inst
 
-    assert [i.values() for i in cstats] == [
+    assert [list(i.values()) for i in cstats] == [
         ["4", "5", "6", "7", "8"],
         ["4", "5", "8"],
         ["6", "7"]
@@ -196,7 +196,7 @@ def test_init_factory_alias():
     assert [i.alive() for i in cstats] == [0, 0]
     assert ConstructorStats.detail_reg_inst() == n_inst
 
-    assert [i.values() for i in cstats] == [
+    assert [list(i.values()) for i in cstats] == [
         ["1", "8", "3", "4", "5", "6", "123", "10", "47"],
         ["hi there", "3", "4", "6", "move", "123", "why hello!", "move", "47"]
     ]
@@ -276,7 +276,7 @@ def test_init_factory_dual():
     assert [i.alive() for i in cstats] == [0, 0]
     assert ConstructorStats.detail_reg_inst() == n_inst
 
-    assert [i.values() for i in cstats] == [
+    assert [list(i.values()) for i in cstats] == [
         ["1", "2", "3", "4", "5", "6", "7", "8", "9", "100", "11", "12", "13", "14"],
         ["2", "4", "6", "8", "9", "100", "12"]
     ]

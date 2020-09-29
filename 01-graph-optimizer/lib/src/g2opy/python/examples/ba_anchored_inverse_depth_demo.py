@@ -126,8 +126,8 @@ def main():
 
 
     print('\nRMSE (inliers only):')
-    print('before optimization:', np.sqrt(sse[0] / len(inliers)))
-    print('after  optimization:', np.sqrt(sse[1] / len(inliers)))
+    print(('before optimization:', np.sqrt(sse[0] / len(inliers))))
+    print(('after  optimization:', np.sqrt(sse[1] / len(inliers))))
 
 
 

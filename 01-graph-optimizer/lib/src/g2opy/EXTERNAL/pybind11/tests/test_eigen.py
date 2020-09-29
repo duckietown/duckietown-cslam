@@ -510,7 +510,7 @@ def test_both_ref_mutators():
     expect = np.array([[0., 22, 20], [31, 37, 33], [41, 42, 38]])
     assert np.all(z == expect)
 
-    y = np.array(range(100), dtype='float64').reshape(10, 10)
+    y = np.array(list(range(100)), dtype='float64').reshape(10, 10)
     y2 = m.incr_matrix_any(y, 10)  # np -> eigen -> np
     y3 = m.incr_matrix_any(y2[0::2, 0::2], -33)  # np -> eigen -> np slice -> np -> eigen -> np
     y4 = m.even_rows(y3)  # numpy -> eigen slice -> (... y3)
@@ -518,7 +518,7 @@ def test_both_ref_mutators():
     y6 = m.incr_matrix_any(y5, 1000)  # numpy -> eigen -> (... y5)
 
     # Apply same mutations using just numpy:
-    yexpect = np.array(range(100), dtype='float64').reshape(10, 10)
+    yexpect = np.array(list(range(100)), dtype='float64').reshape(10, 10)
     yexpect += 10
     yexpect[0::2, 0::2] -= 33
     yexpect[0::4, 0::4] += 1000

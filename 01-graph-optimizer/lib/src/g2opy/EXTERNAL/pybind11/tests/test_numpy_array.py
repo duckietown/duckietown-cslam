@@ -227,14 +227,14 @@ def test_isinstance():
 
 def test_constructors():
     defaults = m.default_constructors()
-    for a in defaults.values():
+    for a in list(defaults.values()):
         assert a.size == 0
     assert defaults["array"].dtype == np.array([]).dtype
     assert defaults["array_t<int32>"].dtype == np.int32
     assert defaults["array_t<double>"].dtype == np.float64
 
     results = m.converting_constructors([1, 2, 3])
-    for a in results.values():
+    for a in list(results.values()):
         np.testing.assert_array_equal(a, [1, 2, 3])
     assert results["array"].dtype == np.int_
     assert results["array_t<int32>"].dtype == np.int32
@@ -325,13 +325,13 @@ def test_array_unchecked_fixed_dims(msg):
         m.proxy_add2(np.array([1., 2, 3]), 5.0)
     assert msg(excinfo.value) == "array has incorrect number of dimensions: 1; expected 2"
 
-    expect_c = np.ndarray(shape=(3, 3, 3), buffer=np.array(range(3, 30)), dtype='int')
+    expect_c = np.ndarray(shape=(3, 3, 3), buffer=np.array(list(range(3, 30))), dtype='int')
     assert np.all(m.proxy_init3(3.0) == expect_c)
     expect_f = np.transpose(expect_c)
     assert np.all(m.proxy_init3F(3.0) == expect_f)
 
-    assert m.proxy_squared_L2_norm(np.array(range(6))) == 55
-    assert m.proxy_squared_L2_norm(np.array(range(6), dtype="float64")) == 55
+    assert m.proxy_squared_L2_norm(np.array(list(range(6)))) == 55
+    assert m.proxy_squared_L2_norm(np.array(list(range(6)), dtype="float64")) == 55
 
     assert m.proxy_auxiliaries2(z1) == [11, 11, True, 2, 8, 2, 2, 4, 32]
     assert m.proxy_auxiliaries2(z1) == m.array_auxiliaries2(z1)
@@ -342,7 +342,7 @@ def test_array_unchecked_dyn_dims(msg):
     m.proxy_add2_dyn(z1, 10)
     assert np.all(z1 == [[11, 12], [13, 14]])
 
-    expect_c = np.ndarray(shape=(3, 3, 3), buffer=np.array(range(3, 30)), dtype='int')
+    expect_c = np.ndarray(shape=(3, 3, 3), buffer=np.array(list(range(3, 30))), dtype='int')
     assert np.all(m.proxy_init3_dyn(3.0) == expect_c)
 
     assert m.proxy_auxiliaries2_dyn(z1) == [11, 11, True, 2, 8, 2, 2, 4, 32]

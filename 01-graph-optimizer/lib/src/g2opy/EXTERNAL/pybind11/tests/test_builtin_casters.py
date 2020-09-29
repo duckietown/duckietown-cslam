@@ -11,10 +11,10 @@ def test_simple_string():
 
 def test_unicode_conversion():
     """Tests unicode conversion and error reporting."""
-    assert m.good_utf8_string() == u"Say utf8‽ 🎂 𝐀"
-    assert m.good_utf16_string() == u"b‽🎂𝐀z"
-    assert m.good_utf32_string() == u"a𝐀🎂‽z"
-    assert m.good_wchar_string() == u"a⸘𝐀z"
+    assert m.good_utf8_string() == "Say utf8‽ 🎂 𝐀"
+    assert m.good_utf16_string() == "b‽🎂𝐀z"
+    assert m.good_utf32_string() == "a𝐀🎂‽z"
+    assert m.good_wchar_string() == "a⸘𝐀z"
 
     with pytest.raises(UnicodeDecodeError):
         m.bad_utf8_string()
@@ -31,10 +31,10 @@ def test_unicode_conversion():
             m.bad_wchar_string()
 
     assert m.u8_Z() == 'Z'
-    assert m.u8_eacute() == u'é'
-    assert m.u16_ibang() == u'‽'
-    assert m.u32_mathbfA() == u'𝐀'
-    assert m.wchar_heart() == u'♥'
+    assert m.u8_eacute() == 'é'
+    assert m.u16_ibang() == '‽'
+    assert m.u32_mathbfA() == '𝐀'
+    assert m.wchar_heart() == '♥'
 
 
 def test_single_char_arguments():
@@ -43,50 +43,50 @@ def test_single_char_arguments():
         return "Character code point not in range({0:#x})".format(r)
     toolong_message = "Expected a character, but multi-character string found"
 
-    assert m.ord_char(u'a') == 0x61  # simple ASCII
-    assert m.ord_char(u'é') == 0xE9  # requires 2 bytes in utf-8, but can be stuffed in a char
+    assert m.ord_char('a') == 0x61  # simple ASCII
+    assert m.ord_char('é') == 0xE9  # requires 2 bytes in utf-8, but can be stuffed in a char
     with pytest.raises(ValueError) as excinfo:
-        assert m.ord_char(u'Ā') == 0x100  # requires 2 bytes, doesn't fit in a char
+        assert m.ord_char('Ā') == 0x100  # requires 2 bytes, doesn't fit in a char
     assert str(excinfo.value) == toobig_message(0x100)
     with pytest.raises(ValueError) as excinfo:
-        assert m.ord_char(u'ab')
+        assert m.ord_char('ab')
     assert str(excinfo.value) == toolong_message
 
-    assert m.ord_char16(u'a') == 0x61
-    assert m.ord_char16(u'é') == 0xE9
-    assert m.ord_char16(u'Ā') == 0x100
-    assert m.ord_char16(u'‽') == 0x203d
-    assert m.ord_char16(u'♥') == 0x2665
+    assert m.ord_char16('a') == 0x61
+    assert m.ord_char16('é') == 0xE9
+    assert m.ord_char16('Ā') == 0x100
+    assert m.ord_char16('‽') == 0x203d
+    assert m.ord_char16('♥') == 0x2665
     with pytest.raises(ValueError) as excinfo:
-        assert m.ord_char16(u'🎂') == 0x1F382  # requires surrogate pair
+        assert m.ord_char16('🎂') == 0x1F382  # requires surrogate pair
     assert str(excinfo.value) == toobig_message(0x10000)
     with pytest.raises(ValueError) as excinfo:
-        assert m.ord_char16(u'aa')
+        assert m.ord_char16('aa')
     assert str(excinfo.value) == toolong_message
 
-    assert m.ord_char32(u'a') == 0x61
-    assert m.ord_char32(u'é') == 0xE9
-    assert m.ord_char32(u'Ā') == 0x100
-    assert m.ord_char32(u'‽') == 0x203d
-    assert m.ord_char32(u'♥') == 0x2665
-    assert m.ord_char32(u'🎂') == 0x1F382
+    assert m.ord_char32('a') == 0x61
+    assert m.ord_char32('é') == 0xE9
+    assert m.ord_char32('Ā') == 0x100
+    assert m.ord_char32('‽') == 0x203d
+    assert m.ord_char32('♥') == 0x2665
+    assert m.ord_char32('🎂') == 0x1F382
     with pytest.raises(ValueError) as excinfo:
-        assert m.ord_char32(u'aa')
+        assert m.ord_char32('aa')
     assert str(excinfo.value) == toolong_message
 
-    assert m.ord_wchar(u'a') == 0x61
-    assert m.ord_wchar(u'é') == 0xE9
-    assert m.ord_wchar(u'Ā') == 0x100
-    assert m.ord_wchar(u'‽') == 0x203d
-    assert m.ord_wchar(u'♥') == 0x2665
+    assert m.ord_wchar('a') == 0x61
+    assert m.ord_wchar('é') == 0xE9
+    assert m.ord_wchar('Ā') == 0x100
+    assert m.ord_wchar('‽') == 0x203d
+    assert m.ord_wchar('♥') == 0x2665
     if m.wchar_size == 2:
         with pytest.raises(ValueError) as excinfo:
-            assert m.ord_wchar(u'🎂') == 0x1F382  # requires surrogate pair
+            assert m.ord_wchar('🎂') == 0x1F382  # requires surrogate pair
         assert str(excinfo.value) == toobig_message(0x10000)
     else:
-        assert m.ord_wchar(u'🎂') == 0x1F382
+        assert m.ord_wchar('🎂') == 0x1F382
     with pytest.raises(ValueError) as excinfo:
-        assert m.ord_wchar(u'aa')
+        assert m.ord_wchar('aa')
     assert str(excinfo.value) == toolong_message
 
 
@@ -103,7 +103,7 @@ def test_bytes_to_string():
     assert m.strlen(byte("a\x00b")) == 1  # C-string limitation
 
     # passing in a utf8 encoded string should work
-    assert m.string_length(u'💩'.encode("utf8")) == 4
+    assert m.string_length('💩'.encode("utf8")) == 4
 
 
 @pytest.mark.skipif(not hasattr(m, "has_string_view"), reason="no <string_view>")
@@ -151,10 +151,10 @@ def test_integer_casting():
     assert m.i32_str(2000000000) == "2000000000"
     assert m.u32_str(2000000000) == "2000000000"
     if sys.version_info < (3,):
-        assert m.i32_str(long(-1)) == "-1"  # noqa: F821 undefined name 'long'
-        assert m.i64_str(long(-1)) == "-1"  # noqa: F821 undefined name 'long'
-        assert m.i64_str(long(-999999999999)) == "-999999999999"  # noqa: F821 undefined name
-        assert m.u64_str(long(999999999999)) == "999999999999"  # noqa: F821 undefined name 'long'
+        assert m.i32_str(int(-1)) == "-1"  # noqa: F821 undefined name 'long'
+        assert m.i64_str(int(-1)) == "-1"  # noqa: F821 undefined name 'long'
+        assert m.i64_str(int(-999999999999)) == "-999999999999"  # noqa: F821 undefined name
+        assert m.u64_str(int(999999999999)) == "999999999999"  # noqa: F821 undefined name 'long'
     else:
         assert m.i64_str(-999999999999) == "-999999999999"
         assert m.u64_str(999999999999) == "999999999999"
@@ -174,10 +174,10 @@ def test_integer_casting():
 
     if sys.version_info < (3,):
         with pytest.raises(TypeError) as excinfo:
-            m.u32_str(long(-1))  # noqa: F821 undefined name 'long'
+            m.u32_str(int(-1))  # noqa: F821 undefined name 'long'
         assert "incompatible function arguments" in str(excinfo.value)
         with pytest.raises(TypeError) as excinfo:
-            m.u64_str(long(-1))  # noqa: F821 undefined name 'long'
+            m.u64_str(int(-1))  # noqa: F821 undefined name 'long'
         assert "incompatible function arguments" in str(excinfo.value)
 
 
@@ -291,7 +291,7 @@ def test_bool_caster():
         def __init__(self, x):
             self.x = x
 
-        def __nonzero__(self):
+        def __bool__(self):
             return self.x
 
         def __bool__(self):

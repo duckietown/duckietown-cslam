@@ -84,5 +84,5 @@ for codegen in [generate_dummy_code_pybind11, generate_dummy_code_boost]:
         n2 = dt.datetime.now()
         elapsed = (n2 - n1).total_seconds()
         size = os.stat('test.so').st_size
-        print("   {%i, %f, %i}," % (nclasses * nfns, elapsed, size))
+        print(("   {%i, %f, %i}," % (nclasses * nfns, elapsed, size)))
     print ("}")

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import rospy
 import math
 import tf
@@ -151,7 +151,7 @@ def get_markers(duckiebots, watchtowers, apriltags, listener):
         except (tf.LookupException, tf.ConnectivityException,
                 tf.ExtrapolationException):
             continue
-        tag_id = int(filter(str.isdigit, duckiebots[it]))
+        tag_id = int(list(filter(str.isdigit, duckiebots[it])))
         marker_array.markers.append(get_duckiebot_marker(tag_id, trans, rot))
 
     for it in range(len(watchtowers)):
@@ -161,7 +161,7 @@ def get_markers(duckiebots, watchtowers, apriltags, listener):
         except (tf.LookupException, tf.ConnectivityException,
                 tf.ExtrapolationException):
             continue
-        tag_id = int(filter(str.isdigit, watchtowers[it]))
+        tag_id = int(list(filter(str.isdigit, watchtowers[it])))
         marker_array.markers.append(get_watchtower_marker(tag_id, trans, rot))
 
     for it in range(len(apriltags)):
@@ -171,7 +171,7 @@ def get_markers(duckiebots, watchtowers, apriltags, listener):
         except (tf.LookupException, tf.ConnectivityException,
                 tf.ExtrapolationException):
             continue
-        tag_id = int(filter(str.isdigit, apriltags[it]))
+        tag_id = int(list(filter(str.isdigit, apriltags[it])))
 
         if tag_id not in trafficsign_apriltags:
             marker_array.markers.append(

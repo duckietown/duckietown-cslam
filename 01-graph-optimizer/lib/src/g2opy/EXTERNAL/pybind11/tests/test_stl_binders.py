@@ -164,7 +164,7 @@ def test_noncopyable_containers():
         assert mnc[i].value == 10 * i
 
     vsum = 0
-    for k, v in mnc.items():
+    for k, v in list(mnc.items()):
         assert v.value == 10 * k
         vsum += v.value
 
@@ -176,7 +176,7 @@ def test_noncopyable_containers():
         assert mnc[i].value == 10 * i
 
     vsum = 0
-    for k, v in mnc.items():
+    for k, v in list(mnc.items()):
         assert v.value == 10 * k
         vsum += v.value
 

@@ -123,7 +123,7 @@ class PriorHandler(object):
     def load_priors(self):
         with open(self.priors_filename, 'r') as priors_file:
             priors = yaml.load(priors_file)
-            for prior_name, prior in priors.iteritems():
+            for prior_name, prior in list(priors.items()):
                 from_type = prior['from_type']
                 to_type = prior['to_type']
                 position = prior['position']
@@ -136,7 +136,7 @@ class PriorHandler(object):
                 new_prior = Prior(prior_name, from_type, to_type,
                                   position, rotation, constraint_list, standard_space_deviation, standard_angle_deviation)
                 self.prior_list.append(new_prior)
-                print(str(new_prior))
+                print((str(new_prior)))
 
 
 class CyclicCounter(object):
@@ -222,7 +222,7 @@ class Node(object):
     def __init__(self, node_id, types, duckietown_graph, movable=False):
         self.node_id = node_id
         self.node_type = get_node_type(node_id)
-        self.node_number = int(filter(str.isdigit, node_id))
+        self.node_number = int(list(filter(str.isdigit, node_id)))
         self.types = types
         self.duckietown_graph = duckietown_graph
         self.time_stamps_to_indices = dict()
@@ -230,8 +230,8 @@ class Node(object):
         self.node_lock = g2oGB.ControlableLock()
         self.movable = movable
         if(self.node_type not in self.types):
-            print("Registering node of type %s unkown in types = " %
-                  self.node_type + str(self.types))
+            print(("Registering node of type %s unkown in types = " %
+                  self.node_type + str(self.types)))
 
     def get_g2o_index(self, time_stamp):
         """Given a timestamp associated to that node, outputs an integer that can be used as a
@@ -399,11 +399,11 @@ class MovableNode(Node):
         # Find the total time (time between the last and the first timestamp).
         total_delta_t = float(sorted_time_stamps[-1] - sorted_time_stamps[0])
         if (total_delta_t == 0.0):
-            print("in interpolate, delta t is 0.0, with %s and list is:" %
-                  self.node_id)
+            print(("in interpolate, delta t is 0.0, with %s and list is:" %
+                  self.node_id))
             print(to_interpolate)
-            print("new_time_stamp is %f and old time stamp is %f" %
-                  (old_time_stamp, new_time_stamp))
+            print(("new_time_stamp is %f and old time stamp is %f" %
+                  (old_time_stamp, new_time_stamp)))
             pprint.pprint(self.time_stamps_to_indices)
         # Perform a linear interpolation in the Lie algebra associated to SE3
         # group defined by the transform.
@@ -465,16 +465,16 @@ class MovableNode(Node):
                 self.interpolate(time_stamp_before,
                                  time_stamp_after, transform, measure_information=retro_measure_information)
             else:
-                print("will not perform retro_interpolation with %d and %d " %
-                      (before, after))
+                print(("will not perform retro_interpolation with %d and %d " %
+                      (before, after)))
 
     def save_and_remove_old_poses(self, reference_time):
         last_accepted_stamps = reference_time - self.stocking_time
         max_anterior = None
         anterior_time_stamps_indices = []
         with self.node_lock:
-            anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
-            ) if time_stamp < last_accepted_stamps]
+            anterior_time_stamps = [time_stamp for time_stamp in list(self.time_stamps_to_indices.keys(
+            )) if time_stamp < last_accepted_stamps]
         if(anterior_time_stamps != []):
             max_anterior = max(anterior_time_stamps)
             anterior_time_stamps.remove(max_anterior)
@@ -505,7 +505,7 @@ class MovableNode(Node):
     def save_and_remove_everything(self, remove=False):
         time_stamps_indices = []
         with self.node_lock:
-            time_stamps = self.time_stamps_to_indices.keys()
+            time_stamps = list(self.time_stamps_to_indices.keys())
         if(time_stamps != []):
             pose_stamped_list = []
             for time_stamp in sorted(time_stamps):
@@ -559,8 +559,8 @@ class MovableNode(Node):
                 pose_stamped_list.append(pose_stamped)
             return pose_stamped_list
         else:
-            print("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s" % (
-                target_time_stamp, self.node_id))
+            print(("[WARNING] trying to extract poses up until an unknown time stamp %f for node %s" % (
+                target_time_stamp, self.node_id)))
             return None
 
     def save_trajectory(self, poses_stamped):
@@ -595,32 +595,32 @@ class MovableNode(Node):
 
                     data["trajectory_data"][pose[0]] = row
 
-                time_stamps = data["trajectory_data"].keys()
+                time_stamps = list(data["trajectory_data"].keys())
                 min_time_stamp = min(time_stamps)
                 data["begin_time_stamp"] = min_time_stamp
 
                 keys = {}
-                for key, _ in data["trajectory_data"].iteritems():
+                for key, _ in list(data["trajectory_data"].items()):
                     new_key = key - min_time_stamp
                     keys[key] = "%08.4f" % new_key
 
-                for key, new_key in keys.iteritems():
+                for key, new_key in list(keys.items()):
                     data["trajectory_data"][new_key] = data["trajectory_data"].pop(
                         key)
                 yaml.dump(data, trajectory_yaml)
                 self.has_a_result_file = True
 
             # TODO : Code this function
-            print("Trying to save for %s" % self.node_id)
+            print(("Trying to save for %s" % self.node_id))
         else:
-            print("Couldnt save data for %s as result folder %s does not exist" % (
-                self.node_id, self.result_folder))
+            print(("Couldnt save data for %s as result folder %s does not exist" % (
+                self.node_id, self.result_folder)))
 
     def get_trajectory(self):
         result_dict = dict()
         g2o_vertices = self.duckietown_graph.graph.optimizer.vertices()
         with self.node_lock:
-            for time_stamp, _ in self.time_stamps_to_indices.iteritems():
+            for time_stamp, _ in list(self.time_stamps_to_indices.items()):
                 vertex_id = self.get_g2o_index(time_stamp)
                 if (vertex_id not in g2o_vertices):
                     pass
@@ -635,8 +635,8 @@ class MovableNode(Node):
         for first_time_stamp in [self.first_odometry_time_stamp, self.first_watchtower_message]:
             if(first_time_stamp != 0):
                 with self.node_lock:
-                    anterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
-                    ) if time_stamp <= first_time_stamp]
+                    anterior_time_stamps = [time_stamp for time_stamp in list(self.time_stamps_to_indices.keys(
+                    )) if time_stamp <= first_time_stamp]
                     for time_stamp in anterior_time_stamps:
                         self.cyclic_counter.remove_index(
                             self.time_stamps_to_indices[time_stamp])
@@ -652,8 +652,8 @@ class MovableNode(Node):
 
         if(self.last_watchtower_time_stamp != -1):
             with self.node_lock:
-                posterior_time_stamps = [time_stamp for time_stamp in self.time_stamps_to_indices.keys(
-                ) if time_stamp > self.last_watchtower_time_stamp]
+                posterior_time_stamps = [time_stamp for time_stamp in list(self.time_stamps_to_indices.keys(
+                )) if time_stamp > self.last_watchtower_time_stamp]
                 for time_stamp in posterior_time_stamps:
                     self.cyclic_counter.remove_index(
                         self.time_stamps_to_indices[time_stamp])
@@ -775,9 +775,9 @@ class DuckietownGraphBuilder(object):
                 # with self.lock:
                 self.graph.add_vertex(0, vertex_pose, fixed=True)
                 # Add vertices for all the floor tags.
-                for key, value in complete_dict.iteritems():
+                for key, value in list(complete_dict.items()):
                     if key == "objects":
-                        for _, object_value in value.iteritems():
+                        for _, object_value in list(value.items()):
                             if (object_value['kind'] == "floor_tag"):
                                 tag_id = object_value['tag']['~TagInstance'][
                                     'tag_id']
@@ -862,9 +862,9 @@ class DuckietownGraphBuilder(object):
         node = self.get_node(node_id)
         added = node.add_timestamp(time_stamp)
         if (not added):
-            print(
+            print((
                 "add_vertex did not add : node %s at time %f as already there" %
-                (node_id, time_stamp))
+                (node_id, time_stamp)))
         else:
             # Translation vector, z coordinate does not vary.
             position = [position[0], position[1], 0.0]
@@ -974,9 +974,9 @@ class DuckietownGraphBuilder(object):
                     return True
 
             else:
-                print(
+                print((
                     "Node type %s should be movable if given odometry transform"
-                    % node_id_0)
+                    % node_id_0))
                 exit(-1)
 
     def set_fixed(self, node_id, time_stamp):
@@ -1008,7 +1008,7 @@ class DuckietownGraphBuilder(object):
     def get_global_last_time(self):
         global_last_time = 0
         with self.lock:
-            for _, node in self.node_dict.iteritems():
+            for _, node in list(self.node_dict.items()):
                 if node.last_time_stamp > global_last_time:
                     global_last_time = node.last_time_stamp
         return global_last_time
@@ -1066,7 +1066,7 @@ class DuckietownGraphBuilder(object):
             TODO : register in a file the path of duckiebots before destroying it here
         """
         with self.lock:
-            for _, node in self.node_dict.iteritems():
+            for _, node in list(self.node_dict.items()):
                 if node.is_movable():
                     node.save_and_remove_old_poses(reference_time)
 
@@ -1076,7 +1076,7 @@ class DuckietownGraphBuilder(object):
             Considered as useless are vertices that are anterior to the first odometry message
         """
         with self.lock:
-            for _, node in self.node_dict.iteritems():
+            for _, node in list(self.node_dict.items()):
                 if node.is_movable():
                     node.clean()
 
@@ -1086,7 +1086,7 @@ class DuckietownGraphBuilder(object):
             Considered as useless are vertices that are anterior to the first odometry message
         """
         with self.lock:
-            for _, node in self.node_dict.iteritems():
+            for _, node in list(self.node_dict.items()):
                 if node.is_movable():
                     node.final_clean()
 
@@ -1111,7 +1111,7 @@ class DuckietownGraphBuilder(object):
         with self.lock:
             result_dict = dict()
             # TODO : dictionnary changed size during iteration!! WTF
-            for node_id, node in self.node_dict.iteritems():
+            for node_id, node in list(self.node_dict.items()):
                 result_dict[node_id] = node.get_last_known_position()
 
         return result_dict
@@ -1129,7 +1129,7 @@ class DuckietownGraphBuilder(object):
         """
         result_dict = dict()
         with self.lock:
-            for node_id, node in self.node_dict.iteritems():
+            for node_id, node in list(self.node_dict.items()):
                 if node.is_movable():
                     result_dict[node_id] = node.get_trajectory()
 
@@ -1137,7 +1137,7 @@ class DuckietownGraphBuilder(object):
 
     def on_shutdown(self):
         with self.lock:
-            for node in self.node_dict.itervalues():
+            for node in list(self.node_dict.values()):
                 if node.is_movable():
                     node.save_and_remove_everything()
         print("exited duckietown graph builder")

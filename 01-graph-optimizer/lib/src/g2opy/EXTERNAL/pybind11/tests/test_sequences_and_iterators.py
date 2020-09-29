@@ -37,7 +37,7 @@ def test_sequence():
     cstats = ConstructorStats.get(m.Sequence)
 
     s = m.Sequence(5)
-    assert cstats.values() == ['of size', '5']
+    assert list(cstats.values()) == ['of size', '5']
 
     assert "Sequence" in repr(s)
     assert len(s) == 5
@@ -48,16 +48,16 @@ def test_sequence():
     assert isclose(s[0], 12.34) and isclose(s[3], 56.78)
 
     rev = reversed(s)
-    assert cstats.values() == ['of size', '5']
+    assert list(cstats.values()) == ['of size', '5']
 
     rev2 = s[::-1]
-    assert cstats.values() == ['of size', '5']
+    assert list(cstats.values()) == ['of size', '5']
 
     it = iter(m.Sequence(0))
     for _ in range(3):  # __next__ must continue to raise StopIteration
         with pytest.raises(StopIteration):
             next(it)
-    assert cstats.values() == ['of size', '0']
+    assert list(cstats.values()) == ['of size', '0']
 
     expected = [0, 56.78, 0, 0, 12.34]
     assert allclose(rev, expected)
@@ -65,7 +65,7 @@ def test_sequence():
     assert rev == rev2
 
     rev[0::2] = m.Sequence([2.0, 2.0, 2.0])
-    assert cstats.values() == ['of size', '3', 'from std::vector']
+    assert list(cstats.values()) == ['of size', '3', 'from std::vector']
 
     assert allclose(rev, [2, 56.78, 2, 0, 2])
 
@@ -79,7 +79,7 @@ def test_sequence():
     del rev2
     assert cstats.alive() == 0
 
-    assert cstats.values() == []
+    assert list(cstats.values()) == []
     assert cstats.default_constructions == 0
     assert cstats.copy_constructions == 0
     assert cstats.move_constructions >= 1
@@ -101,7 +101,7 @@ def test_map_iterator():
     expected = {'hi': 'bye', 'black': 'white', 'orange': 'banana'}
     for k in sm:
         assert sm[k] == expected[k]
-    for k, v in sm.items():
+    for k, v in list(sm.items()):
         assert v == expected[k]
 
     it = iter(m.StringMap({}))
@@ -136,7 +136,7 @@ def test_python_iterator_in_cpp():
     assert m.find_none(l) is True
     assert m.count_nonzeros({"a": 0, "b": 1, "c": 2}) == 2
 
-    r = range(5)
+    r = list(range(5))
     assert all(m.tuple_iterator(tuple(r)))
     assert all(m.list_iterator(list(r)))
     assert all(m.sequence_iterator(r))

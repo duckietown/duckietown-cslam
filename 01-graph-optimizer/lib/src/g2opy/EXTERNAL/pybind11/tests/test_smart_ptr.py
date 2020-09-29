@@ -32,7 +32,7 @@ def test_smart_ptr(capture):
     cstats = ConstructorStats.get(m.MyObject1)
     assert cstats.alive() == 0
     expected_values = ['MyObject1[{}]'.format(i) for i in range(1, 7)] + ['MyObject1[7]'] * 4
-    assert cstats.values() == expected_values
+    assert list(cstats.values()) == expected_values
     assert cstats.default_constructions == 0
     assert cstats.copy_constructions == 0
     # assert cstats.move_constructions >= 0 # Doesn't invoke any
@@ -53,7 +53,7 @@ def test_smart_ptr(capture):
     assert cstats.alive() == 1
     o = None
     assert cstats.alive() == 0
-    assert cstats.values() == ['MyObject2[8]', 'MyObject2[6]', 'MyObject2[7]']
+    assert list(cstats.values()) == ['MyObject2[8]', 'MyObject2[6]', 'MyObject2[7]']
     assert cstats.default_constructions == 0
     assert cstats.copy_constructions == 0
     # assert cstats.move_constructions >= 0 # Doesn't invoke any
@@ -74,7 +74,7 @@ def test_smart_ptr(capture):
     assert cstats.alive() == 1
     o = None
     assert cstats.alive() == 0
-    assert cstats.values() == ['MyObject3[9]', 'MyObject3[8]', 'MyObject3[9]']
+    assert list(cstats.values()) == ['MyObject3[9]', 'MyObject3[8]', 'MyObject3[9]']
     assert cstats.default_constructions == 0
     assert cstats.copy_constructions == 0
     # assert cstats.move_constructions >= 0 # Doesn't invoke any
@@ -84,7 +84,7 @@ def test_smart_ptr(capture):
     # Object
     cstats = ConstructorStats.get(m.Object)
     assert cstats.alive() == 0
-    assert cstats.values() == []
+    assert list(cstats.values()) == []
     assert cstats.default_constructions == 10
     assert cstats.copy_constructions == 0
     # assert cstats.move_constructions >= 0 # Doesn't invoke any
@@ -94,7 +94,7 @@ def test_smart_ptr(capture):
     # ref<>
     cstats = m.cstats_ref()
     assert cstats.alive() == 0
-    assert cstats.values() == ['from pointer'] * 10
+    assert list(cstats.values()) == ['from pointer'] * 10
     assert cstats.default_constructions == 30
     assert cstats.copy_constructions == 12
     # assert cstats.move_constructions >= 0 # Doesn't invoke any

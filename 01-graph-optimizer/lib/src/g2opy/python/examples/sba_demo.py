@@ -112,8 +112,8 @@ def main():
         sse[1] += np.sum(error**2)
 
     print('\nRMSE (inliers only):')
-    print('before optimization:', np.sqrt(sse[0] / len(inliers)))
-    print('after  optimization:', np.sqrt(sse[1] / len(inliers)))
+    print(('before optimization:', np.sqrt(sse[0] / len(inliers))))
+    print(('after  optimization:', np.sqrt(sse[1] / len(inliers))))
                     
 
 

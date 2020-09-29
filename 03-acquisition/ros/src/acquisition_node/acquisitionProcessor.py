@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from py_MVO import VisualOdometry
 from Common_Modules import *
@@ -15,7 +15,7 @@ from cv_bridge import CvBridge, CvBridgeError
 
 import os
 import sys
-import cPickle as pickle
+import pickle as pickle
 import numpy as np
 from pathos.multiprocessing import ProcessingPool
 

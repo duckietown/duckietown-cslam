@@ -2,7 +2,7 @@ import pytest
 from pybind11_tests import pickling as m
 
 try:
-    import cPickle as pickle  # Use cPickle on Python 2.7
+    import pickle as pickle  # Use cPickle on Python 2.7
 except ImportError:
     import pickle
 

@@ -20,7 +20,7 @@ class CopyLibFile(install):
         lib_file = glob.glob(__library_file__)
         assert len(lib_file) == 1     
 
-        print('copying {} -> {}'.format(lib_file[0], install_dir))
+        print(('copying {} -> {}'.format(lib_file[0], install_dir)))
         shutil.copy(lib_file[0], install_dir)
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import random
 import threading
@@ -107,7 +107,7 @@ class PointBroadcaster(threading.Thread):
         """
         # Create broadcaster and transform.
         if(node_pose == None):
-            print("No pose given for %s" % node_id)
+            print(("No pose given for %s" % node_id))
             return
         t = geometry_msgs.msg.TransformStamped()
         t.header.stamp = rospy.Time.now()
@@ -148,12 +148,12 @@ class PointBroadcaster(threading.Thread):
             if not t.child_frame_id.startswith("apriltag"):
                 self.second_broadcaster.publish(t)
         except:
-            print("bad rotation %s" % str(R))
+            print(("bad rotation %s" % str(R)))
         # print("Proportion sendTransform/total fonction : %f" % ((c-b)/(c-a)))
         # print("Proportion quaternion/total fonction : %f" % ((f-e)/(c-a)))
 
     def run(self):
-        for node_id, node_pose in self.pose_dict.iteritems():
+        for node_id, node_pose in self.pose_dict.items():
             if node_pose != -1:
                 self.tfbroadcast(node_id, node_pose)
 
@@ -209,7 +209,7 @@ class PathBroadcaster(threading.Thread):
                 # point.z = 0.001
                 self.path.poses.append(pose_stamped)
             except:
-                print("bad rotation %s" % str(R))
+                print(("bad rotation %s" % str(R)))
 
         self.publisher.publish(self.path)
 
@@ -297,7 +297,7 @@ class TransformListener():
                     except yaml.YAMLError as exc:
                         print(exc)
             else:
-                print("apriltagDB file not found at %s" % apriltagfile)
+                print(("apriltagDB file not found at %s" % apriltagfile))
 
     def find_vertex_name(self, id):
         """ Returns the format ID of an object in the ID map based on its type.
@@ -544,7 +544,7 @@ class TransformListener():
 
             path_dict = self.resampler.get_optimized_movable_paths()
             # print(path_dict)
-            for node_id, node_path in path_dict.iteritems():
+            for node_id, node_path in path_dict.items():
                 path_broadcaster = PathBroadcaster(node_path, node_id)
                 path_broadcaster.start()
 
@@ -578,7 +578,7 @@ class TransformListener():
             path_dict = self.resampler.get_optimized_movable_paths()
             # print(path_dict)
             path_broadcasters = []
-            for node_id, node_path in path_dict.iteritems():
+            for node_id, node_path in path_dict.items():
                 path_broadcaster = PathBroadcaster(node_path, node_id)
                 path_broadcaster.start()
                 path_broadcasters.append(path_broadcaster)
@@ -618,7 +618,7 @@ class TransformListener():
         bag_is_present = False
         bag_env = "ATMSGS_BAG"
         if not bag_env in os.environ:
-            print('I expect environment variable %s' % bag_env)
+            print(('I expect environment variable %s' % bag_env))
         else:
             bag_path = os.environ[bag_env]
             bag_is_present = True
@@ -655,7 +655,7 @@ class TransformListener():
                                         bag_path, shell=True)
                 print("finished with reading the bag")
             except Exception as e:
-                print("error : %s" % e)
+                print(("error : %s" % e))
 
         else:
             self.got_bag = False

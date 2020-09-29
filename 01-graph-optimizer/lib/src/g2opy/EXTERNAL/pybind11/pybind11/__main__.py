@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import argparse
 import sys
 import sysconfig
@@ -19,7 +17,7 @@ def print_includes():
         if d not in unique_dirs:
             unique_dirs.append(d)
 
-    print(' '.join('-I' + d for d in unique_dirs))
+    print((' '.join('-I' + d for d in unique_dirs)))
 
 
 def main():

@@ -95,8 +95,8 @@ def main():
             sse[0] += np.sum(error**2)
         point_id += 1
 
-    print('num vertices:', len(optimizer.vertices()))
-    print('num edges:', len(optimizer.edges()))
+    print(('num vertices:', len(optimizer.vertices())))
+    print(('num edges:', len(optimizer.edges())))
 
     print('Performing full BA:')
     optimizer.initialize_optimization()
@@ -110,8 +110,8 @@ def main():
         sse[1] += np.sum(error**2)
 
     print('\nRMSE (inliers only):')
-    print('before optimization:', np.sqrt(sse[0] / len(inliers)))
-    print('after  optimization:', np.sqrt(sse[1] / len(inliers)))
+    print(('before optimization:', np.sqrt(sse[0] / len(inliers))))
+    print(('after  optimization:', np.sqrt(sse[1] / len(inliers))))
                     
 
 
