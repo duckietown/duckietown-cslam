@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 WesQuackerson (named after Wes Anderson due to his love of overhead scenes) combines all the
@@ -31,10 +31,10 @@ CAMERA_RESOLUTION = (int(os.getenv('CAMERA_RESOLUTION_HEIGHT',1296)),int(os.gete
 TITLE_CARD = int(os.getenv('TITLE_CARD',1))
 
 print("Starting the awesome WesQuackerson movie generation process.")
-print("We are reading the AT messages from %s and video bags from %s." % (ATMSGS_BAG, VIDEO_BAGS))
-print("The particular topics are: %s and %s." % (POSES_TOPIC, VIDEO_TOPIC))
-print("The final video of how we track AT %d with resolution %s will be saved at %s." % (TRACKED_AT_ID, str(CAMERA_RESOLUTION), OUTPUT_FILE))
-print("We will make it with frame rate %d and the minimum shot length wil be %d.\n" % (OUTPUT_FRAMERATE, MIN_SHOT_LENGTH))
+print(("We are reading the AT messages from %s and video bags from %s." % (ATMSGS_BAG, VIDEO_BAGS)))
+print(("The particular topics are: %s and %s." % (POSES_TOPIC, VIDEO_TOPIC)))
+print(("The final video of how we track AT %d with resolution %s will be saved at %s." % (TRACKED_AT_ID, str(CAMERA_RESOLUTION), OUTPUT_FILE)))
+print(("We will make it with frame rate %d and the minimum shot length wil be %d.\n" % (OUTPUT_FRAMERATE, MIN_SHOT_LENGTH)))
 
 def makeCut():
     """
@@ -60,8 +60,8 @@ def makeCut():
         if msg.header.stamp.secs + 1e-9*msg.header.stamp.nsecs > bag_end_time:
             bag_end_time = msg.header.stamp.secs + 1e-9*msg.header.stamp.nsecs
 
-    print("The following cameras were found in the bag: %s" % str(cameras))
-    print("Bag start time: %.8f, Bag end time: %.8f, Total seconds: %.8f" % (bag_start_time, bag_end_time, bag_end_time-bag_start_time))
+    print(("The following cameras were found in the bag: %s" % str(cameras)))
+    print(("Bag start time: %.8f, Bag end time: %.8f, Total seconds: %.8f" % (bag_start_time, bag_end_time, bag_end_time-bag_start_time)))
 
     # Initialize the timestamps
     timestamps = np.arange(bag_start_time, bag_end_time, 1.0/OUTPUT_FRAMERATE)
@@ -153,7 +153,7 @@ def makeCut():
 
 
     for i in range(15):
-        print(groups[i], group_counts[i])
+        print((groups[i], group_counts[i]))
     # If the first one is too short, find the first long enough and use that camera
     if group_counts[0] < MIN_SHOT_LENGTH:
         for j, count in enumerate(group_counts):
@@ -162,7 +162,7 @@ def makeCut():
                     groups[jj] = groups[j]
                 break
     for i in range(15):
-        print(groups[i], group_counts[i])
+        print((groups[i], group_counts[i]))
 
     # If the last one is too short, find the last long enough and use that camera
     reversed_group_counts = group_counts[::-1]
@@ -290,13 +290,13 @@ def makeVideo(cutTimeline, cameras, timestamps):
         video.write(img)
 
         if i%OUTPUT_FRAMERATE == 0:
-            print("%d\%d seconds processed" % (i/OUTPUT_FRAMERATE, len(cutTimeline)/OUTPUT_FRAMERATE))
+            print(("%d\%d seconds processed" % (i/OUTPUT_FRAMERATE, len(cutTimeline)/OUTPUT_FRAMERATE)))
             sys.stdout.flush()
 
     video.release()
     bag.close()
 
-    print("Render to %s complete!" % OUTPUT_FILE)
+    print(("Render to %s complete!" % OUTPUT_FILE))
 
 
 cutTimeline, cameras, timestamps = makeCut()

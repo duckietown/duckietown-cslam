@@ -98,8 +98,7 @@ class OdometryResampler(object):
     def get_transform(self, time_stamp):
         if self.last_odometry_time_stamp == 0:
             self.last_odometry_time_stamp = time_stamp
-            self.last_time_stamps = filter(
-                lambda x: x >= time_stamp - self.max_time_diff, self.last_time_stamps)
+            self.last_time_stamps = [x for x in self.last_time_stamps if x >= time_stamp - self.max_time_diff]
             print("First odometry message")
             return -1, -1, -1
         previous_time_stamp = 0
@@ -111,8 +110,8 @@ class OdometryResampler(object):
             max_last_time_stamps = max(self.last_time_stamps)
 
             if time_stamp > max_last_time_stamps:
-                print("asking for too recent time stamp : %f is bigger than last %f" % (
-                    time_stamp, max_last_time_stamps))
+                print(("asking for too recent time stamp : %f is bigger than last %f" % (
+                    time_stamp, max_last_time_stamps)))
                 self.last_odometry_time_stamp = time_stamp
                 return -1, -1, -1
 
@@ -128,7 +127,7 @@ class OdometryResampler(object):
                         list_measure_info.append(
                             self.edges[t][1])
         else:
-            for t in self.edges.keys():
+            for t in list(self.edges.keys()):
                 if t < self.last_odometry_time_stamp and t > previous_time_stamp:
                     previous_time_stamp = t
                 if t > time_stamp and t < next_time_stamp:
@@ -191,8 +190,7 @@ class OdometryResampler(object):
 
         old_time_stamp = self.last_odometry_time_stamp
         self.last_odometry_time_stamp = time_stamp
-        self.last_time_stamps = filter(
-            lambda x: x >= max_time_stamp, self.last_time_stamps)
+        self.last_time_stamps = [x for x in self.last_time_stamps if x >= max_time_stamp]
 
         measure_information = merge_measure_information(list_measure_info)
 
@@ -269,7 +267,7 @@ class SingleDuckiebotTrajectory():
                     if t > time_stamp and t < next_time_stamp:
                         next_time_stamp = t
         else:
-            for t in self.edges.keys():
+            for t in list(self.edges.keys()):
                 if t < time_stamp and t > previous_time_stamp:
                     previous_time_stamp = t
                 if t > time_stamp and t < next_time_stamp:

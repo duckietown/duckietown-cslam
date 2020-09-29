@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from cslam_diagnostics.diagnostics_ui import Ui_MainWindow
 import sys
 import rospy
@@ -62,7 +62,7 @@ class DiagnosticsPanel(QtGui.QMainWindow):
                     msg.header.stamp.nsecs * 10**-9
 
     def update_table(self,table,devices):
-        while table.rowCount() < len(devices.keys()):
+        while table.rowCount() < len(list(devices.keys())):
             table.insertRow(0)
 
         for itr, device_id in enumerate(sorted(devices.keys())):

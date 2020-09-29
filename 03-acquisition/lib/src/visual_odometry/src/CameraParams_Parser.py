@@ -79,7 +79,7 @@ class CameraParams:
 
         try:
             self.isProjMat= self.txt[idx+2].strip()
-            print(self.txt[idx+2])
+            print((self.txt[idx+2]))
             if self.isProjMat == 'True' or self.isProjMat == 'TRUE':
                 # Convert to a 1-D float list
                 self.ProjMat = [float(i.strip()) for i in self.txt[idx+3].split()]

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import logging
 import math
@@ -126,7 +126,7 @@ class PostProcessor():
             self.node_list.append(odometry_processor_node)
 
         cmd = "rosbag play %s.bag" % self.INPUT_BAG_PATH
-        for topic, remap in topic_remapping.iteritems():
+        for topic, remap in topic_remapping.items():
             cmd += " %s:=%s" % (topic, remap)
         try:
             subprocess.check_output(cmd, shell=True)

@@ -131,7 +131,7 @@ def rotateFunct(pts_l, angle, degrees=False):
 def VO_plot(T_v):
     """ Plot the VO trajectory"""
     plt.figure(1)
-    pyMVO, = plt.plot(*zip(*T_v), marker='o', color='b', label='py-MVO')
+    pyMVO, = plt.plot(*list(zip(*T_v)), marker='o', color='b', label='py-MVO')
     plt.legend(handles=[pyMVO])
     # Set plot parameters and show it
     plt.axis('equal')
@@ -143,8 +143,8 @@ def VO_plot(T_v):
 def VO_GT_plot(T_v, GT_l):
     """ Plot the VO and Ground Truth trajectories"""
     plt.figure(1)
-    pyMVO, = plt.plot(*zip(*T_v), marker='o', color='b', label='py-MVO')
-    GT, = plt.plot(*zip(*GT_l), marker='o', color='g', label='Ground Truth')
+    pyMVO, = plt.plot(*list(zip(*T_v)), marker='o', color='b', label='py-MVO')
+    GT, = plt.plot(*list(zip(*GT_l)), marker='o', color='g', label='Ground Truth')
     plt.legend(handles=[pyMVO, GT])
     # Set plot parameters and show it
     plt.axis('equal')
@@ -161,9 +161,9 @@ def GPS_VO_plot(T_v, utm_dict):
 
     # Retrieving the GPS coordinates into a list
     # Shifting the trajectory to the origin
-    utm_dx = utm_dict.values()[0][0]
-    utm_dy = utm_dict.values()[0][1]
-    gps = [(u[0] - utm_dx, u[1] - utm_dy) for u in utm_dict.values()]
+    utm_dx = list(utm_dict.values())[0][0]
+    utm_dy = list(utm_dict.values())[0][1]
+    gps = [(u[0] - utm_dx, u[1] - utm_dy) for u in list(utm_dict.values())]
 
     # Scale factor from GPS to VO
     last_gps = gps[len(gps) - 1]
@@ -174,7 +174,7 @@ def GPS_VO_plot(T_v, utm_dict):
 
     scale = d_gps / d_VO
 
-    print('The scale factor', scale)
+    print(('The scale factor', scale))
     # Apply scale factor to the translation vectors
     T_v = [np.array(t) * scale for t in T_v]
 
@@ -183,7 +183,7 @@ def GPS_VO_plot(T_v, utm_dict):
         if i != 0:
             magn = np.linalg.norm((t - T_v[i - 1]))
 
-        print(i, t, math.sqrt((t[0] ** 2) + (t[1] ** 2)), magn)
+        print((i, t, math.sqrt((t[0] ** 2) + (t[1] ** 2)), magn))
 
     # Obtaining the angle between the first points of each list: VO list and GPS list
     rotate_idx = 6
@@ -211,8 +211,8 @@ def GPS_VO_plot(T_v, utm_dict):
 
     # Plotting the VO and GPS trajectories
     plt.figure(1)
-    GPS, = plt.plot(*zip(*gps), color='red', marker='o', label='GPS')
-    pyMVO, = plt.plot(*zip(*T_v), marker='o', color='b', label='py-MVO')
+    GPS, = plt.plot(*list(zip(*gps)), color='red', marker='o', label='GPS')
+    pyMVO, = plt.plot(*list(zip(*T_v)), marker='o', color='b', label='py-MVO')
     plt.legend(handles=[pyMVO, GPS])
     # Set plot parameters and show it
     plt.axis('equal')
@@ -228,7 +228,7 @@ def unique_everseen(iterable, key=None):
     seen = set()
     seen_add = seen.add
     if key is None:
-        for element in ifilterfalse(seen.__contains__, iterable):
+        for element in filterfalse(seen.__contains__, iterable):
             seen_add(element)
             yield element
     else:
@@ -242,7 +242,7 @@ def GPS_VO_Merge_plot(T_v_dict, utm_dict):
     """ Plot the VO and GPS trajectories.
         The GPS trajectory is rotated and translated to the origin
         in order to obtain a visual comparison between both trajectories."""
-    k = T_v_dict.keys() + utm_dict.keys()
+    k = list(T_v_dict.keys()) + list(utm_dict.keys())
     k = [i for i in unique_everseen([i for i in k if k.count(i) > 1])]
 
     T_v, gps_orig = [], []
@@ -274,7 +274,7 @@ def GPS_VO_Merge_plot(T_v_dict, utm_dict):
         if i != 0:
             magn = np.linalg.norm((t - T_v[i - 1]))
 
-        print(i, t, math.sqrt((t[0] ** 2) + (t[1] ** 2)), magn)
+        print((i, t, math.sqrt((t[0] ** 2) + (t[1] ** 2)), magn))
 
     # Obtaining the angle between the first points of each list: VO list and GPS list
     rotate_idx = min(len(T_v)-1, len(gps)-1)
@@ -310,8 +310,8 @@ def GPS_VO_Merge_plot(T_v_dict, utm_dict):
 
     # Plotting the VO and GPS trajectories
     plt.figure(1)
-    GPS, = plt.plot(*zip(*gps_orig), color='red', marker='o', label='GPS')
-    pyMVO, = plt.plot(*zip(*T_v), marker='o', color='b', label='py-MVO')
+    GPS, = plt.plot(*list(zip(*gps_orig)), color='red', marker='o', label='GPS')
+    pyMVO, = plt.plot(*list(zip(*T_v)), marker='o', color='b', label='py-MVO')
     plt.legend(handles=[pyMVO, GPS])
     # Set plot parameters and show it
     plt.axis('equal')

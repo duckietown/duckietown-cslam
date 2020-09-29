@@ -1,14 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 import rosbag
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import CompressedImage, Image, CameraInfo
 from duckietown_msgs.msg import AprilTagDetection
-import cPickle as pickle
+import pickle as pickle
 import os
 import numpy as np
-import Queue
+import queue
 import collections
 import yaml
 
@@ -194,8 +194,8 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
             seq_stamper += 1
 
         except KeyboardInterrupt:
-            raise(Exception("Exiting"))
-        except Queue.Empty:
+            raise Exception
+        except queue.Empty:
             if os.getenv('ACQ_DEVICE_MODE', 'live') == 'live':
                 logger.warning("No messages received in the last 5 seconds!")
         except Exception as e:
@@ -211,7 +211,7 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
         logger.info("Saving statistics to %s",
                     ACQ_OBSERVATIONS_STATISTICS_OUTPUT)
         new_stats = dict()
-        for id, count in counts.iteritems():
+        for id, count in counts.items():
             new_stats[id] = count
 
         yaml.dump({ACQ_DEVICE_NAME: new_stats}, open(
@@ -222,5 +222,5 @@ def publishOnServer(outputDictQueue, quitEvent, logger, mode='live'):
     logger.info("----------------------------------------------------")
     logger.info("COUNTS OF OBSERVED APRIL TAGS AND ODOMETRY MESSAGES:")
     logger.info("Device: %s" % ACQ_DEVICE_NAME)
-    for id, count in counts.iteritems():
+    for id, count in counts.items():
         logger.info("tag: {0}\t{1} observations".format(id, count))

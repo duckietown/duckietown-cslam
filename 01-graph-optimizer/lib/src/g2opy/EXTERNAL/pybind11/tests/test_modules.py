@@ -34,8 +34,8 @@ def test_reference_internal():
     del b
     assert astats.alive() == 0
     assert bstats.alive() == 0
-    assert astats.values() == ['1', '2', '42', '43']
-    assert bstats.values() == []
+    assert list(astats.values()) == ['1', '2', '42', '43']
+    assert list(bstats.values()) == []
     assert astats.default_constructions == 0
     assert bstats.default_constructions == 1
     assert astats.copy_constructions == 0

@@ -76,7 +76,7 @@ def main():
 
     optimizer.initialize_optimization()
     optimizer.compute_active_errors()
-    print('Initial chi2 =', optimizer.chi2())
+    print(('Initial chi2 =', optimizer.chi2()))
 
     optimizer.save('gicp.g2o')
 
@@ -84,8 +84,8 @@ def main():
     optimizer.optimize(5)
 
     print('\nSecond vertex should be near [0, 0, 1]')
-    print('before optimization:', cam.t)
-    print('after  optimization:', optimizer.vertex(1).estimate().t)
+    print(('before optimization:', cam.t))
+    print(('after  optimization:', optimizer.vertex(1).estimate().t))
 
 
 

@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import logging
-import cPickle as pickle
+import pickle as pickle
 import math
 import os
 import sys

@@ -114,15 +114,15 @@ def main():
 
     optimizer.initialize_optimization()
     optimizer.compute_active_errors()
-    print('Initial chi2 =', optimizer.chi2())
+    print(('Initial chi2 =', optimizer.chi2()))
 
     optimizer.set_verbose(True)
     optimizer.optimize(20)
 
     print('\nSecond vertex should be near [0, 0, 1]')
-    print('before optimization:', cam.t)
-    print('after  optimization:', optimizer.vertex(1).estimate().t)
-    print('error:', optimizer.vertex(1).estimate().t - [0, 0, 1])
+    print(('before optimization:', cam.t))
+    print(('after  optimization:', optimizer.vertex(1).estimate().t))
+    print(('error:', optimizer.vertex(1).estimate().t - [0, 0, 1]))
 
 
     '''

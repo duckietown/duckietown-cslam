@@ -234,7 +234,7 @@ def _test_import_pybind11():
         import pybind11_tests  # noqa: F401 imported but unused
     except Exception as e:
         print("Failed to import pybind11_tests from pytest:")
-        print("  {}: {}".format(type(e).__name__, e))
+        print(("  {}: {}".format(type(e).__name__, e)))
         sys.exit(1)
 
 

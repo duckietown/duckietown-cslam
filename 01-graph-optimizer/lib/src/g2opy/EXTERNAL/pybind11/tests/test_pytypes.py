@@ -168,14 +168,14 @@ def test_constructors():
         bool: "Not empty",
         int: "42",
         float: "+1e3",
-        tuple: range(3),
-        list: range(3),
+        tuple: list(range(3)),
+        list: list(range(3)),
         dict: [("two", 2), ("one", 1), ("three", 3)],
         set: [4, 4, 5, 6, 6, 6],
         memoryview: b'abc'
     }
-    inputs = {k.__name__: v for k, v in data.items()}
-    expected = {k.__name__: k(v) for k, v in data.items()}
+    inputs = {k.__name__: v for k, v in list(data.items())}
+    expected = {k.__name__: k(v) for k, v in list(data.items())}
 
     assert m.converting_constructors(inputs) == expected
     assert m.cast_functions(inputs) == expected
